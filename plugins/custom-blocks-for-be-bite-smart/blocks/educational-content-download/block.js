@@ -86,6 +86,8 @@
       episodeTitle: { type: "string", default: "" },
       pdfUrl: { type: "string", default: "" },
       pdfUrlEs: { type: "string", default: "" },
+      downloadUrlEn: { type: "string", default: "" }, // ← Google Drive or direct link
+      downloadUrlEs: { type: "string", default: "" },
       // Unique ID so EN/ES viewers don't bleed across episodes on the same page
       blockId: { type: "string", default: "" },
     },
@@ -113,8 +115,19 @@
             { title: "About this block", initialOpen: true },
             wp.element.createElement(
               "p",
+              {
+                style: {
+                  fontSize: "13px",
+                  color: "#50575e",
+                  marginBottom: "8px",
+                },
+              },
+              "Choose ONE format for both languages — either upload PDFs to view inline, or paste download links. Don't mix the two.",
+            ),
+            wp.element.createElement(
+              "p",
               { style: { fontSize: "13px", color: "#50575e", margin: 0 } },
-              "Edit the episode number, content type, title, and PDF files directly in the block below.",
+              "Priority if both are set: PDF viewer wins.",
             ),
           ),
         ),
@@ -245,6 +258,84 @@
                 ),
             ),
           ),
+
+          // ── Divider ──
+          wp.element.createElement(
+            "div",
+            {
+              style: {
+                width: "100%",
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+                padding: "4px 0",
+              },
+            },
+            wp.element.createElement("hr", {
+              style: {
+                flex: 1,
+                border: "none",
+                borderTop: "1px solid #d0e4eb",
+              },
+            }),
+            wp.element.createElement(
+              "span",
+              {
+                style: {
+                  fontSize: "11px",
+                  fontWeight: "700",
+                  color: "#6b7c84",
+                  textTransform: "uppercase",
+                  letterSpacing: "1px",
+                  whiteSpace: "nowrap",
+                },
+              },
+              "— or use download links instead —",
+            ),
+            wp.element.createElement("hr", {
+              style: {
+                flex: 1,
+                border: "none",
+                borderTop: "1px solid #d0e4eb",
+              },
+            }),
+          ),
+
+          // English download link (alternative to PDF viewer)
+          wp.element.createElement(
+            "div",
+            { style: previewStyles.uploadGroup },
+            wp.element.createElement(
+              "span",
+              { style: previewStyles.uploadLabel },
+              "English Download Link",
+            ),
+            wp.element.createElement("input", {
+              type: "text",
+              value: attributes.downloadUrlEn,
+              onChange: (e) => setAttributes({ downloadUrlEn: e.target.value }),
+              placeholder: "https://drive.google.com/...",
+              style: { width: "100%", padding: "4px 8px", fontSize: "12px" },
+            }),
+          ),
+
+          // Spanish download link (alternative to PDF viewer)
+          wp.element.createElement(
+            "div",
+            { style: previewStyles.uploadGroup },
+            wp.element.createElement(
+              "span",
+              { style: previewStyles.uploadLabel },
+              "Spanish Download Link",
+            ),
+            wp.element.createElement("input", {
+              type: "text",
+              value: attributes.downloadUrlEs,
+              onChange: (e) => setAttributes({ downloadUrlEs: e.target.value }),
+              placeholder: "https://drive.google.com/...",
+              style: { width: "100%", padding: "4px 8px", fontSize: "12px" },
+            }),
+          ),
         ),
       );
     },
@@ -257,12 +348,76 @@
       const esId = "ecd-es-" + blockId;
       const groupId = "ecd-grp-" + blockId;
 
+      // Convert Google Drive and Dropbox URLs to direct download links
+      const convertToDirectDownload = (url) => {
+        if (!url) return null;
+        const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^\/]+)/);
+        if (driveMatch) {
+          return (
+            "https://drive.google.com/uc?export=download&id=" + driveMatch[1]
+          );
+        }
+        if (url.includes("dropbox.com")) {
+          if (url.includes("?dl=")) return url.replace(/\?dl=0/, "?dl=1");
+          return url + (url.includes("?") ? "&dl=1" : "?dl=1");
+        }
+        return url;
+      };
+
+      const downloadUrlEn = convertToDirectDownload(attributes.downloadUrlEn);
+      const downloadUrlEs = convertToDirectDownload(attributes.downloadUrlEs);
+
       const episodeAndContentType = [
         attributes.episodeNumber ? "Episode " + attributes.episodeNumber : "",
         attributes.contentType ? attributes.contentType : "",
       ]
         .filter(Boolean)
         .join(" · ");
+
+      // Per-language button helper — viewer > download > coming soon
+      const renderButton = (
+        hasPdf,
+        hasDownload,
+        viewerClass,
+        downloadClass,
+        comingSoonClass,
+        targetId,
+        label,
+      ) => {
+        if (hasPdf) {
+          return wp.element.createElement(
+            "button",
+            {
+              className: viewerClass,
+              "data-target": targetId,
+              "data-group": groupId,
+              "data-expanded": "false",
+            },
+            "View PDF (" + label + ")",
+          );
+        }
+        if (hasDownload) {
+          return wp.element.createElement(
+            "a",
+            {
+              href: hasDownload,
+              className: downloadClass,
+              download: true,
+              "aria-label": "Download " + label + " version",
+            },
+            "Download (" + label + ")",
+          );
+        }
+        return wp.element.createElement(
+          "button",
+          {
+            className: comingSoonClass,
+            disabled: true,
+            "aria-disabled": "true",
+          },
+          "Coming Soon (" + label + ")",
+        );
+      };
 
       return wp.element.createElement(
         "div",
@@ -286,14 +441,12 @@
           "div",
           { className: "ecd-header" },
           episodeAndContentType &&
-            // Episode 1 · Coloring Book
             wp.element.createElement(
               "span",
               { className: "capitalized-and-colored ecd-title" },
               episodeAndContentType,
             ),
           attributes.episodeTitle &&
-            // Respect The Bubble
             wp.element.createElement(RichText.Content, {
               tagName: "h3",
               className: "ecd-title",
@@ -301,36 +454,31 @@
             }),
         ),
 
-        // Toggle buttons
-        (attributes.pdfUrl || attributes.pdfUrlEs) &&
-          wp.element.createElement(
-            "div",
-            { className: "ecd-buttons" },
-            attributes.pdfUrl &&
-              wp.element.createElement(
-                "button",
-                {
-                  className: "ecd-toggle",
-                  "data-target": enId,
-                  "data-group": groupId,
-                  "data-expanded": "false",
-                },
-                "View PDF (English)",
-              ),
-            attributes.pdfUrlEs &&
-              wp.element.createElement(
-                "button",
-                {
-                  className: "ecd-toggle ecd-toggle--outline",
-                  "data-target": esId,
-                  "data-group": groupId,
-                  "data-expanded": "false",
-                },
-                "View PDF (Spanish)",
-              ),
+        // Toggle/download buttons
+        wp.element.createElement(
+          "div",
+          { className: "ecd-buttons" },
+          renderButton(
+            attributes.pdfUrl,
+            downloadUrlEn,
+            "ecd-toggle",
+            "ecd-toggle ecd-toggle--download",
+            "ecd-toggle ecd-toggle--coming-soon",
+            enId,
+            "EN",
           ),
+          renderButton(
+            attributes.pdfUrlEs,
+            downloadUrlEs,
+            "ecd-toggle ecd-toggle--outline",
+            "ecd-toggle ecd-toggle--outline ecd-toggle--download",
+            "ecd-toggle ecd-toggle--outline ecd-toggle--coming-soon",
+            esId,
+            "ES",
+          ),
+        ),
 
-        // PDF viewers — direct flex children so they naturally span full width
+        // PDF viewers — only rendered when a PDF (not a download link) is provided
         attributes.pdfUrl &&
           wp.element.createElement(
             "div",

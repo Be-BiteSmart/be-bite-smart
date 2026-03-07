@@ -1,8 +1,9 @@
-/* ── educational-content-download-block ──────────────────────────────────── */
-
+/* ── Educational Content Download Block ─────────────────────────────────────
+   Mobile-first. Base styles target mobile, min-width queries layer on top.
+   ─────────────────────────────────────────────────────────────────────────── */
 .educational-content-download-block {
   border-bottom: 1px solid #d0e4eb;
-  padding: 16px 32px;
+  padding: 16px;
   display: flex;
   flex-wrap: wrap; /* viewers are direct children and wrap onto their own row */
   align-items: center;
@@ -10,10 +11,12 @@
   transition: background 0.15s;
 }
 
-span.ecd-title {
-  font-size: 11px;
-  margin-bottom: 3px;
+@media (min-width: 601px) {
+  .educational-content-download-block {
+    padding: 16px 32px;
+  }
 }
+
 .educational-content-download-block:last-child {
   border-bottom: none;
 }
@@ -28,6 +31,11 @@ span.ecd-title {
   min-width: 160px;
 }
 
+span.ecd-title {
+  font-size: 11px;
+  margin-bottom: 3px;
+}
+
 .ecd-title {
   font-family: "Urbanist", sans-serif;
   font-size: var(--wp--preset--font-size--medium);
@@ -36,12 +44,20 @@ span.ecd-title {
   margin: 0;
 }
 
-/* ── Buttons ── */
+/* ── Buttons ──
+   Full width and stacked on mobile, inline on larger screens. */
 .ecd-buttons {
   display: flex;
-  gap: 8px;
   flex-wrap: wrap;
-  flex-shrink: 0;
+  gap: 8px;
+  width: 100%; /* full width on mobile so buttons stack cleanly */
+}
+
+@media (min-width: 942px) {
+  .ecd-buttons {
+    width: auto; /* back inline with chip and header on larger screens */
+    flex-shrink: 0;
+  }
 }
 
 .ecd-toggle {
@@ -52,14 +68,24 @@ span.ecd-title {
   border-radius: 8px;
   cursor: pointer;
   white-space: nowrap;
+  min-width: 200px; /* wide enough for "Coming Soon (EN/ES)" — consistent across all states */
+  width: 100%; /* full width on mobile */
+  justify-content: center;
   transition:
     background 0.2s,
     color 0.2s,
     border-color 0.2s;
   /* Solid blue by default (English) */
   background: #1a6e8a;
+  box-sizing: border-box;
   color: #ffffff;
   border: 2px solid #1a6e8a;
+}
+
+@media (min-width: 601px) {
+  .ecd-toggle {
+    width: min-content; /* shrinks to min-width on larger screens */
+  }
 }
 
 .ecd-toggle--outline {
@@ -73,23 +99,35 @@ span.ecd-title {
   color: #ffffff;
 }
 
-/* on mobile screens, stack the pdf buttons */
+/* ── Coming soon state ──
+   Disabled visually but still readable — meets WCAG AA contrast on white */
+.ecd-toggle--coming-soon {
+  background: #e8edf2;
+  color: #4e6475; /* 5.0:1 on #e8edf2 ✅ */
+  border-color: #c8d4dc;
+  cursor: not-allowed;
+  pointer-events: none;
+}
 
-@media (max-width: 600px) {
-  .ecd-buttons {
-    width: 100%;
-  }
+.ecd-toggle--outline.ecd-toggle--coming-soon {
+  background: #ffffff;
+  color: #4e6475;
+  border-color: #c8d4dc;
+}
 
-  .ecd-toggle {
-    width: 100%;
-    justify-content: center;
-  }
+/* ── Download link button ──
+   Styled as an <a> but visually matches .ecd-toggle */
+.ecd-toggle--download {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* ── PDF viewers ────────────────────────────────────────────────────────────
    Direct flex children of the row. flex-basis: 100% wraps them onto their
    own full-width row beneath the chip, title and buttons — no JS trickery.
-   Hidden by default; ecd-toggle.js sets display:block on open.
+   Hidden by default; ecd-toggle.js adds .expanded to show.
    ─────────────────────────────────────────────────────────────────────────── */
 .ecd-viewer {
   display: none;
