@@ -472,34 +472,34 @@
                   ),
                 ),
               ),
-
-              // ── Download note (replaces per-episode download buttons) ──
-              attributes.downloadsPageUrl &&
-                wp.element.createElement(
-                  "div",
-                  { className: "download-note" },
-                  wp.element.createElement(
-                    "p",
-                    { className: "download-note-text" },
-                    wp.element.createElement(
-                      "strong",
-                      null,
-                      "Videos and coloring books are available to download.",
-                    ),
-                  ),
-
-                  wp.element.createElement(
-                    "a",
-                    {
-                      href: attributes.downloadsPageUrl,
-                      className:
-                        "download-link-btn block-toggle-btn is-style-outline",
-                    },
-                    "Go to Downloads",
-                  ),
-                ),
             ),
           ),
+
+          // ── Download note — full width row between main content and funded-by bar ──
+          // Only rendered when a downloads page URL is set
+          attributes.downloadsPageUrl &&
+            wp.element.createElement(
+              "div",
+              { className: "download-note" },
+              wp.element.createElement(
+                "p",
+                { className: "download-note-text" },
+                wp.element.createElement(
+                  "strong",
+                  null,
+                  "Videos and coloring books are available to download.",
+                ),
+              ),
+              wp.element.createElement(
+                "a",
+                {
+                  href: attributes.downloadsPageUrl,
+                  className:
+                    "download-link-btn block-toggle-btn is-style-outline",
+                },
+                "Go to Downloads",
+              ),
+            ),
 
           // ── Funded by bar (full width, only rendered when fundedByName is set) ──
           attributes.fundedByName &&
