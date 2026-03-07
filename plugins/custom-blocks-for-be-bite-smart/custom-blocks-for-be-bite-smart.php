@@ -145,7 +145,7 @@ wp_enqueue_script(
     'episode-card-block',
     plugins_url( 'blocks/episode-card/block.js', __FILE__ ),
     array( 'wp-blocks', 'wp-block-editor', 'wp-components', 'wp-element', 'wp-i18n' ),
-    '1.0.1',
+    '1.0.2',
     true
 );
 wp_enqueue_script(
@@ -220,7 +220,7 @@ function custom_blocks_scripts() {
     'educational-content-download-frontend',
     plugins_url('blocks/educational-content-download/educational-content-pdf-toggle.js', __FILE__),
     array(), // no dependencies
-    '1.0',
+    '1.0.1',
     true
 );
 
