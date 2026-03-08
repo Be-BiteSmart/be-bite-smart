@@ -4,7 +4,7 @@ function twentytwentyfive_child_enqueue_styles() {
     wp_enqueue_style( 'twentytwentyfive-parent', get_template_directory_uri() . '/style.css' );
 
     // Enqueue child style
-    wp_enqueue_style( 'twentytwentyfive-child', get_stylesheet_directory_uri() . '/style.css', array('twentytwentyfive-parent'), '1.0.2' );
+    wp_enqueue_style( 'twentytwentyfive-child', get_stylesheet_directory_uri() . '/style.css', array('twentytwentyfive-parent'), '1.0.3' );
     //version number so returning visitors browser will download the new file
 
      // Additional partial CSS
