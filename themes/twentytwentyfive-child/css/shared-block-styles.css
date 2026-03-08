@@ -38,7 +38,7 @@ body:not(.block-editor-page) .custom-block-border {
 
 /* toggle button styles */
 
-body:not(.block-editor-page) .custom-block-card .block-toggle-btn {
+body:not(.block-editor-page) .block-toggle-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -52,17 +52,19 @@ body:not(.block-editor-page) .custom-block-card .block-toggle-btn {
   background-color: #1e5480;
   color: #ffffff;
   border: 2px solid #1e5480;
+  box-sizing: border-box;
 }
 
-body:not(.block-editor-page) .custom-block-card .block-toggle-btn:hover {
+body:not(.block-editor-page) .block-toggle-btn:hover {
   opacity: 0.9;
   transform: translateY(-1px);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   color: #ffffff;
   text-decoration: none;
+  box-sizing: border-box;
 }
 
-body:not(.block-editor-page) .custom-block-card .block-toggle-btn:active {
+body:not(.block-editor-page) .block-toggle-btn:active {
   transform: translateY(0);
 }
 
@@ -210,7 +212,7 @@ body:not(.block-editor-page) .custom-block-card .pdf-viewer-container iframe {
 
 /* ── Toggle buttons ── */
 /* filled button */
-body:not(.block-editor-page) .custom-block-card .block-toggle-btn {
+body:not(.block-editor-page) .block-toggle-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -225,36 +227,36 @@ body:not(.block-editor-page) .custom-block-card .block-toggle-btn {
   color: var(--wp--preset--color--base);
   border: 2px solid var(--wp--preset--color--accent-2);
   text-decoration: none;
+  box-sizing: border-box;
 }
 
-body:not(.block-editor-page) .custom-block-card .block-toggle-btn:hover {
-  background-color: transparent;
+body:not(.block-editor-page) .block-toggle-btn:hover {
+  background-color: white;
   color: var(--wp--preset--color--accent-2);
   /* transform gives a subtle lift effect, however it looks off if it has a svg next to it. Makes the text look pushed up. */
   transform: translateY(-1px);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   text-decoration: none;
+  box-sizing: border-box;
 }
 
-body:not(.block-editor-page) .custom-block-card .block-toggle-btn:active {
+body:not(.block-editor-page) .block-toggle-btn:active {
   transform: translateY(0);
 }
 
 /* outlined buttons */
 
-body:not(.block-editor-page)
-  .custom-block-card
-  .block-toggle-btn.is-style-outline {
-  background-color: transparent;
+body:not(.block-editor-page) .block-toggle-btn.is-style-outline {
+  background-color: white;
   color: var(--wp--preset--color--accent-2);
   border: 2px solid var(--wp--preset--color--accent-2);
+  box-sizing: border-box;
 }
 
-body:not(.block-editor-page)
-  .custom-block-card
-  .block-toggle-btn.is-style-outline:hover {
+body:not(.block-editor-page) .block-toggle-btn.is-style-outline:hover {
   background-color: var(--wp--preset--color--accent-2);
   color: var(--wp--preset--color--base);
+  box-sizing: border-box;
 }
 
 .capitalized-and-colored {

@@ -95,6 +95,15 @@ function press_release_register_block() {
 }
 add_action( 'init', 'press_release_register_block' );
 
+// -----------------------------
+// Register Hero Block
+// -----------------------------
+
+function hero_register_block() {
+    register_block_type( __DIR__ . '/blocks/hero' );
+}
+add_action( 'init', 'hero_register_block' );
+
 
 // -----------------------------
 // Enqueue editor JS

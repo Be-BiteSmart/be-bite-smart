@@ -1,0 +1,272 @@
+/* ── Section wrapper ──────────────────────────────────────── */
+.dbp-section {
+  position: relative;
+  background-color: rgba(232, 230, 224, 0.9);
+  overflow: hidden;
+}
+
+/* ── Background wrapper ───────────────────────────────────── */
+.dbp-bg-wrapper {
+  position: absolute;
+  inset: 0;
+  max-width: 1920px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* ── Background image ─────────────────────────────────────────────────────────
+   On desktop the left-to-right gradient in .dbp-bg fades the image out toward
+   the left so text sits on a clean surface. The image is anchored right so the
+   most visually rich part shows on the right side of the section. */
+.dbp-bg {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  max-width: 1400px;
+  background-image:
+    linear-gradient(
+      to right,
+      rgba(232, 230, 224, 1) 0%,
+      rgba(232, 230, 224, 0.95) 15%,
+      rgba(232, 230, 224, 0.9) 35%,
+      rgba(245, 243, 238, 0.7) 60%,
+      rgba(232, 230, 224, 0.3) 80%,
+      rgba(232, 230, 224, 0.1) 100%
+    ),
+    var(--dbp-bg-image, none);
+  background-size: cover;
+  background-position: center right;
+  background-repeat: no-repeat;
+}
+
+/* ── Overlay — feathers the seam on very wide screens ────────────────────────
+   Covers the gap between the section's solid background-color and the left
+   edge of .dbp-bg on viewports wider than 1400px. */
+.dbp-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to right,
+    rgba(232, 230, 224, 1) 0%,
+    rgba(232, 230, 224, 1) 30%,
+    rgba(232, 230, 224, 0.8) 42%,
+    rgba(232, 230, 224, 0) 60%
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ── Outer content wrapper ────────────────────────────────── */
+.dbp-content {
+  position: relative;
+  z-index: 2;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 56px 40px 56px 56px;
+}
+
+/* ── Inner text area ──────────────────────────────────────── */
+.dbp-text {
+  max-width: 520px;
+}
+
+/* ── Label pill ───────────────────────────────────────────── */
+.dbp-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 40px;
+  padding: 6px 16px 6px 12px;
+  margin-bottom: 20px;
+  margin-top: 24px;
+}
+
+.dbp-label__dash {
+  display: inline-block;
+  width: 22px;
+  height: 2.5px;
+  background: var(--wp--preset--color--accent-1);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.dbp-label__text {
+  color: var(--wp--preset--color--accent-5);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 2.4px;
+  text-transform: uppercase;
+}
+
+/* ── Unified card: heading + body ─────────────────────────────────────────────
+   Single white pill wraps both elements so they read as one connected block
+   against the background image. The divider inside provides visual separation
+   without breaking the shared container. */
+.dbp-card {
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border-radius: 10px;
+  padding: 18px 16px 16px;
+  margin-top: 25px;
+  margin-bottom: 45px;
+}
+
+.dbp-card__divider {
+  height: 1px;
+  background: rgba(0, 0, 0, 0.12);
+  margin: 12px 0;
+}
+
+/* ── Heading ──────────────────────────────────────────────── */
+/* Background, padding, and border-radius removed — contrast is handled by
+   .dbp-card. line-height is intentionally generous at 1.35 (not tighter) to
+   give .dbp-heading__highlight room above and below without crowding the
+   preceding line — restored from original. */
+.dbp-heading {
+  font-family: "Urbanist", Georgia, serif;
+  font-size: clamp(26px, 3.5vw, 35px);
+  font-weight: 500;
+  color: var(--wp--preset--color--accent-5);
+  line-height: 1.35;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+/* box-decoration-break: clone ensures the inline padding renders correctly on
+   each line if the heading reflows across multiple lines on narrow viewports.
+   Restored from original — does not conflict with .dbp-card. */
+.dbp-heading span {
+  padding: 0.05em 0.2em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  line-height: inherit;
+}
+
+.dbp-heading__highlight {
+  font-style: italic;
+  color: var(--wp--preset--color--accent-1);
+  line-height: inherit;
+  font-weight: 500;
+
+  border-radius: 0.15em;
+
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+/* ── Body text ────────────────────────────────────────────── */
+/* Background, text-shadow, and standalone margin removed — contrast and
+   spacing handled by .dbp-card. max-width: 400px restored from original to
+   keep paragraph line-length comfortable within the card. */
+.dbp-body {
+  font-size: var(--wp--preset--font-size--medium);
+  line-height: 1.65;
+  font-weight: 500;
+  max-width: 400px;
+  margin: 0;
+}
+
+/* ── Stat cards ───────────────────────────────────────────── */
+.dbp-stats {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 40px;
+}
+
+.dbp-stat {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(4px);
+  border-radius: 6px;
+  padding: 14px 16px;
+  border-left: 4px solid transparent;
+}
+
+.dbp-stat--blue {
+  border-left-color: var(--wp--preset--color--accent-2);
+}
+.dbp-stat--orange {
+  border-left-color: var(--wp--preset--color--accent-1);
+}
+
+.dbp-stat__num {
+  display: block;
+  font-family: "Urbanist", Georgia, serif;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.dbp-stat__label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--wp--preset--color--accent-5);
+  margin-top: 2px;
+}
+
+/* ── Buttons ──────────────────────────────────────────────── */
+.dbp-buttons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+/* ── Mobile ───────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .dbp-card {
+    background: rgba(255, 255, 255, 0.82);
+  }
+  /* On mobile, switch to a full-width top-to-bottom treatment. The left-to-right
+     desktop layout doesn't apply at narrow widths — image fills the full width
+     above the content instead. */
+  .dbp-bg {
+    right: 0;
+    left: 0;
+    max-width: 100%;
+    background-image: var(--dbp-bg-image, none);
+    background-position: top center;
+  }
+
+  /* Replace the horizontal overlay with a vertical fade so the image shows
+     at the top and dissolves into the section color below. */
+  .dbp-overlay {
+    background: linear-gradient(
+      to bottom,
+      rgba(232, 230, 224, 0) 0%,
+      rgba(232, 230, 224, 0) 20%,
+      rgba(232, 230, 224, 0.55) 48%,
+      rgba(232, 230, 224, 0.97) 65%,
+      rgba(232, 230, 224, 1) 78%
+    );
+  }
+
+  .dbp-content {
+    padding: 40px 20px 44px 20px;
+    max-width: 100%;
+  }
+
+  .dbp-buttons {
+    flex-direction: column;
+    align-items: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .dbp-buttons .block-toggle-btn {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+@media (max-width: 454px) {
+  .dbp-buttons .block-toggle-btn {
+    text-align: center;
+  }
+}
