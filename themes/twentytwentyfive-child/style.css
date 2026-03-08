@@ -161,13 +161,13 @@ blockquote {
 /* grid facts for landing page */
 
 @media (max-width: 768px) {
-  .facts-grid {
-    grid-template-columns: repeat(2, 1fr);
+  .facts-grid.is-layout-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
   }
 }
 
 @media (max-width: 480px) {
-  .facts-grid {
-    grid-template-columns: 1fr;
+  .facts-grid.is-layout-grid {
+    grid-template-columns: 1fr !important;
   }
 }
