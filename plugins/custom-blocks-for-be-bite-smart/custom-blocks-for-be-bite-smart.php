@@ -135,6 +135,14 @@ add_action( 'enqueue_block_editor_assets', function () {
         '1.0.1'
     );
 
+    wp_enqueue_style(
+    'hero-block-style',
+    plugins_url( 'blocks/hero/style.css', __FILE__ ),
+    array(),
+    '1.0.1' 
+);
+    
+
 // Many blocks are manually enqueued (instead of relying on register_block_type auto-enqueue) because all three use components from
 // wp-components (TextControl, PanelBody, etc.). Without a build step there is no
 // block.asset.php to declare dependencies, so wp-components is not guaranteed to load
