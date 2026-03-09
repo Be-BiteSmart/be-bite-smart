@@ -1,0 +1,16 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 2,
+  "name": "custom/research-article",
+  "title": "Research Article",
+  "category": "widgets",
+  "textdomain": "custom-blocks",
+  "editorScript": "file:./index.js",
+  "style": "file:./style-index.css",
+  "editorStyle": "file:./style.css",
+  "supports": {
+    "spacing": {
+      "margin": true
+    }
+  }
+}

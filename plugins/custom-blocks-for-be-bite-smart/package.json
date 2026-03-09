@@ -1,0 +1,17 @@
+{
+  "name": "custom-blocks-for-be-bite-smart",
+  "version": "1.0.0",
+  "description": "",
+  "main": "pdf-toggle.js",
+  "scripts": {
+    "build": "wp-scripts build",
+    "start": "wp-scripts start",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@wordpress/scripts": "^31.6.0"
+  }
+}

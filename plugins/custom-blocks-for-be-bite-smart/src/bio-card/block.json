@@ -1,0 +1,10 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 2,
+  "name": "custom/bio-card",
+  "title": "Bio Card",
+  "category": "widgets",
+  "editorScript": "file:./index.js",
+    "style": "file:./style-index.css",
+  "viewScript": "file:./bio-toggle.js"
+}

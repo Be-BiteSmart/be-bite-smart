@@ -1,0 +1,15 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 2,
+  "name": "custom/unfunded-episode",
+  "title": "Unfunded Episode Card",
+  "category": "widgets",
+  "editorScript": "file:./index.js",
+  "style": "file:./style-index.css",
+  "dependencies": [
+    "wp-blocks",
+    "wp-element",
+    "wp-components",
+    "wp-block-editor"
+  ]
+}

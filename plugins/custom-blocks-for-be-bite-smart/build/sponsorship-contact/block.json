@@ -1,0 +1,9 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 2,
+  "name": "custom/sponsorship-contact",
+  "title": "Sponsorship Contact",
+  "category": "widgets",
+  "editorScript": "file:./index.js",
+  "style": "file:./style-index.css"
+}
