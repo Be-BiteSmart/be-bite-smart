@@ -212,7 +212,7 @@ wp_enqueue_script(
 function custom_blocks_scripts() {
     wp_enqueue_script(
         'bio-toggle',
-        plugins_url( 'bio-toggle.js', __FILE__ ),
+        plugins_url( '/blocks/bio-card/bio-toggle.js', __FILE__ ),
         array(),
         '1.0',
         true
