@@ -216,9 +216,14 @@ responsive wrapper — so that selector never matches.
     display: block !important;
   }
 
+  .wp-block-navigation__submenu-container {
+    text-align: center;
+  }
+
   /* Indent submenu children */
   .wp-block-navigation__submenu-container .wp-block-navigation-item__content {
-    padding-left: 2rem;
+    padding-left: 0;
+    justify-content: center;
     font-size: 1rem;
     opacity: 0.8;
   }
