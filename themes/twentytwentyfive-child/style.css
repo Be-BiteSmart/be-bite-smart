@@ -20,6 +20,9 @@ h2 {
   color: var(--wp--preset--color--accent-1);
 }
 
+h3 {
+  color: var(--wp--preset--color--accent-5);
+}
 hr.gradient-divider {
   height: 3px;
   border: none;
