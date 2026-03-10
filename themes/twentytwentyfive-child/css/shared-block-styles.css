@@ -38,7 +38,8 @@ body:not(.block-editor-page) .custom-block-border {
 
 /* toggle button styles */
 
-body:not(.block-editor-page) .block-toggle-btn {
+body:not(.block-editor-page) .block-toggle-btn,
+body:not(.block-editor-page) .wp-block-file__button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -55,7 +56,8 @@ body:not(.block-editor-page) .block-toggle-btn {
   box-sizing: border-box;
 }
 
-body:not(.block-editor-page) .block-toggle-btn:hover {
+body:not(.block-editor-page) .block-toggle-btn:hover,
+body:not(.block-editor-page) .wp-block-file__button:hover {
   opacity: 0.9;
   transform: translateY(-1px);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -64,8 +66,14 @@ body:not(.block-editor-page) .block-toggle-btn:hover {
   box-sizing: border-box;
 }
 
-body:not(.block-editor-page) .block-toggle-btn:active {
+body:not(.block-editor-page) .block-toggle-btn:active,
+body:not(.block-editor-page) .wp-block-file__button:active {
   transform: translateY(0);
+}
+
+/* hide the download button file name text */
+.wp-block-file a:not(.wp-block-file__button) {
+  display: none;
 }
 
 /* PDF viewer container */
