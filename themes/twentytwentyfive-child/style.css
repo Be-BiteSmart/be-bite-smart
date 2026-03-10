@@ -34,6 +34,22 @@ hr.gradient-divider {
 strong {
   font-weight: 600;
 }
+
+/* hide the "homepage" title visually, but keep it for accessibility 
+ The .home class is automatically added by WordPress to the body tag on the front page, so this only applies there.*/
+
+.home .wp-block-post-title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* dark stats divider */
 hr.stat-divider {
   border: none;
@@ -45,7 +61,8 @@ hr.stat-divider {
   margin: 12px auto;
 }
 
-/* styling for chevron up to top button, chevron is made with css */
+/* ============= WP Scroll to top styling for chevron up to top button, chevron is made with css 
+======== */
 button#wpfront-scroll-top-container {
   background-color: #1f6a8f;
   border-radius: 50%;
@@ -71,6 +88,13 @@ button#wpfront-scroll-top-container::after {
   transform: rotate(-45deg);
   display: block;
   margin-top: 4px;
+}
+
+/* adds focus outline so the scroll to top button meets WCAG standards */
+.wpfront-scroll-top-container a:focus-visible,
+.wpfront-scroll-top-container button:focus-visible {
+  outline: 3px solid var(--wp--preset--color--accent-2);
+  outline-offset: 3px;
 }
 
 /* ages badge for video series */

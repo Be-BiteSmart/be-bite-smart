@@ -25,8 +25,7 @@
   bottom: 0;
   width: 100%;
   max-width: 1400px;
-  background-image:
-    linear-gradient(
+  background-image: linear-gradient(
       to right,
       rgba(232, 230, 224, 1) 0%,
       rgba(232, 230, 224, 0.95) 15%,
@@ -95,7 +94,7 @@
 
 .dbp-label__text {
   color: var(--wp--preset--color--accent-5);
-  font-size: 12px;
+  font-size: var(--wp--preset--font-size--small);
   font-weight: 600;
   letter-spacing: 2.4px;
   text-transform: uppercase;
@@ -128,7 +127,7 @@
    preceding line — restored from original. */
 .dbp-heading {
   font-family: "Urbanist", Georgia, serif;
-  font-size: clamp(26px, 3.5vw, 35px);
+  font-size: var(--wp--preset--font-size--x-large);
   font-weight: 500;
   color: var(--wp--preset--color--accent-5);
   line-height: 1.35;
@@ -196,14 +195,14 @@
 .dbp-stat__num {
   display: block;
   font-family: "Urbanist", Georgia, serif;
-  font-size: 22px;
+  font-size: var(--wp--preset--font-size--large);
   font-weight: 700;
   line-height: 1.2;
 }
 
 .dbp-stat__label {
   display: block;
-  font-size: 12px;
+  font-size: var(--wp--preset--font-size--small);
   font-weight: 500;
   color: var(--wp--preset--color--accent-5);
   margin-top: 2px;
