@@ -1,29 +1,51 @@
 <?php
 function twentytwentyfive_child_enqueue_styles() {
+
+//  the asset.php files only contain a version hash — WordPress never actually loads the compiled JS files from build/. The CSS files themselves still live at their original paths (style.css, css/navbar.css etc.) — the build step just generates the hash fingerprint we use for versioning to avoid css caching issues.
+        // why not filemtime? because it has issues with git
+        // manual version control would of continued to work, but its tedious and easy to forget to update the version number
+
     // Enqueue parent style
     wp_enqueue_style( 'twentytwentyfive-parent', get_template_directory_uri() . '/style.css' );
 
-    // Enqueue child style
-    wp_enqueue_style( 'twentytwentyfive-child', get_stylesheet_directory_uri() . '/style.css', array('twentytwentyfive-parent'), '1.0.3' );
-    //version number so returning visitors browser will download the new file
+    $style_asset = include get_stylesheet_directory() . '/build/style.asset.php';
+    wp_enqueue_style(
+        'twentytwentyfive-child',
+        get_stylesheet_directory_uri() . '/style.css',
+        array('twentytwentyfive-parent'),
+        $style_asset['version']
+    );
 
-     // Additional partial CSS
-    wp_enqueue_style( 'child-navbar', get_stylesheet_directory_uri() . '/css/navbar.css', array('twentytwentyfive-child'),  '1.0.4' );
-    wp_enqueue_style( 'child-forminator', get_stylesheet_directory_uri() . '/css/forminator.css', array('twentytwentyfive-child'), '1.0.1' );
-   // the partial css shared-block-styles is loaded instead in add_action
+    $navbar_asset = include get_stylesheet_directory() . '/build/navbar.asset.php';
+    wp_enqueue_style(
+        'child-navbar',
+        get_stylesheet_directory_uri() . '/css/navbar.css',
+        array('twentytwentyfive-child'),
+        $navbar_asset['version']
+    );
+
+    $forminator_asset = include get_stylesheet_directory() . '/build/forminator.asset.php';
+    wp_enqueue_style(
+        'child-forminator',
+        get_stylesheet_directory_uri() . '/css/forminator.css',
+        array('twentytwentyfive-child'),
+        $forminator_asset['version']
+    );
 }
 add_action( 'wp_enqueue_scripts', 'twentytwentyfive_child_enqueue_styles' );
 
 
 // enqueue_block_assets since these styles are also used in the editor
 add_action( 'enqueue_block_assets', function() {
+    $shared_blocks_asset = include get_stylesheet_directory() . '/build/shared-blocks.asset.php';
     wp_enqueue_style(
         'child-shared-blocks',
         get_stylesheet_directory_uri() . '/css/shared-block-styles.css',
         array(),
-        filemtime( get_stylesheet_directory() . '/css/shared-block-styles.css' )
+        $shared_blocks_asset['version']
     );
 });
+
 
 // deletes autosaves on post save
 add_action( 'post_updated', function( $post_id ) {
