@@ -1,14 +1,15 @@
 import './style.css';
 
-
-import { registerBlockType } from '@wordpress/blocks';
-import { useBlockProps, RichText, MediaUpload, MediaUploadCheck } from '@wordpress/block-editor';
+import { registerBlockType, createBlock } from '@wordpress/blocks';
+import { useBlockProps, RichText, MediaUpload, MediaUploadCheck, InnerBlocks } from '@wordpress/block-editor';
 import { Button, TextControl } from '@wordpress/components';
 import { createElement as el } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 
+
+const EXPANDED_BIO_BLOCKS =  ["core/paragraph", "core/heading", "core/list", "core/quote", "core/image"];
+
 registerBlockType("custom/bio-card", {
-  // ... rest stays the same
     title: __("Bio Card", "custom-blocks"),
     category: "widgets",
 
@@ -22,7 +23,7 @@ registerBlockType("custom/bio-card", {
       professionalEmail: { type: "string", default: "" },
       linkedIn: { type: "string", default: "" },
       shortBio: { type: "string", default: "" },
-      expandedBio: { type: "string", default: "" },
+   // ── Expanded Bio (InnerBlocks — paragraph, heading, list, quote, image) ───
     },
 
     edit: function ({ attributes, setAttributes }) {
@@ -32,7 +33,7 @@ registerBlockType("custom/bio-card", {
         "div",
         blockProps,
 
-        // Photo
+        // ── Photo ───────────────────────────────────────────────────────
         attributes.photoUrl &&
           el("img", {
             src: attributes.photoUrl,
@@ -43,7 +44,7 @@ registerBlockType("custom/bio-card", {
             },
           }),
 
-        // Content wrapper
+        // ── Content wrapper ─────────────────────────────────────────────
         el(
           "div",
           null,
@@ -72,7 +73,7 @@ registerBlockType("custom/bio-card", {
             }),
           ),
 
-          // Name
+          // ── Name ──────────────────────────────────────────────────────
           el(
             "div",
             { style: { marginBottom: "1em" } },
@@ -98,7 +99,7 @@ registerBlockType("custom/bio-card", {
             }),
           ),
 
-          // Role
+          // ── Role ──────────────────────────────────────────────────────
           el(
             "div",
             { style: { marginBottom: "1em" } },
@@ -122,7 +123,7 @@ registerBlockType("custom/bio-card", {
             }),
           ),
 
-          // Affiliation
+          // ── Affiliation ───────────────────────────────────────────────
           el(
             "div",
             { style: { marginBottom: "1em" } },
@@ -146,7 +147,7 @@ registerBlockType("custom/bio-card", {
             }),
           ),
 
-          // Professional Email
+          // ── Professional Email ─────────────────────────────────────────
           el(
             "div",
             { style: { marginBottom: "1em" } },
@@ -168,7 +169,7 @@ registerBlockType("custom/bio-card", {
             }),
           ),
 
-          // Personal Email
+          // ── Personal Email ────────────────────────────────────────────
           el(
             "div",
             { style: { marginBottom: "1em" } },
@@ -190,7 +191,7 @@ registerBlockType("custom/bio-card", {
             }),
           ),
 
-          // LinkedIn
+          // ── LinkedIn ──────────────────────────────────────────────────
           el(
             "div",
             { style: { marginBottom: "1em" } },
@@ -212,7 +213,7 @@ registerBlockType("custom/bio-card", {
             }),
           ),
 
-          // Short Bio
+          // ── Short Bio ─────────────────────────────────────────────────
           el(
             "div",
             { style: { marginBottom: "1em" } },
@@ -236,7 +237,11 @@ registerBlockType("custom/bio-card", {
             }),
           ),
 
-          // Expanded Bio
+          // ── Expanded Bio (InnerBlocks / core/freeform) ─────────────────
+          // Replaces the old expandedBio RichText attribute so editors get
+          // the full classic toolbar: bold, italics, headings, lists, etc.
+          // NOTE: switching from an old saved expandedBio value will require
+          // "Attempt Block Recovery" in the editor for existing blocks.
           el(
             "div",
             { style: { marginBottom: "1em" } },
@@ -251,12 +256,21 @@ registerBlockType("custom/bio-card", {
               },
               "Expanded Bio",
             ),
-            el(RichText, {
-              tagName: "div",
-              value: attributes.expandedBio,
-              onChange: (val) => setAttributes({ expandedBio: val }),
-              placeholder: __("Expanded Bio", "custom-blocks"),
-            }),
+            el(
+              "div",
+              {
+                style: {
+                  border: "1px dashed #aaa",
+                  padding: "10px",
+                  borderRadius: "4px",
+                },
+              },
+              el(InnerBlocks, {
+                allowedBlocks: EXPANDED_BIO_BLOCKS,
+                template: [["core/paragraph", {}]],
+                templateLock: false,
+              }),
+            ),
           ),
         ),
       );
@@ -279,7 +293,7 @@ registerBlockType("custom/bio-card", {
           "div",
           { className: "bio-main" },
 
-          // Section 1 - photo + details side by side
+          // ── Section 1 — photo + details side by side ───────────────────
           el(
             "div",
             { className: "bio-section-1" },
@@ -361,36 +375,35 @@ registerBlockType("custom/bio-card", {
                   value: attributes.shortBio,
                 }),
 
-              attributes.expandedBio &&
-                el(
-                  "button",
-                  {
-                    className: "expanded-bio-toggle show-more-btn",
-                  },
-                  el("span", null, "Read Full Biography"),
-                  el("span", { className: "bio-chevron" }, null),
-                ),
-            ),
-          ),
-
-          // Section 2 - expanded bio only
-          attributes.expandedBio &&
-            el(
-              "div",
-              { className: "bio-section-2 expanded-bio-content" },
-              el(RichText.Content, {
-                tagName: "div",
-                value: attributes.expandedBio,
-              }),
+              // Show More button — always rendered since expanded bio now
+              // lives in InnerBlocks and we can't conditionally check its
+              // content at save time. Hide via CSS if InnerBlocks is empty.
               el(
                 "button",
                 {
-                  className: "expanded-bio-toggle show-less-btn",
+                  className: "expanded-bio-toggle show-more-btn",
                 },
-                el("span", null, "Collapse Biography"),
+                el("span", null, "Read Full Biography"),
                 el("span", { className: "bio-chevron" }, null),
               ),
             ),
+          ),
+
+          // ── Section 2 — expanded bio only ─────────────────────────────
+       
+          el(
+            "div",
+            { className: "bio-section-2 expanded-bio-content" },
+            el(InnerBlocks.Content),
+            el(
+              "button",
+              {
+                className: "expanded-bio-toggle show-less-btn",
+              },
+              el("span", null, "Collapse Biography"),
+              el("span", { className: "bio-chevron" }, null),
+            ),
+          ),
         ),
       );
     },

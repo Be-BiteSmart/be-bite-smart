@@ -7,7 +7,7 @@ import { __ } from '@wordpress/i18n';
 import { useDispatch } from '@wordpress/data';
 
 const editor_font_size = "18px";
-const TEXT_BLOCKS = ["core/freeform"];
+const TEXT_BLOCKS = ["core/paragraph", "core/heading", "core/list", "core/quote", "core/image"];
 const PDF_BLOCKS = ["custom/pdf-toggle"];
 
 registerBlockType("custom/press-release", {
@@ -51,7 +51,7 @@ registerBlockType("custom/press-release", {
         if (val === "text") {
           replaceInnerBlocks(
             clientId,
-            [createBlock("core/freeform", {})],
+            [createBlock("core/paragraph", {})],
             false,
           );
         } else if (val === "pdf") {
@@ -356,7 +356,7 @@ registerBlockType("custom/press-release", {
                 template:
                   attributes.expandableType === "pdf"
                     ? [["custom/pdf-toggle", {}]]
-                    : [["core/freeform", {}]],
+                    : [["core/paragraph", {}]],
                 templateLock:
                   attributes.expandableType === "pdf" ? "all" : false,
               }),

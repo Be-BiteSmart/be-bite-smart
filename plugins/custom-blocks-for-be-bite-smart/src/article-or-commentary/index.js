@@ -1,11 +1,13 @@
 import './style.css';
 
-import { registerBlockType } from '@wordpress/blocks';
+import { registerBlockType, createBlock } from '@wordpress/blocks';
 import { useBlockProps, RichText, InspectorControls, InnerBlocks } from '@wordpress/block-editor';
 import { PanelBody, RadioControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+import { useDispatch } from '@wordpress/data';
 
 const editor_font_size = "18px";
+const TEXT_BLOCKS = ["core/paragraph", "core/heading", "core/list", "core/quote", "core/image"];
 const ALLOWED_BLOCKS = ["custom/pdf-toggle"];
 
 registerBlockType("custom/article-or-commentary", {
@@ -31,17 +33,40 @@ registerBlockType("custom/article-or-commentary", {
       introParagraph: { type: "string", default: "" },
       articleId: { type: "string", default: "" },
       contentType: { type: "string", default: "text" },
-      fullText: { type: "string", default: "" },
+      // fullText removed — content now lives in InnerBlocks ["core/paragraph", "core/heading", "core/list", "core/quote", "core/image"];
     },
 
-    edit: ({ attributes, setAttributes }) => {
+    edit: ({ attributes, setAttributes, clientId }) => {
       const blockProps = useBlockProps();
+      const { replaceInnerBlocks } = useDispatch("core/block-editor");
+
+      // When the user switches content type, clear inner blocks and
+      // insert the correct starting template for the new mode.
+      // NOTE: switching modes clears any content already entered.
+      const handleContentTypeChange = (val) => {
+        setAttributes({ contentType: val });
+
+        if (val === "text") {
+          replaceInnerBlocks(
+            clientId,
+            [createBlock("core/paragraph", {})],
+            false,
+          );
+        } else {
+          // "pdf" — swap in the pdf-toggle block
+          replaceInnerBlocks(
+            clientId,
+            [createBlock("custom/pdf-toggle", {})],
+            false,
+          );
+        }
+      };
 
       return wp.element.createElement(
         "div",
         blockProps,
 
-        // Inspector Controls
+        // ── Inspector Controls ──────────────────────────────────────────
         wp.element.createElement(
           InspectorControls,
           null,
@@ -55,12 +80,24 @@ registerBlockType("custom/article-or-commentary", {
                 { label: "Full Text", value: "text" },
                 { label: "PDF", value: "pdf" },
               ],
-              onChange: (val) => setAttributes({ contentType: val }),
+              onChange: handleContentTypeChange,
             }),
+            attributes.contentType === "text" &&
+              wp.element.createElement(
+                "p",
+                {
+                  style: {
+                    fontSize: "12px",
+                    color: "#6b7280",
+                    marginTop: "8px",
+                  },
+                },
+                "Paste or type your full text below. Bold, italics, headings, and lists are supported.",
+              ),
           ),
         ),
 
-        // Headline
+        // ── Headline ────────────────────────────────────────────────────
         wp.element.createElement(
           "div",
           {
@@ -95,7 +132,7 @@ registerBlockType("custom/article-or-commentary", {
           }),
         ),
 
-        // Author
+        // ── Author ──────────────────────────────────────────────────────
         wp.element.createElement(
           "div",
           {
@@ -133,7 +170,7 @@ registerBlockType("custom/article-or-commentary", {
           }),
         ),
 
-        // Date
+        // ── Date ────────────────────────────────────────────────────────
         wp.element.createElement(
           "div",
           {
@@ -170,7 +207,7 @@ registerBlockType("custom/article-or-commentary", {
           }),
         ),
 
-        // Article ID
+        // ── Article ID ──────────────────────────────────────────────────
         wp.element.createElement(
           "div",
           {
@@ -208,7 +245,7 @@ registerBlockType("custom/article-or-commentary", {
           }),
         ),
 
-        // Intro Paragraph
+        // ── Intro Paragraph ─────────────────────────────────────────────
         wp.element.createElement(
           "div",
           { style: { marginBottom: "15px" } },
@@ -236,77 +273,45 @@ registerBlockType("custom/article-or-commentary", {
           }),
         ),
 
-        // Conditional: Full Text or PDF (InnerBlocks)
-        attributes.contentType === "text"
-          ? wp.element.createElement(
-              "div",
-              { style: { marginBottom: "15px" } },
-              wp.element.createElement(
-                "label",
-                {
-                  style: {
-                    display: "block",
-                    fontSize: editor_font_size,
-                    fontWeight: "600",
-                    marginBottom: "5px",
-                  },
-                },
-                "Full Text (expandable):",
-              ),
-              wp.element.createElement(RichText, {
-                tagName: "div",
-                multiline: "p",
-                placeholder: __("Enter full article text", "custom-blocks"),
-                value: attributes.fullText,
-                onChange: (val) => setAttributes({ fullText: val }),
-                style: {
-                  fontSize: editor_font_size,
-                },
-              }),
-              wp.element.createElement(
-                "span",
-                {
-                  style: {
-                    display: "block",
-                    marginTop: "8px",
-                    fontSize: editor_font_size,
-                    color: "#6b7280",
-                  },
-                },
-                "Want to attach a PDF instead? Switch to PDF mode in the block settings panel (icon in the top right toolbar, next to the save button).",
-              ),
-            )
-          : wp.element.createElement(
-              "div",
-              { style: { marginBottom: "15px" } },
-              wp.element.createElement(
-                "label",
-                {
-                  style: {
-                    display: "block",
-                    fontSize: editor_font_size,
-                    fontWeight: "600",
-                    marginBottom: "8px",
-                  },
-                },
-                "PDF Toggle Block:",
-              ),
-              wp.element.createElement(
-                "div",
-                {
-                  style: {
-                    border: "1px dashed #aaa",
-                    padding: "10px",
-                    borderRadius: "4px",
-                  },
-                },
-                wp.element.createElement(InnerBlocks, {
-                  allowedBlocks: ALLOWED_BLOCKS,
-                  template: [["custom/pdf-toggle", {}]],
-                  templateLock: "all",
-                }),
-              ),
-            ),
+        // ── Expandable InnerBlocks (text or pdf) ─────────────────────────
+        wp.element.createElement(
+          "div",
+          { style: { marginBottom: "15px" } },
+          wp.element.createElement(
+            "label",
+            {
+              style: {
+                display: "block",
+                fontSize: editor_font_size,
+                fontWeight: "600",
+                marginBottom: "8px",
+              },
+            },
+            attributes.contentType === "pdf"
+              ? "PDF Toggle Block:"
+              : "Full Text (expandable):",
+          ),
+          wp.element.createElement(
+            "div",
+            {
+              style: {
+                border: "1px dashed #aaa",
+                padding: "10px",
+                borderRadius: "4px",
+              },
+            },
+            wp.element.createElement(InnerBlocks, {
+              allowedBlocks:
+                attributes.contentType === "pdf" ? ALLOWED_BLOCKS : TEXT_BLOCKS,
+              template:
+                attributes.contentType === "pdf"
+                  ? [["custom/pdf-toggle", {}]]
+                  : [["core/paragraph", {}]],
+              templateLock:
+                attributes.contentType === "pdf" ? "all" : false,
+            }),
+          ),
+        ),
       );
     },
 
@@ -323,7 +328,7 @@ registerBlockType("custom/article-or-commentary", {
           id: attributes.articleId || undefined,
         },
 
-        // Headline
+        // ── Headline ─────────────────────────────────────────────────────
         attributes.headline &&
           wp.element.createElement(RichText.Content, {
             tagName: "h3",
@@ -331,7 +336,7 @@ registerBlockType("custom/article-or-commentary", {
             className: "article-headline",
           }),
 
-        // Author & Date
+        // ── Author & Date ─────────────────────────────────────────────────
         wp.element.createElement(
           "div",
           { className: "article-meta" },
@@ -352,7 +357,7 @@ registerBlockType("custom/article-or-commentary", {
             ),
         ),
 
-        // Intro Paragraph
+        // ── Intro Paragraph ───────────────────────────────────────────────
         attributes.introParagraph &&
           wp.element.createElement(RichText.Content, {
             tagName: "p",
@@ -360,8 +365,11 @@ registerBlockType("custom/article-or-commentary", {
             className: "article-intro",
           }),
 
-        // Full Text (expandable)
-        attributes.contentType === "text" && attributes.fullText
+        // ── Expandable InnerBlocks (text or pdf) ──────────────────────────
+        // Both modes now use InnerBlocks.Content — the text branch wraps it
+        // in expandable-content with a Read More toggle button, the pdf
+        // branch renders the pdf-toggle block directly.
+        attributes.contentType === "text"
           ? wp.element.createElement(
               "div",
               null,
@@ -371,28 +379,19 @@ registerBlockType("custom/article-or-commentary", {
                   // expandable-content base styles live in global CSS
                   className: "expandable-content",
                 },
-                wp.element.createElement(RichText.Content, {
-                  tagName: "div",
-                  value: attributes.fullText,
-                }),
+                wp.element.createElement(InnerBlocks.Content),
               ),
-
               wp.element.createElement(
                 "button",
                 {
                   className: "read-more-toggle block-toggle-btn",
                   "data-expanded": "false",
+                  type: "button",
                 },
                 "Read More",
               ),
             )
-          : null,
-
-        // PDF — rendered by the inner pdf-toggle block
-        attributes.contentType === "pdf"
-          ? wp.element.createElement(InnerBlocks.Content)
-          : null,
+          : wp.element.createElement(InnerBlocks.Content),
       );
     },
   });
-
