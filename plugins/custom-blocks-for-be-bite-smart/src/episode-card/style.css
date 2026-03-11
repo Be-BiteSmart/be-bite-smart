@@ -254,7 +254,6 @@
   display: flex;
   width: 100%;
   font-size: 0.625rem;
-  font-weight: 900;
   letter-spacing: -0.025em;
 }
 
@@ -271,6 +270,7 @@
   padding: 0;
   outline: none;
   border-radius: 9999px;
+  font-weight: 900;
 }
 
 .toggle-label:focus-visible {
