@@ -91,8 +91,7 @@ button#wpfront-scroll-top-container::after {
 }
 
 /* adds focus outline so the scroll to top button meets WCAG standards */
-.wpfront-scroll-top-container a:focus-visible,
-.wpfront-scroll-top-container button:focus-visible {
+button#wpfront-scroll-top-container:focus-visible {
   outline: 3px solid var(--wp--preset--color--accent-2);
   outline-offset: 3px;
 }
