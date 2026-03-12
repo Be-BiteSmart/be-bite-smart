@@ -246,6 +246,24 @@ body:not(.block-editor-page) .block-toggle-btn.is-style-outline:hover {
   box-sizing: border-box;
 }
 
+/* normal button focused */
+body:not(.block-editor-page) .block-toggle-btn:focus-visible,
+body:not(.block-editor-page) .wp-block-file__button:focus-visible,
+body:not(.block-editor-page) .wp-block-file .wp-element-button:focus-visible {
+  outline: 3px solid var(--wp--preset--color--accent-2);
+  outline-offset: 3px;
+
+  box-shadow: 0 0 0 5px rgba(31, 106, 143, 0.15);
+}
+
+/* outline button focused */
+
+body:not(.block-editor-page) .lighter-focus .wp-element-button:focus-visible {
+  outline: 3px solid white;
+  outline-offset: 3px;
+}
+/* TEXT STYLING */
+
 body:not(.block-editor-page) .capitalized-and-colored {
   display: block;
   font-size: var(--wp--preset--font-size--medium);
