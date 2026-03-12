@@ -10,17 +10,14 @@
   gap: 16px;
   transition: background 0.15s;
 }
-
 @media (min-width: 601px) {
   .educational-content-download-block {
     padding: 16px 32px;
   }
 }
-
 .educational-content-download-block:last-child {
   border-bottom: none;
 }
-
 .educational-content-download-block:hover {
   background: #e8f4f8;
 }
@@ -30,7 +27,6 @@
   flex: 1;
   min-width: 160px;
 }
-
 .ecd-header span {
   margin-bottom: 3px;
   font-size: var(--wp--preset--font-size--small) !important;
@@ -40,7 +36,6 @@
     black
   ) !important;
 }
-
 .ecd-title {
   font-family: "Urbanist", sans-serif;
   font-size: var(--wp--preset--font-size--medium);
@@ -51,70 +46,109 @@
 
 /* ── Buttons ──
    Full width and stacked on mobile, inline on larger screens. */
-.ecd-buttons {
+body:not(.block-editor-page) .ecd-buttons {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   width: 100%; /* full width on mobile so buttons stack cleanly */
 }
-
 @media (min-width: 942px) {
-  .ecd-buttons {
+  body:not(.block-editor-page) .ecd-buttons {
     width: auto; /* back inline with chip and header on larger screens */
     flex-shrink: 0;
   }
 }
 
-.ecd-toggle {
+/* ── Base toggle ──
+   Mirrors .block-toggle-btn. JS reads .ecd-toggle, data-target,
+   data-group, data-expanded — none of those are touched here. */
+body:not(.block-editor-page) .ecd-toggle {
   font-family: "Urbanist", sans-serif;
   font-weight: 700;
   font-size: var(--wp--preset--font-size--medium);
-  padding: 8px 18px;
-  border-radius: 8px;
+  padding: 0.6em 1.2em;
+  border-radius: 1.2rem; /* pill — was 8px */
   cursor: pointer;
   white-space: nowrap;
   min-width: 200px; /* wide enough for "Coming Soon (EN/ES)" — consistent across all states */
   width: 100%; /* full width on mobile */
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
-  transition:
-    background 0.2s,
-    color 0.2s,
-    border-color 0.2s;
-  /* Solid blue by default (English) */
-  background: #1a6e8a;
   box-sizing: border-box;
-  color: #ffffff;
-  border: 2px solid #1a6e8a;
+  text-decoration: none;
+  transition: all 0.2s;
+  /* Fill variant by default */
+  background-color: var(--wp--preset--color--accent-2);
+  color: var(--wp--preset--color--base);
+  border: 2px solid var(--wp--preset--color--accent-2);
 }
-
 @media (min-width: 601px) {
-  .ecd-toggle {
+  body:not(.block-editor-page) .ecd-toggle {
     width: min-content; /* shrinks to min-width on larger screens */
   }
 }
 
-.ecd-toggle--outline {
-  background: #ffffff;
-  color: #1a6e8a;
+/* ── Fill hover ──
+   :not guards stop hover styles leaking onto disabled/coming-soon buttons */
+body:not(.block-editor-page)
+  .ecd-toggle:not(.ecd-toggle--outline):not(.ecd-toggle--coming-soon):hover {
+  background-color: white;
+  color: var(--wp--preset--color--accent-2);
+  border-color: var(--wp--preset--color--accent-2);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  text-decoration: none;
 }
 
-.ecd-toggle:hover {
-  background: #155d75;
-  border-color: #155d75;
-  color: #ffffff;
+/* ── Fill open state — flips to outlined when viewer is expanded ── */
+body:not(.block-editor-page)
+  .ecd-toggle:not(.ecd-toggle--outline)[data-expanded="true"] {
+  background-color: white;
+  color: var(--wp--preset--color--accent-2);
+  border-color: var(--wp--preset--color--accent-2);
+}
+
+/* ── Outline variant — matches .block-toggle-btn.is-style-outline ── */
+body:not(.block-editor-page) .ecd-toggle--outline {
+  background-color: white;
+  color: var(--wp--preset--color--accent-2);
+  border: 2px solid var(--wp--preset--color--accent-2);
+}
+
+/* ── Outline hover ── */
+body:not(.block-editor-page)
+  .ecd-toggle--outline:not(.ecd-toggle--coming-soon):hover {
+  background-color: var(--wp--preset--color--accent-2);
+  color: var(--wp--preset--color--base);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  text-decoration: none;
+}
+
+/* ── Active — shared, matches .block-toggle-btn:active ── */
+body:not(.block-editor-page) .ecd-toggle:active {
+  transform: translateY(0);
+}
+
+/* ── Focus — thick ring with white gap, matches global button focus ── */
+body:not(.block-editor-page) .ecd-toggle:focus-visible {
+  outline: 3px solid var(--wp--preset--color--accent-2);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 5px rgba(31, 106, 143, 0.15);
 }
 
 /* ── Coming soon state ──
-   Disabled visually but still readable — meets WCAG AA contrast on white */
-.ecd-toggle--coming-soon {
+   Disabled visually but still readable — meets WCAG AA contrast on white.
+   pointer-events: none prevents hover/focus leaking through. */
+body:not(.block-editor-page) .ecd-toggle--coming-soon {
   background: #e8edf2;
   color: #4e6475; /* 5.0:1 on #e8edf2 ✅ */
   border-color: #c8d4dc;
   cursor: not-allowed;
   pointer-events: none;
 }
-
-.ecd-toggle--outline.ecd-toggle--coming-soon {
+body:not(.block-editor-page) .ecd-toggle--outline.ecd-toggle--coming-soon {
   background: #ffffff;
   color: #4e6475;
   border-color: #c8d4dc;
@@ -122,7 +156,7 @@
 
 /* ── Download link button ──
    Styled as an <a> but visually matches .ecd-toggle */
-.ecd-toggle--download {
+body:not(.block-editor-page) .ecd-toggle--download {
   text-decoration: none;
   display: inline-flex;
   align-items: center;
@@ -141,7 +175,6 @@
   border-top: 1px solid #d0e4eb;
   padding-top: 12px;
 }
-
 .ecd-viewer.expanded {
   display: block;
 }

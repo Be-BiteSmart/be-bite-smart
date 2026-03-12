@@ -1,81 +1,110 @@
-/* PDF Toggle Button - FRONTEND ONLY */
+/* ── PDF Toggle Buttons — FRONTEND ONLY ─────────────────────────────────────
+   Mirrors .block-toggle-btn base + fill/outline variants.
+   JS reads .pdf-toggle, data-target, data-group, data-expanded — untouched.
+───────────────────────────────────────────────────────────────────────────── */
+
+body:not(.block-editor-page) .pdf-toggle-block .pdf-toggle-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+/* Base — matches .block-toggle-btn exactly */
 body:not(.block-editor-page) .pdf-toggle-block .pdf-toggle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.75rem 1.5rem;
-  font-size: 1rem;
+  padding: 0.6em 1.2em;
+  font-size: var(--wp--preset--font-size--medium);
   font-weight: 600;
-  border-radius: 0.375rem;
+  font-family: "urbanist", sans-serif;
+  border-radius: 1.2rem; /* pill — was 0.375rem */
   cursor: pointer;
   transition: all 0.2s;
   margin-top: 1rem;
-  /* Base color styles are overridden per-button below */
-}
-body:not(.block-editor-page) .pdf-toggle-block .pdf-toggle:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-body:not(.block-editor-page) .pdf-toggle-block .pdf-toggle:active {
-  transform: translateY(0);
+  text-decoration: none;
+  box-sizing: border-box;
 }
 
-/* First button — fill style (matches WordPress is-style-fill button) */
+/* ── Fill variant (button 1) — matches .block-toggle-btn default ── */
 body:not(.block-editor-page)
   .pdf-toggle-block
   .pdf-toggle-buttons
   .pdf-toggle:nth-child(1) {
   background-color: var(--wp--preset--color--accent-2);
-  color: #ffffff;
-  border: 1px solid var(--wp--preset--color--accent-2);
+  color: var(--wp--preset--color--base);
+  border: 2px solid var(--wp--preset--color--accent-2); /* was 1px */
 }
 
-/* Second button — outline style (matches WordPress is-style-outline button) */
-body:not(.block-editor-page)
-  .pdf-toggle-block
-  .pdf-toggle-buttons
-  .pdf-toggle:nth-child(2) {
-  background-color: #ffffff;
-  color: var(--wp--preset--color--accent-2);
-  border: 1px solid var(--wp--preset--color--accent-2);
-}
-
-/* Keep fill button solid on hover rather than going transparent */
 body:not(.block-editor-page)
   .pdf-toggle-block
   .pdf-toggle-buttons
   .pdf-toggle:nth-child(1):hover {
-  opacity: 0.9;
+  background-color: white;
+  color: var(--wp--preset--color--accent-2); /* proper swap — was opacity */
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  text-decoration: none;
 }
 
-/* Optional: visually toggle the fill button to outlined when its PDF is open */
+/* When PDF is open, fill button flips to outlined (existing behaviour, corrected border width) */
 body:not(.block-editor-page)
   .pdf-toggle-block
   .pdf-toggle-buttons
   .pdf-toggle:nth-child(1)[data-expanded="true"] {
-  background-color: #ffffff;
+  background-color: white;
   color: var(--wp--preset--color--accent-2);
+  border: 2px solid var(--wp--preset--color--accent-2);
 }
 
-/* PDF Viewer Container - FRONTEND ONLY */
+/* ── Outline variant (button 2) — matches .block-toggle-btn.is-style-outline ── */
+body:not(.block-editor-page)
+  .pdf-toggle-block
+  .pdf-toggle-buttons
+  .pdf-toggle:nth-child(2) {
+  background-color: white;
+  color: var(--wp--preset--color--accent-2);
+  border: 2px solid var(--wp--preset--color--accent-2); /* was 1px */
+}
+
+body:not(.block-editor-page)
+  .pdf-toggle-block
+  .pdf-toggle-buttons
+  .pdf-toggle:nth-child(2):hover {
+  background-color: var(--wp--preset--color--accent-2);
+  color: var(--wp--preset--color--base);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  text-decoration: none;
+}
+
+/* ── Shared active — matches .block-toggle-btn:active ── */
+body:not(.block-editor-page) .pdf-toggle-block .pdf-toggle:active {
+  transform: translateY(0);
+}
+
+/* ── Focus-visible — matches .block-toggle-btn:focus-visible exactly ── */
+body:not(.block-editor-page) .pdf-toggle-block .pdf-toggle:focus-visible {
+  outline: 3px solid var(--wp--preset--color--accent-2);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 5px rgba(31, 106, 143, 0.15);
+}
+
+/* ── PDF Viewer container (unchanged) ── */
 body:not(.block-editor-page) .pdf-toggle-block .pdf-viewer-container {
   display: none;
   margin-top: 1.5rem;
   padding-top: 1.5rem;
   border-top: 1px solid #e5e7eb;
 }
+
+body:not(.block-editor-page) .pdf-toggle-block .pdf-viewer-container.expanded,
 body:not(.block-editor-page) .pdf-toggle-block .pdf-viewer-container.show {
-  display: block !important;
+  display: block;
 }
+
 body:not(.block-editor-page) .pdf-toggle-block .pdf-viewer-container iframe {
   border-radius: 0.375rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-/* Adds space between buttons */
-body:not(.block-editor-page) .pdf-toggle-block .pdf-toggle-buttons {
-  display: flex;
-  gap: 10px;
-  margin-top: 10px;
 }
