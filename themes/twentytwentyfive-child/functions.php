@@ -24,13 +24,15 @@ function twentytwentyfive_child_enqueue_styles() {
         $navbar_asset['version']
     );
 
-    $forminator_asset = include get_stylesheet_directory() . '/build/forminator.asset.php';
+   $forminator_asset = include get_stylesheet_directory() . '/build/forminator.asset.php';
+if ( is_page( 'contact' ) ) {
     wp_enqueue_style(
         'child-forminator',
         get_stylesheet_directory_uri() . '/css/forminator.css',
         array('twentytwentyfive-child'),
         $forminator_asset['version']
     );
+}
 }
 add_action( 'wp_enqueue_scripts', 'twentytwentyfive_child_enqueue_styles' );
 
