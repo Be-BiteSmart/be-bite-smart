@@ -36,6 +36,29 @@ if ( is_page( 'contact' ) ) {
 }
 add_action( 'wp_enqueue_scripts', 'twentytwentyfive_child_enqueue_styles' );
 
+/* load hero image immediately on front page */
+add_action( 'wp_head', function() {
+    if ( ! is_front_page() ) return;
+
+    global $post;
+    $blocks = parse_blocks( $post->post_content );
+
+    foreach ( $blocks as $block ) {
+        if ( $block['blockName'] !== 'custom/hero' ) continue;
+
+        $attrs  = $block['attrs'];
+        $sm_url = esc_url( $attrs['bgImageSmUrl'] ?? '' );
+        $md_url = esc_url( $attrs['bgImageMdUrl'] ?? '' );
+        $lg_url = esc_url( $attrs['bgImageLgUrl'] ?? '' );
+
+        /* mirror picture element media queries image choosing logic, since preload tries to use srcset which won't always match the media query logic*/
+        if ( $sm_url ) echo '<link rel="preload" as="image" href="' . $sm_url . '" media="(max-width: 640px)" fetchpriority="high">' . "\n";
+        if ( $md_url ) echo '<link rel="preload" as="image" href="' . $md_url . '" media="(min-width: 641px) and (max-width: 1280px)" fetchpriority="high">' . "\n";
+        if ( $lg_url ) echo '<link rel="preload" as="image" href="' . $lg_url . '" media="(min-width: 1281px)" fetchpriority="high">' . "\n";
+
+        break;
+    }
+}, 1 );
 
 // enqueue_block_assets since these styles are also used in the editor
 add_action( 'enqueue_block_assets', function() {
