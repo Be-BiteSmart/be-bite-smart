@@ -227,3 +227,13 @@ function show_more_button_logic() {
     <?php
 }
 add_action('wp_footer', 'show_more_button_logic');
+
+/* force lazy load for images that aren't actually the lcp */
+
+add_filter( 'wp_content_img_tag', function( $filtered_image, $context, $attachment_id ) {
+    if ( str_contains( $filtered_image, 'no-lcp' ) ) {
+        $filtered_image = str_replace( 'fetchpriority="high"', 'fetchpriority="low"', $filtered_image );
+        $filtered_image = str_replace( 'decoding="async"', 'decoding="async" loading="lazy"', $filtered_image );
+    }
+    return $filtered_image;
+}, 10, 3 );
