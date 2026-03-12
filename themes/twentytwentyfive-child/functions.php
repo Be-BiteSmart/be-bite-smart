@@ -60,6 +60,14 @@ add_action( 'wp_head', function() {
     }
 }, 1 );
 
+// removes jquery from every page except for contact, since forminator needs it //
+
+add_action( 'wp_enqueue_scripts', function() {
+    if ( ! is_page( 'contact' ) ) {
+        wp_deregister_script( 'jquery-migrate' );
+    }
+} );
+
 // enqueue_block_assets since these styles are also used in the editor
 add_action( 'enqueue_block_assets', function() {
     $shared_blocks_asset = include get_stylesheet_directory() . '/build/shared-blocks.asset.php';
