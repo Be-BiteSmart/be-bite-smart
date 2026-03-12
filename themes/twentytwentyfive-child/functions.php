@@ -68,6 +68,13 @@ add_action( 'wp_enqueue_scripts', function() {
     }
 } );
 
+// went with optional rather than swap to avoid CLS
+// Optional: the browser gets a very short window (roughly 100ms) to load the font. If it loads in time, great. If not, it uses the fallback for that entire page load and doesn't swap at all. Zero layout shift, and on the next visit the font is cached so it loads instantly.
+add_filter( 'wp_font_face_resolver_style_properties', function( $properties ) {
+    $properties['font-display'] = 'optional';
+    return $properties;
+} );
+
 // enqueue_block_assets since these styles are also used in the editor
 add_action( 'enqueue_block_assets', function() {
     $shared_blocks_asset = include get_stylesheet_directory() . '/build/shared-blocks.asset.php';
