@@ -185,14 +185,15 @@ blockquote {
 }
 
 /* grid facts for landing page */
+/* intentionally repeated facts-grid to raise specificity, wordpress class was fighting with it */
 
-@media (max-width: 768px) {
+@media (max-width: 875px) {
   .facts-grid.facts-grid.is-layout-grid {
     grid-template-columns: repeat(2, 1fr) !important;
   }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 580px) {
   .facts-grid.facts-grid.is-layout-grid {
     grid-template-columns: 1fr !important;
   }
