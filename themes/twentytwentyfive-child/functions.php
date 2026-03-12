@@ -60,13 +60,6 @@ add_action( 'wp_head', function() {
     }
 }, 1 );
 
-// removes jquery from every page except for contact, since forminator needs it //
-
-add_action( 'wp_enqueue_scripts', function() {
-    if ( ! is_page( 'contact' ) ) {
-        wp_deregister_script( 'jquery-migrate' );
-    }
-} );
 
 // went with optional rather than swap to avoid CLS
 // Optional: the browser gets a very short window (roughly 100ms) to load the font. If it loads in time, great. If not, it uses the fallback for that entire page load and doesn't swap at all. Zero layout shift, and on the next visit the font is cached so it loads instantly.
