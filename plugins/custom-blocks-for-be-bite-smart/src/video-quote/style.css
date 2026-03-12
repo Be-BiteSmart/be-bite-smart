@@ -111,29 +111,7 @@
 
 /* ── Watch button ── */
 .video-quote-watch-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  background: var(--wp--preset--color--accent-2);
-  color: white;
-  padding: 0.75rem 2rem;
-  border-radius: 0.38rem;
-  font-weight: 700;
-  font-size: 1rem;
-  border: none;
-  cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s;
-  outline: none;
-  margin: 0 auto 2rem auto;
   max-width: max-content;
-}
-
-.video-quote-watch-button:hover {
-  background: color-mix(in srgb, var(--wp--preset--color--accent-1) 70%, black);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
-  transform: translateY(-1px);
 }
 
 .video-quote-watch-button:active {
