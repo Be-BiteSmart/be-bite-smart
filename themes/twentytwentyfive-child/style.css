@@ -198,3 +198,75 @@ blockquote {
     grid-template-columns: 1fr !important;
   }
 }
+
+/* ── Native WordPress Block Buttons ─────────────────────────────────────────
+   html prefix ensures these win over WordPress's own :root :where() rules
+   without needing !important.
+   ─────────────────────────────────────────────────────────────────────────── */
+/* Filled button hover */
+/* Standard fill (accent-2 bg → flips to white on hover) */
+html
+  body:not(.block-editor-page)
+  .wp-block-button:not(.is-style-outline)
+  .wp-element-button:not(.has-base-background-color):hover {
+  background-color: white !important;
+  color: var(--wp--preset--color--accent-2) !important;
+  border: 2px solid var(--wp--preset--color--accent-2) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  text-decoration: none;
+}
+/* Inverted fill (white bg → accent-2 on hover) */
+html
+  body:not(.block-editor-page)
+  .wp-block-button.is-style-outline
+  .wp-element-button.has-accent-2-background-color:hover {
+  background-color: white !important;
+  color: var(--wp--preset--color--accent-2) !important;
+  border: 2px solid var(--wp--preset--color--accent-2) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  text-decoration: none;
+}
+
+/* Inverted fill (white bg → accent-2 on hover) */
+html
+  body:not(.block-editor-page)
+  .wp-block-button:not(.is-style-outline)
+  .wp-element-button.has-base-background-color:hover {
+  background-color: var(--wp--preset--color--accent-2) !important;
+  color: var(--wp--preset--color--base) !important;
+  border: 2px solid white !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  text-decoration: none;
+}
+
+/* Standard outline (white bg → accent-2 on hover) */
+html
+  body:not(.block-editor-page)
+  .wp-block-button.is-style-outline
+  .wp-element-button:not(.has-accent-2-background-color):hover {
+  background-color: var(--wp--preset--color--accent-2) !important;
+  color: var(--wp--preset--color--base) !important;
+  border: 2px solid white !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  text-decoration: none;
+}
+/* Active — shared */
+html body:not(.block-editor-page) .wp-block-button .wp-element-button:active {
+  transform: translateY(0);
+}
+
+/* Focus */
+html
+  body:not(.block-editor-page)
+  .wp-block-button
+  .wp-element-button:focus-visible {
+  outline: 4px solid var(--wp--preset--color--accent-2);
+  outline-offset: 6px;
+  box-shadow:
+    0 0 0 2px white,
+    0 0 0 6px var(--wp--preset--color--accent-2);
+}
