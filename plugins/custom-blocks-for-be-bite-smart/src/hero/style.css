@@ -1,48 +1,78 @@
+/* ── Override WordPress layout constraints ────────────────── */
+/* Pull the block out of the parent's padding using negative margins.
+   left/right are negated using the same variables that set the padding,
+   so they cancel out exactly and the block sits flush with the viewport. */
+.wp-block-custom-hero.alignfull {
+  max-width: none !important;
+  width: auto !important;
+  margin-left: calc(-1 * var(--wp--style--root--padding-left, 0px)) !important;
+  margin-right: calc(
+    -1 * var(--wp--style--root--padding-right, 0px)
+  ) !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
 /* ── Section wrapper ──────────────────────────────────────── */
+/* Full-width cream background. Cream shows to the left of .dbp-inner on
+   viewports wider than 1800px — no tricks needed, just normal flow. */
 .dbp-section {
-  position: relative;
+  width: 100%;
+  max-width: 100% !important;
   background-color: rgba(232, 230, 224, 0.9);
+}
+
+/* ── Inner container ──────────────────────────────────────── */
+/* Holds both the image and the content together. Right-anchored via
+   margin-left:auto + margin-right:0 — on viewports wider than 1800px the
+   section's cream background shows to the left naturally. */
+.dbp-inner {
+  position: relative;
+  max-width: 1800px;
+  width: 100%;
+  margin: 0 auto;
   overflow: hidden;
 }
 
 /* ── Background wrapper ───────────────────────────────────── */
+/* Fills .dbp-inner absolutely — .dbp-content (sibling) drives the height. */
 .dbp-bg-wrapper {
   position: absolute;
   inset: 0;
-  max-width: 1920px;
-  width: 100%;
-  margin: 0 auto;
+  max-width: 1600px;
 }
 
-/* ── Background image ─────────────────────────────────────────────────────────
-   On desktop the left-to-right gradient in .dbp-bg fades the image out toward
-   the left so text sits on a clean surface. The image is anchored right so the
-   most visually rich part shows on the right side of the section. */
-.dbp-bg {
+/* ── Background picture element ───────────────────────────────────────────────
+   <picture> is inline by default — display:block is required for position,
+   width, and height to behave correctly.
+
+   DOM stacking order (all position:absolute inside .dbp-bg-wrapper):
+     1. .dbp-bg-picture  ← photo
+     2. .dbp-bg          ← left-to-right gradient fades image toward text
+     3. .dbp-overlay     ← feathers the seam on very wide screens           */
+.dbp-bg-picture {
   position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
+  display: block;
+}
+
+.dbp-bg-picture img {
+  display: block;
   width: 100%;
-  max-width: 1400px;
-  background-image: linear-gradient(
-      to right,
-      rgba(232, 230, 224, 1) 0%,
-      rgba(232, 230, 224, 0.95) 15%,
-      rgba(232, 230, 224, 0.9) 35%,
-      rgba(245, 243, 238, 0.7) 60%,
-      rgba(232, 230, 224, 0.3) 80%,
-      rgba(232, 230, 224, 0.1) 100%
-    ),
-    var(--dbp-bg-image, none);
-  background-size: cover;
-  background-position: center right;
-  background-repeat: no-repeat;
+  height: 100%;
+  object-fit: cover;
+  object-position: center right;
+}
+
+@media (max-width: 640px) {
+  .dbp-bg-picture img {
+    object-position: top center;
+  }
 }
 
 /* ── Overlay — feathers the seam on very wide screens ────────────────────────
    Covers the gap between the section's solid background-color and the left
-   edge of .dbp-bg on viewports wider than 1400px. */
+   edge of .dbp-bg-wrapper on viewports wider than 1800px. */
 .dbp-overlay {
   position: absolute;
   inset: 0;
@@ -58,6 +88,8 @@
 }
 
 /* ── Outer content wrapper ────────────────────────────────── */
+/* position:relative + z-index keeps content above the absolutely positioned
+   background elements in .dbp-bg-wrapper. */
 .dbp-content {
   position: relative;
   z-index: 2;
@@ -150,9 +182,7 @@
   color: var(--wp--preset--color--accent-1);
   line-height: inherit;
   font-weight: 500;
-
   border-radius: 0.15em;
-
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
 }
@@ -223,19 +253,14 @@
   .dbp-card {
     background: rgba(255, 255, 255, 0.82);
   }
-  /* On mobile, switch to a full-width top-to-bottom treatment. The left-to-right
-     desktop layout doesn't apply at narrow widths — image fills the full width
-     above the content instead. */
-  .dbp-bg {
-    right: 0;
-    left: 0;
+
+  /* On mobile the inner container fills full width — no cream on the side. */
+  .dbp-inner {
     max-width: 100%;
-    background-image: var(--dbp-bg-image, none);
-    background-position: top center;
+    margin-left: 0;
   }
 
-  /* Replace the horizontal overlay with a vertical fade so the image shows
-     at the top and dissolves into the section color below. */
+  /* Vertical fade — image shows at top, dissolves to cream below. */
   .dbp-overlay {
     background: linear-gradient(
       to bottom,

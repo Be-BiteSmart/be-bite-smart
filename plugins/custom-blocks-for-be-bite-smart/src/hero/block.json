@@ -6,5 +6,31 @@
   "description": "Campaign section with stats and donation CTAs",
   "category": "widgets",
   "editorScript": "file:./index.js",
-  "style": "file:./style-index.css"
+  "style": "file:./style-index.css",
+  "attributes": {
+    "label": { "type": "string", "default": "Dog Bite Prevention" },
+    "heading": {
+      "type": "string",
+      "default": "Every year, thousands of children are bitten — most injuries are"
+    },
+    "highlight": { "type": "string", "default": "preventable." },
+    "body": {
+      "type": "string",
+      "default": "Our educational videos teach children essential safety skills when interacting with dogs. With your support, we can reach more families and prevent injuries."
+    },
+    "stat1Num": { "type": "string", "default": "4.5M+" },
+    "stat1Label": { "type": "string", "default": "People bitten annually" },
+    "stat2Num": { "type": "string", "default": "Ages 0–2" },
+    "stat2Label": { "type": "string", "default": "Most at risk" },
+    "btn1Text": { "type": "string", "default": "Donate" },
+    "btn1Url": { "type": "string", "default": "#" },
+    "btn2Text": { "type": "string", "default": "Sponsor" },
+    "btn2Url": { "type": "string", "default": "#" },
+    "bgImageSmId": { "type": "number" },
+    "bgImageSmUrl": { "type": "string", "default": "" },
+    "bgImageMdId": { "type": "number" },
+    "bgImageMdUrl": { "type": "string", "default": "" },
+    "bgImageLgId": { "type": "number" },
+    "bgImageLgUrl": { "type": "string", "default": "" }
+  }
 }
