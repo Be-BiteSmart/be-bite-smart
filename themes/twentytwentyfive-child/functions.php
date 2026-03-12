@@ -230,10 +230,15 @@ add_action('wp_footer', 'show_more_button_logic');
 
 /* force lazy load for images that aren't actually the lcp */
 
-add_filter( 'wp_content_img_tag', function( $filtered_image, $context, $attachment_id ) {
-    if ( str_contains( $filtered_image, 'no-lcp' ) ) {
-        $filtered_image = str_replace( 'fetchpriority="high"', 'fetchpriority="low"', $filtered_image );
-        $filtered_image = str_replace( 'decoding="async"', 'decoding="async" loading="lazy"', $filtered_image );
-    }
-    return $filtered_image;
-}, 10, 3 );
+add_filter( 'the_content', function( $content ) {
+    // Find any figure with no-lcp class and fix the img inside it
+    return preg_replace_callback(
+        '/<figure[^>]+class="[^"]*no-lcp[^"]*"[^>]*>.*?<img([^>]+)>/s',
+        function( $matches ) {
+            $img = str_replace( 'fetchpriority="high"', 'fetchpriority="low"', $matches[0] );
+            $img = str_replace( 'decoding="async"', 'decoding="async" loading="lazy"', $img );
+            return $img;
+        },
+        $content
+    );
+} );
