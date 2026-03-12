@@ -299,7 +299,7 @@ registerBlockType("custom/video-quote", {
           wp.element.createElement(
             "button",
             {
-              className: "video-quote-watch-button block-btn-toggle",
+              className: "video-quote-watch-button block-toggle-btn",
               type: "button",
             },
             wp.element.createElement(
