@@ -231,29 +231,14 @@ html
   text-decoration: none;
 }
 
-/* The [class*="has-"][class*="background-color"] attribute selector matches any element that has both has- and background-color somewhere in its class string — so it only fires when no background utility class is present at all, leaving your existing rules for the explicit color variants untouched.*/
-
-/* Fill with no background color class (theme default bg → white on hover) */
+/* Fill with no background color class */
 html
   body:not(.block-editor-page)
-  .wp-block-button.is-style-fill
-  .wp-element-button:not([class*="has-"][class*="background-color"]):hover {
+  .wp-block-button:not(.is-style-outline)
+  .wp-element-button:not([class*="background-color"]):hover {
   background-color: white !important;
   color: var(--wp--preset--color--accent-2) !important;
   border: 2px solid var(--wp--preset--color--accent-2) !important;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  text-decoration: none;
-}
-
-/* Standard outline (white bg → accent-2 on hover) */
-html
-  body:not(.block-editor-page)
-  .wp-block-button.is-style-outline
-  .wp-element-button:not(.has-accent-2-background-color):hover {
-  background-color: var(--wp--preset--color--accent-2) !important;
-  color: var(--wp--preset--color--base) !important;
-  border: 2px solid white !important;
   transform: translateY(-1px);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   text-decoration: none;
