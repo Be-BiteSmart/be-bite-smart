@@ -280,9 +280,7 @@ html
   body:not(.block-editor-page)
   .wp-block-button
   .wp-element-button:focus-visible {
-  outline: 4px solid var(--wp--preset--color--accent-2);
-  outline-offset: 6px;
-  box-shadow:
-    0 0 0 2px white,
-    0 0 0 6px var(--wp--preset--color--accent-2);
+  outline: 3px solid var(--wp--preset--color--accent-2);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 5px rgba(31, 106, 143, 0.15);
 }
