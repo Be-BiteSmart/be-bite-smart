@@ -504,7 +504,11 @@ html
 }
 
 /* Lighter focus ring when buttons sit on a dark background */
-body:not(.block-editor-page) .lighter-focus .wp-element-button:focus-visible {
+html
+  body:not(.block-editor-page)
+  .lighter-focus
+  .wp-element-button:focus-visible {
   outline: 3px solid white;
   outline-offset: 3px;
+  box-shadow: none;
 }
