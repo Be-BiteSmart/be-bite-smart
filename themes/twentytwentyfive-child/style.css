@@ -199,88 +199,312 @@ blockquote {
   }
 }
 
-/* ── Native WordPress Block Buttons ─────────────────────────────────────────
-   html prefix ensures these win over WordPress's own :root :where() rules.
-   Every hover rule uses the border shorthand so width, style, and color are
-   always set atomically — prevents partial overrides from utility classes.
-   ─────────────────────────────────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════════════════
+   BUTTON SYSTEM — Custom (.block-toggle-btn) + Native WordPress (.wp-element-button)
+   ══════════════════════════════════════════════════════════════════════════
 
-/* Standard fill (accent-2 bg → white on hover) */
+   ARCHITECTURE
+   ─────────────
+   1. Base styles  — shape, font, default colors for .block-toggle-btn
+   2. Hover tokens — each variant declares --_btn-hover-* custom properties
+   3. Shared hover — one rule reads those tokens + applies the lift effect
+   4. Active       — one shared rule collapses the lift
+   5. Focus        — two rules (custom vs WP differ in offset / ring style)
+
+   WHY html + !important ON THE SHARED HOVER RULE
+   ────────────────────────────────────────────────
+   WordPress ships :root :where(.wp-element-button) { background: --contrast }
+   which overrides theme accent colors. html body + !important is the only
+   reliable way to beat that specificity for native WP blocks. Applying it
+   to the custom .block-toggle-btn as well is harmless since nothing else
+   fights it there.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── 1. Base styles ─────────────────────────────────────────────────────── */
+
+body:not(.block-editor-page)
+  :is(
+    .block-toggle-btn,
+    .wp-block-file__button,
+    .wp-block-file .wp-element-button
+  ) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6em 1.2em;
+  font-size: var(--wp--preset--font-size--medium);
+  font-weight: 600;
+  border-radius: 1.2rem;
+  cursor: pointer;
+  font-family: "urbanist", sans-serif;
+  transition: all 0.2s;
+  margin-top: 1rem;
+  background-color: var(--wp--preset--color--accent-2);
+  color: var(--wp--preset--color--base);
+  border: 2px solid var(--wp--preset--color--accent-2);
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+/* Outline variant overrides */
+body:not(.block-editor-page) .block-toggle-btn.is-style-outline {
+  background-color: white;
+  color: var(--wp--preset--color--accent-2);
+  border: 2px solid var(--wp--preset--color--accent-2);
+}
+
+/* ── 2. Hover color tokens ──────────────────────────────────────────────── */
+/*
+   Each variant declares three custom properties that describe its hover state.
+   The single :hover rule below reads these — no color values repeat anywhere else.
+*/
+
+/* Filled (accent-2 bg) → invert to white on hover */
+body:not(.block-editor-page)
+  :is(
+    .block-toggle-btn:not(.is-style-outline),
+    .wp-block-file__button,
+    .wp-block-file .wp-element-button,
+    .wp-block-button:not(.is-style-outline)
+      .wp-element-button:not(.has-base-background-color),
+    .wp-block-button:not(.is-style-outline)
+      .wp-element-button:not([class*="background-color"]),
+    .wp-block-button.is-style-outline
+      .wp-element-button.has-accent-2-background-color
+  ) {
+  --_btn-hover-bg: white;
+  --_btn-hover-color: var(--wp--preset--color--accent-2);
+  --_btn-hover-border: var(--wp--preset--color--accent-2);
+}
+
+/* Inverted fill (white / base bg) → fill with accent-2 on hover */
+body:not(.block-editor-page)
+  :is(
+    .wp-block-button:not(.is-style-outline)
+      .wp-element-button.has-base-background-color,
+    .wp-block-button.is-style-outline
+      .wp-element-button:not([class*="has-"][class*="background-color"])
+  ) {
+  --_btn-hover-bg: var(--wp--preset--color--accent-2);
+  --_btn-hover-color: var(--wp--preset--color--base);
+  --_btn-hover-border: white;
+}
+
+/*
+   Custom outline → fill with accent-2 on hover.
+   Kept separate from the WP outline group above because the WP variant
+   flips its border to white; the custom toggle keeps border as accent-2.
+*/
+body:not(.block-editor-page) .block-toggle-btn.is-style-outline {
+  --_btn-hover-bg: var(--wp--preset--color--accent-2);
+  --_btn-hover-color: var(--wp--preset--color--base);
+  --_btn-hover-border: var(--wp--preset--color--accent-2);
+}
+
+/* ── 3. Shared hover rule ───────────────────────────────────────────────── */
+
 html
   body:not(.block-editor-page)
-  .wp-block-button:not(.is-style-outline)
-  .wp-element-button:not(.has-base-background-color):hover {
-  background-color: white !important;
-  color: var(--wp--preset--color--accent-2) !important;
-  border: 2px solid var(--wp--preset--color--accent-2) !important;
+  :is(
+    .block-toggle-btn,
+    .wp-block-file__button,
+    .wp-block-file .wp-element-button,
+    .wp-block-button .wp-element-button
+  ):hover {
+  background-color: var(--_btn-hover-bg) !important;
+  color: var(--_btn-hover-color) !important;
+  border: 2px solid var(--_btn-hover-border) !important;
   transform: translateY(-1px);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   text-decoration: none;
+  font-family: "urbanist", sans-serif;
 }
 
-/* Inverted fill (white bg → accent-2 on hover) */
+/* ── 4. Shared active rule ──────────────────────────────────────────────── */
+
 html
   body:not(.block-editor-page)
-  .wp-block-button:not(.is-style-outline)
-  .wp-element-button.has-base-background-color:hover {
-  background-color: var(--wp--preset--color--accent-2) !important;
-  color: var(--wp--preset--color--base) !important;
-  border: 2px solid white !important;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  text-decoration: none;
-}
-
-/* Fill with no background color class */
-html
-  body:not(.block-editor-page)
-  .wp-block-button:not(.is-style-outline)
-  .wp-element-button:not([class*="background-color"]):hover {
-  background-color: white !important;
-  color: var(--wp--preset--color--accent-2) !important;
-  border: 2px solid var(--wp--preset--color--accent-2) !important;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  text-decoration: none;
-}
-
-/* Inverted outline (accent-2 bg → white on hover) */
-html
-  body:not(.block-editor-page)
-  .wp-block-button.is-style-outline
-  .wp-element-button.has-accent-2-background-color:hover {
-  background-color: white !important;
-  color: var(--wp--preset--color--accent-2) !important;
-  border: 2px solid var(--wp--preset--color--accent-2) !important;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  text-decoration: none;
-}
-
-/* Outline with no background color class (theme default bg → accent-2 on hover) */
-html
-  body:not(.block-editor-page)
-  .wp-block-button.is-style-outline
-  .wp-element-button:not([class*="has-"][class*="background-color"]):hover {
-  background-color: var(--wp--preset--color--accent-2) !important;
-  color: var(--wp--preset--color--base) !important;
-  border: 2px solid white !important;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  text-decoration: none;
-}
-
-/* Active — shared */
-html body:not(.block-editor-page) .wp-block-button .wp-element-button:active {
+  :is(
+    .block-toggle-btn,
+    .wp-block-file__button,
+    .wp-block-file .wp-element-button,
+    .wp-block-button .wp-element-button
+  ):active {
   transform: translateY(0);
 }
 
-/* Focus — thick ring with white gap */
+/* ── 5. Focus ───────────────────────────────────────────────────────────── */
+
+/* All buttons — shared focus style */
 html
   body:not(.block-editor-page)
-  .wp-block-button
-  .wp-element-button:focus-visible {
+  :is(
+    .block-toggle-btn,
+    .wp-block-file__button,
+    .wp-block-file .wp-element-button,
+    .wp-block-button .wp-element-button
+  ):focus-visible {
   outline: 3px solid var(--wp--preset--color--accent-2);
   outline-offset: 3px;
   box-shadow: 0 0 0 5px rgba(31, 106, 143, 0.15);
+}
+
+/* Lighter focus ring when buttons sit on a dark background */
+body:not(.block-editor-page) .lighter-focus .wp-element-button:focus-visible {
+  outline: 3px solid white;
+  outline-offset: 3px;
+} /* ══════════════════════════════════════════════════════════════════════════
+   BUTTON SYSTEM — Custom (.block-toggle-btn) + Native WordPress (.wp-element-button)
+   ══════════════════════════════════════════════════════════════════════════
+
+   ARCHITECTURE
+   ─────────────
+   1. Base styles  — shape, font, default colors for .block-toggle-btn
+   2. Hover tokens — each variant declares --_btn-hover-* custom properties
+   3. Shared hover — one rule reads those tokens + applies the lift effect
+   4. Active       — one shared rule collapses the lift
+   5. Focus        — two rules (custom vs WP differ in offset / ring style)
+
+   WHY html + !important ON THE SHARED HOVER RULE
+   ────────────────────────────────────────────────
+   WordPress ships :root :where(.wp-element-button) { background: --contrast }
+   which overrides theme accent colors. html body + !important is the only
+   reliable way to beat that specificity for native WP blocks. Applying it
+   to the custom .block-toggle-btn as well is harmless since nothing else
+   fights it there.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── 1. Base styles ─────────────────────────────────────────────────────── */
+
+body:not(.block-editor-page)
+  :is(
+    .block-toggle-btn,
+    .wp-block-file__button,
+    .wp-block-file .wp-element-button
+  ) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6em 1.2em;
+  font-size: var(--wp--preset--font-size--medium);
+  font-weight: 600;
+  border-radius: 1.2rem;
+  cursor: pointer;
+  font-family: "urbanist", sans-serif;
+  transition: all 0.2s;
+  margin-top: 1rem;
+  background-color: var(--wp--preset--color--accent-2);
+  color: var(--wp--preset--color--base);
+  border: 2px solid var(--wp--preset--color--accent-2);
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+/* Outline variant overrides */
+body:not(.block-editor-page) .block-toggle-btn.is-style-outline {
+  background-color: white;
+  color: var(--wp--preset--color--accent-2);
+  border: 2px solid var(--wp--preset--color--accent-2);
+}
+
+/* ── 2. Hover color tokens ──────────────────────────────────────────────── */
+/*
+   Each variant declares three custom properties that describe its hover state.
+   The single :hover rule below reads these — no color values repeat anywhere else.
+*/
+
+/* Filled (accent-2 bg) → invert to white on hover */
+body:not(.block-editor-page)
+  :is(
+    .block-toggle-btn:not(.is-style-outline),
+    .wp-block-file__button,
+    .wp-block-file .wp-element-button,
+    .wp-block-button:not(.is-style-outline)
+      .wp-element-button:not(.has-base-background-color),
+    .wp-block-button:not(.is-style-outline)
+      .wp-element-button:not([class*="background-color"]),
+    .wp-block-button.is-style-outline
+      .wp-element-button.has-accent-2-background-color
+  ) {
+  --_btn-hover-bg: white;
+  --_btn-hover-color: var(--wp--preset--color--accent-2);
+  --_btn-hover-border: var(--wp--preset--color--accent-2);
+}
+
+/* Inverted fill (white / base bg) → fill with accent-2 on hover */
+body:not(.block-editor-page)
+  :is(
+    .wp-block-button:not(.is-style-outline)
+      .wp-element-button.has-base-background-color,
+    .wp-block-button.is-style-outline
+      .wp-element-button:not([class*="has-"][class*="background-color"])
+  ) {
+  --_btn-hover-bg: var(--wp--preset--color--accent-2);
+  --_btn-hover-color: var(--wp--preset--color--base);
+  --_btn-hover-border: white;
+}
+
+/*
+   Custom outline → fill with accent-2 on hover.
+   Kept separate from the WP outline group above because the WP variant
+   flips its border to white; the custom toggle keeps border as accent-2.
+*/
+body:not(.block-editor-page) .block-toggle-btn.is-style-outline {
+  --_btn-hover-bg: var(--wp--preset--color--accent-2);
+  --_btn-hover-color: var(--wp--preset--color--base);
+  --_btn-hover-border: var(--wp--preset--color--accent-2);
+}
+
+/* ── 3. Shared hover rule ───────────────────────────────────────────────── */
+
+html
+  body:not(.block-editor-page)
+  :is(
+    .block-toggle-btn,
+    .wp-block-file__button,
+    .wp-block-file .wp-element-button,
+    .wp-block-button .wp-element-button
+  ):hover {
+  background-color: var(--_btn-hover-bg) !important;
+  color: var(--_btn-hover-color) !important;
+  border: 2px solid var(--_btn-hover-border) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  text-decoration: none;
+  font-family: "urbanist", sans-serif;
+}
+
+/* ── 4. Shared active rule ──────────────────────────────────────────────── */
+
+html
+  body:not(.block-editor-page)
+  :is(
+    .block-toggle-btn,
+    .wp-block-file__button,
+    .wp-block-file .wp-element-button,
+    .wp-block-button .wp-element-button
+  ):active {
+  transform: translateY(0);
+}
+
+/* ── 5. Focus ───────────────────────────────────────────────────────────── */
+
+/* All buttons — shared focus style */
+html
+  body:not(.block-editor-page)
+  :is(
+    .block-toggle-btn,
+    .wp-block-file__button,
+    .wp-block-file .wp-element-button,
+    .wp-block-button .wp-element-button
+  ):focus-visible {
+  outline: 3px solid var(--wp--preset--color--accent-2);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 5px rgba(31, 106, 143, 0.15);
+}
+
+/* Lighter focus ring when buttons sit on a dark background */
+body:not(.block-editor-page) .lighter-focus .wp-element-button:focus-visible {
+  outline: 3px solid white;
+  outline-offset: 3px;
 }
