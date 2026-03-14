@@ -10,46 +10,14 @@ body:not(.block-editor-page) .pdf-toggle-block .pdf-toggle-buttons {
   margin-top: 10px;
 }
 
-/* Base — matches .block-toggle-btn exactly */
-body:not(.block-editor-page) .pdf-toggle-block .pdf-toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.6em 1.2em;
-  font-size: var(--wp--preset--font-size--medium);
-  font-weight: 600;
-  font-family: "urbanist", sans-serif;
-  border-radius: 1.2rem; /* pill — was 0.375rem */
-  cursor: pointer;
-  transition: all 0.2s;
-  margin-top: 1rem;
-  text-decoration: none;
-  box-sizing: border-box;
+/* Global adds margin-top: 1rem — not wanted here */
+body:not(.block-editor-page) .pdf-toggle-block .pdf-toggle.block-toggle-btn {
+  margin-top: 0;
 }
 
-/* ── Fill variant (button 1) — matches .block-toggle-btn default ── */
-body:not(.block-editor-page)
-  .pdf-toggle-block
-  .pdf-toggle-buttons
-  .pdf-toggle:nth-child(1) {
-  background-color: var(--wp--preset--color--accent-2);
-  color: var(--wp--preset--color--base);
-  border: 2px solid var(--wp--preset--color--accent-2); /* was 1px */
-}
-
-body:not(.block-editor-page)
-  .pdf-toggle-block
-  .pdf-toggle-buttons
-  .pdf-toggle:nth-child(1):hover {
-  background-color: white;
-  color: var(--wp--preset--color--accent-2); /* proper swap — was opacity */
-  transform: translateY(-1px);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  text-decoration: none;
-}
-
-/* When PDF is open, fill button flips to outlined (existing behaviour, corrected border width) */
-body:not(.block-editor-page)
+/* When open, button 1 flips from filled → outlined */
+html
+  body:not(.block-editor-page)
   .pdf-toggle-block
   .pdf-toggle-buttons
   .pdf-toggle:nth-child(1)[data-expanded="true"] {
@@ -58,40 +26,18 @@ body:not(.block-editor-page)
   border: 2px solid var(--wp--preset--color--accent-2);
 }
 
-/* ── Outline variant (button 2) — matches .block-toggle-btn.is-style-outline ── */
-body:not(.block-editor-page)
+/* When open, button 2 flips from outlined → filled */
+html
+  body:not(.block-editor-page)
   .pdf-toggle-block
   .pdf-toggle-buttons
-  .pdf-toggle:nth-child(2) {
-  background-color: white;
-  color: var(--wp--preset--color--accent-2);
-  border: 2px solid var(--wp--preset--color--accent-2); /* was 1px */
-}
-
-body:not(.block-editor-page)
-  .pdf-toggle-block
-  .pdf-toggle-buttons
-  .pdf-toggle:nth-child(2):hover {
-  background-color: var(--wp--preset--color--accent-2);
+  .pdf-toggle:nth-child(2)[data-expanded="true"] {
+  background-color: var(--wp--preset--color--accent-2) !important;
   color: var(--wp--preset--color--base);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  text-decoration: none;
+  border: 2px solid var(--wp--preset--color--accent-2);
 }
 
-/* ── Shared active — matches .block-toggle-btn:active ── */
-body:not(.block-editor-page) .pdf-toggle-block .pdf-toggle:active {
-  transform: translateY(0);
-}
-
-/* ── Focus-visible — matches .block-toggle-btn:focus-visible exactly ── */
-body:not(.block-editor-page) .pdf-toggle-block .pdf-toggle:focus-visible {
-  outline: 3px solid var(--wp--preset--color--accent-2);
-  outline-offset: 3px;
-  box-shadow: 0 0 0 5px rgba(31, 106, 143, 0.15);
-}
-
-/* ── PDF Viewer container (unchanged) ── */
+/* ── PDF Viewer container ── */
 body:not(.block-editor-page) .pdf-toggle-block .pdf-viewer-container {
   display: none;
   margin-top: 1.5rem;

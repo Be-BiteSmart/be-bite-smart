@@ -284,40 +284,8 @@
 }
 
 /* ── Watch Now Button ── */
-.watch-now-button {
-  width: auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  background: var(--wp--preset--color--accent-2);
-  color: white;
-  padding: 0.625rem 1.5rem;
-  border-radius: 0.5rem;
-  font-weight: 700;
-  font-size: 0.875rem;
-  border: none;
-  cursor: pointer;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-  transition: all 0.2s;
-  outline: none;
-}
-
-.watch-now-button:hover {
-  background: white;
-  color: var(--wp--preset--color--accent-2);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  border: 1px solid var(--wp--preset--color--accent-2);
-}
-
-.watch-now-button:active {
-  transform: scale(0.95);
-}
-
-.watch-now-button:focus-visible {
-  outline: 2px solid var(--wp--preset--color--accent-2);
-  outline-offset: 2px;
-  box-shadow: 0 0 0 4px rgba(11, 3, 122, 0.2);
+.episode-controls .watch-now-button.block-toggle-btn {
+  margin-top: 0 !important; /* global adds 1rem; not wanted here */
 }
 
 /* ── Download Buttons ── */
@@ -336,20 +304,8 @@
 
 .download-button {
   flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: white;
-  color: var(--wp--preset--color--accent-2);
-  padding: 0.625rem 1rem;
-  border: 2px solid var(--wp--preset--color--accent-2);
-  border-radius: 0.5rem;
-  font-weight: 700;
+  margin-top: 0;
   font-size: 0.875rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-decoration: none;
-  outline: none;
   min-width: 0;
 }
 
@@ -358,21 +314,6 @@
     flex: 0 1 auto;
     min-width: 140px;
   }
-}
-
-.download-button:hover {
-  background: var(--wp--preset--color--accent-2);
-  color: white;
-}
-
-.download-button:active {
-  transform: scale(0.98);
-}
-
-.download-button:focus-visible {
-  outline: 2px solid var(--wp--preset--color--accent-2);
-  outline-offset: 2px;
-  box-shadow: 0 0 0 4px rgba(178, 103, 11, 0.2);
 }
 
 .download-button span {
