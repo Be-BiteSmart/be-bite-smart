@@ -78,7 +78,9 @@ header
   .wp-block-navigation__container
   > .wp-block-navigation-item:last-child
   a:hover {
-  opacity: 0.9;
+  background-color: white;
+  color: var(--wp--preset--color--accent-2);
+  border: 2px solid var(--wp--preset--color--accent-2);
   transform: translateY(-1px);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
 }
@@ -99,7 +101,7 @@ header
   .wp-block-navigation__container
   > .wp-block-navigation-item:last-child
   a:focus-visible {
-  outline: 3px solid black !important;
+  outline: 3px solid var(--wp--preset--color--accent-2) !important;
   outline-offset: 2px !important;
 }
 
