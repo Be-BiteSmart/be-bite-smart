@@ -13,15 +13,72 @@
 // editorScript, style, and viewScript automatically — no manual enqueues needed.
 // -----------------------------
 
+
+// -----------------------------
+// Dynamic save blocks (rendered with php not statically rendered)
+// ----------------------------
+
+// -------------- Bio Card Block  ------------------------ //
+
+// Reasons for dynamic rendering over a static save():
+// 1. Allows wp_get_attachment_image() to generate correct srcset/sizes attributes
+//    for the photo, which the static approach couldn't do.
+
+// 2. Future edits to the template update all bio cards site-wide instantly,
+//    with no block recovery needed in the editor.
+
+// 3. The main tradeoff (PHP runs on every page load) is mitigated by the
+//    caching plugin — pages are served as static HTML after the first render.
+
+// Special note for future updates: If you update the PHP template but forget to update edit() to match, editors will see one thing in the block editor and something different on the live site. 
+
+require_once __DIR__ . '/src/bio-card/bio-card.php';
+// require_once is at the top level — it runs when the plugin loads, so render_bio_card_block is defined before init fires and register_block_type tries to reference it.
+
+function bio_card_register_block() {
+    register_block_type( __DIR__ . '/build/bio-card', [
+        'render_callback' => 'render_bio_card_block',
+    ] );
+}
+add_action( 'init', 'bio_card_register_block' );
+
+// -------------- Hero Block  ------------------------ //
+
+// Hero block is a dynamic block — save() returns null in JS and PHP renders
+// the HTML via render_callback. This bypasses WordPress's content sanitizer
+// which was mangling <picture> and <source> tags on save.
+require_once __DIR__ . '/src/hero/hero.php';
+
+function hero_register_block() {
+    register_block_type( __DIR__ . '/build/hero', [
+        'render_callback' => 'render_hero_block',
+    ] );
+}
+add_action( 'init', 'hero_register_block' );
+
+// ----------- video quote -------------------//
+
+// why it was turned into a dynamic block:
+
+// The thumbnail displays up to 800px wide, meaning a 2x retina version would be 1600px — a significant download without srcset serving the right size per device.
+
+// It appears on the landing page and education page, so the bandwidth savings are felt on the highest-traffic pages of the site.
+require_once __DIR__ . '/src/video-quote/video-quote.php';
+
+function documentary_video_register_block() {
+    register_block_type( __DIR__ . '/build/video-quote', [
+        'render_callback' => 'render_video_quote_block',
+    ] );
+}
+add_action( 'init', 'documentary_video_register_block' );
+// -----------------------------
+// static save blocks:
+// ----------------------------
+
 function bitesmart_ra_register_block() {
     register_block_type( __DIR__ . '/build/research-article' );
 }
 add_action( 'init', 'bitesmart_ra_register_block' );
-
-function bio_card_register_block() {
-    register_block_type( __DIR__ . '/build/bio-card' );
-}
-add_action( 'init', 'bio_card_register_block' );
 
 function episode_card_register_block() {
     register_block_type( __DIR__ . '/build/episode-card' );
@@ -33,10 +90,7 @@ function article_or_commentary_register_block() {
 }
 add_action( 'init', 'article_or_commentary_register_block' );
 
-function documentary_video_register_block() {
-    register_block_type( __DIR__ . '/build/video-quote' );
-}
-add_action( 'init', 'documentary_video_register_block' );
+
 
 function pdf_toggle_register_block() {
     register_block_type( __DIR__ . '/build/pdf-toggle' );
@@ -68,94 +122,12 @@ function press_release_register_block() {
 }
 add_action( 'init', 'press_release_register_block' );
 
-// Hero block is a dynamic block — save() returns null in JS and PHP renders
-// the HTML via render_callback. This bypasses WordPress's content sanitizer
-// which was mangling <picture> and <source> tags on save.
-function render_hero_block( $attributes ) {
-    $sm  = esc_url( $attributes['bgImageSmUrl'] ?? '' );
-    $md  = esc_url( $attributes['bgImageMdUrl'] ?? '' );
-    $lg  = esc_url( $attributes['bgImageLgUrl'] ?? '' );
-    $src = $lg ?: $md ?: $sm;
 
-    $picture = '';
-    if ( $src ) {
-        $sources = '';
-        if ( $sm ) $sources .= '<source media="(max-width: 640px)" srcset="' . $sm . '">';
-        if ( $md ) $sources .= '<source media="(max-width: 1280px)" srcset="' . $md . '">';
-        $picture = '<picture class="dbp-bg-picture" aria-hidden="true">'
-            . $sources
-            . '<img src="' . $src . '" alt="" loading="eager" fetchpriority="high">'
-            . '</picture>';
-    }
-
-    $label     = wp_kses_post( $attributes['label']     ?? '' );
-    $heading   = wp_kses_post( $attributes['heading']   ?? '' );
-    $highlight = wp_kses_post( $attributes['highlight'] ?? '' );
-    $body      = wp_kses_post( $attributes['body']      ?? '' );
-    $stat1num  = esc_html( $attributes['stat1Num']   ?? '' );
-    $stat1lab  = esc_html( $attributes['stat1Label'] ?? '' );
-    $stat2num  = esc_html( $attributes['stat2Num']   ?? '' );
-    $stat2lab  = esc_html( $attributes['stat2Label'] ?? '' );
-    $btn1text  = esc_html( $attributes['btn1Text']   ?? '' );
-    $btn1url   = esc_url(  $attributes['btn1Url']    ?? '#' );
-    $btn2text  = esc_html( $attributes['btn2Text']   ?? '' );
-    $btn2url   = esc_url(  $attributes['btn2Url']    ?? '#' );
-
-    ob_start(); ?>
-    <section class="wp-block-custom-hero alignfull dbp-section">
-      <div class="dbp-inner">
-        <div class="dbp-bg-wrapper">
-          <?php echo $picture; ?>
-          <div class="dbp-overlay"></div>
-        </div>
-        <div class="dbp-content">
-          <div class="dbp-text">
-            <div class="dbp-label">
-              <span class="dbp-label__dash"></span>
-              <span class="dbp-label__text"><?php echo $label; ?></span>
-            </div>
-            <div class="dbp-card">
-              <h2 class="dbp-heading">
-                <span><?php echo $heading; ?></span>
-                <em class="dbp-heading__highlight"><?php echo $highlight; ?></em>
-              </h2>
-              <div class="dbp-card__divider"></div>
-              <p class="dbp-body"><?php echo $body; ?></p>
-            </div>
-            <div class="dbp-stats">
-              <div class="dbp-stat dbp-stat--blue">
-                <span class="dbp-stat__num"><?php echo $stat1num; ?></span>
-                <span class="dbp-stat__label"><?php echo $stat1lab; ?></span>
-              </div>
-              <div class="dbp-stat dbp-stat--orange">
-                <span class="dbp-stat__num"><?php echo $stat2num; ?></span>
-                <span class="dbp-stat__label"><?php echo $stat2lab; ?></span>
-              </div>
-            </div>
-            <div class="dbp-buttons">
-              <a href="<?php echo $btn1url; ?>" class="block-toggle-btn"><?php echo $btn1text; ?></a>
-              <a href="<?php echo $btn2url; ?>" class="block-toggle-btn is-style-outline"><?php echo $btn2text; ?></a>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-    <?php
-    return ob_get_clean();
-}
-
-function hero_register_block() {
-    register_block_type( __DIR__ . '/build/hero', [
-        'render_callback' => 'render_hero_block',
-    ] );
-}
-add_action( 'init', 'hero_register_block' );
 
 // -----------------------------
 // Enqueue shared front-end JS
 // These two files are shared across multiple blocks so they can't be
 // owned by a single block's viewScript — they stay as manual enqueues.
-
 
 // -----------------------------
 

@@ -5,6 +5,6 @@
   "title": "Bio Card",
   "category": "widgets",
   "editorScript": "file:./index.js",
-    "style": "file:./style-index.css",
+  "style": "file:./style-index.css",
   "viewScript": "file:./bio-toggle.js"
 }
