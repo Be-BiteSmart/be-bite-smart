@@ -38,10 +38,10 @@ function documentary_video_register_block() {
 }
 add_action( 'init', 'documentary_video_register_block' );
 
-function read_more_register_block() {
-    register_block_type( __DIR__ . '/build/read-more' );
+function pdf_toggle_register_block() {
+    register_block_type( __DIR__ . '/build/pdf-togglee' );
 }
-add_action( 'init', 'read_more_register_block' );
+add_action( 'init', 'pdf_toggle_register_block' );
 
 function unfunded_episode_register_block() {
     register_block_type( __DIR__ . '/build/unfunded-episode' );
