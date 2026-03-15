@@ -96,12 +96,27 @@ add_action( 'post_updated', function( $post_id ) {
 // defers jquery, to improve loading speed. Only done on landing page, since forminator on the contact page will break otherwise
 add_filter( 'script_loader_tag', function( $tag, $handle ) {
     if ( ! is_front_page() ) return $tag;
+    
     $defer = [ 'jquery-core', 'jquery-migrate', 'trp-language-switcher-js-v2' ];
     if ( in_array( $handle, $defer ) ) {
         return str_replace( '<script ', '<script defer ', $tag );
     }
     return $tag;
 }, 10, 2 );
+
+// preloads fonts used in hero
+add_action( 'wp_head', function() {
+    if ( ! is_front_page() ) return;
+  $font_path = content_url() . '/uploads/fonts/';
+    echo '<link rel="preload" href="' . $font_path . 'Omnes-Medium.woff2" as="font" type="font/woff2" crossorigin>' . "\n";
+    echo '<link rel="preload" href="' . $font_path . 'Omnes-SemiBold.woff2" as="font" type="font/woff2" crossorigin>' . "\n";
+    echo '<link rel="preload" href="' . $font_path . 'Urbanist-Medium.woff2" as="font" type="font/woff2" crossorigin>' . "\n";
+    echo '<link rel="preload" href="' . $font_path . 'Urbanist-SemiBold.woff2" as="font" type="font/woff2" crossorigin>' . "\n";
+    echo '<link rel="preload" href="' . $font_path . 'Urbanist-Bold.woff2" as="font" type="font/woff2" crossorigin>' . "\n";
+}, 1 );
+
+
+
 // removes page author information from discord embeds
 add_filter( 'oembed_response_data', 'disable_embeds_filter_oembed_response_data_' );
 function disable_embeds_filter_oembed_response_data_( $data ) {
