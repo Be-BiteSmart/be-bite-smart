@@ -1,9 +1,9 @@
-import './style.css';
+import "./style.css";
 
-import { registerBlockType } from '@wordpress/blocks';
-import { createElement as el } from '@wordpress/element';
-import { TextControl, TextareaControl } from '@wordpress/components';
-import { useBlockProps } from '@wordpress/block-editor';
+import { registerBlockType } from "@wordpress/blocks";
+import { createElement as el } from "@wordpress/element";
+import { TextControl, TextareaControl } from "@wordpress/components";
+import { useBlockProps } from "@wordpress/block-editor";
 
 registerBlockType("custom/unfunded-episode", {
   attributes: {
@@ -92,7 +92,7 @@ registerBlockType("custom/unfunded-episode", {
     });
 
     return el(
-      "div",
+      "article",
       blockProps,
       el(
         "div",

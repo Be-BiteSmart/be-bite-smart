@@ -421,7 +421,7 @@ registerBlockType("custom/educational-content-download", {
     };
 
     return wp.element.createElement(
-      "div",
+      "section",
       {
         ...blockProps,
         className:
