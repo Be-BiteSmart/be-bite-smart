@@ -301,7 +301,7 @@ add_action( 'wp_footer', function() {
         document.addEventListener('click', function(e) {
             if (!e.target.closest('#wpfront-scroll-top-container')) return;
 
-            var target = document.getElementById('wp--skip-link--target');
+            const target = document.getElementById('wp--skip-link--target');
             // wp--skip-link--target is on main, so our target is main
 
             // When the browser follows the skip link natively, it handles moving focus to <main> itself as part of its built-in anchor navigation behaviour — it has special handling for this that bypasses the normal focusability rules.
