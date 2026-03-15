@@ -39,7 +39,7 @@ function documentary_video_register_block() {
 add_action( 'init', 'documentary_video_register_block' );
 
 function pdf_toggle_register_block() {
-    register_block_type( __DIR__ . '/build/pdf-togglee' );
+    register_block_type( __DIR__ . '/build/pdf-toggle' );
 }
 add_action( 'init', 'pdf_toggle_register_block' );
 
