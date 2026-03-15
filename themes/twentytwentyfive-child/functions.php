@@ -104,7 +104,7 @@ add_filter( 'script_loader_tag', function( $tag, $handle ) {
     return $tag;
 }, 10, 2 );
 
-// preloads fonts used in hero
+// preloads fonts used above the fold on the front page
 add_action( 'wp_head', function() {
     if ( ! is_front_page() ) return;
   $font_path = content_url() . '/uploads/fonts/';
