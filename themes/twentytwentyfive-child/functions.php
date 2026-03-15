@@ -277,25 +277,41 @@ add_filter( 'the_content', function( $content ) {
 } );
 
 /* improve accessibility of go to top button, when a keyboard users clicks it they now get sent to the skip link. Instead of being sent to the top of the browser */
+
+/* Instead of using "load" (which caused a timing race with the plugin's own load listener
+   that injects the button), we delegate to document instead. Document always exists 
+   immediately, and we check each click as it happens. By which point the button 
+   definitely exists. */
+
+/*  jQuery's stopPropagation — the plugin's return false kills event bubbling upward through the DOM. Capture phase travels downward through the DOM before bubbling happens, so your listener fires before jQuery even gets a chance to stop anything.
+
+The plugin's code that lead to our listener being blocked:
+"e.on("click", function(o) {
+    // ...
+    return !1
+})"
+
+return false inside a jQuery event handler is shorthand for calling both e.preventDefault() and e.stopPropagation() simultaneously. 
+
+ That's what was killing the bubbling and preventing your delegated listeners from ever seeing the click.
+*/
+
 add_action( 'wp_footer', function() {
     ?>
     <script>
     (function() {
-        document.addEventListener('DOMContentLoaded', function() {
-            var btn = document.getElementById('wpfront-scroll-top-container');
-            if (!btn) return;
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('#wpfront-scroll-top-container')) return;
 
-            btn.addEventListener('click', function() {
-                var target = document.getElementById('wp--skip-link--target');
-                if (!target) return;
+            var target = document.getElementById('wp--skip-link--target');
+            if (!target) return;
 
-                target.setAttribute('tabindex', '-1');
+            target.setAttribute('tabindex', '-1');
 
-                setTimeout(function() {
-                    target.focus({ preventScroll: true });
-                }, 300);
-            });
-        });
+            setTimeout(function() {
+                target.focus({ preventScroll: true });
+            }, 450);
+        }, true); // capture phase beats jQuery's stopPropagation
     })();
     </script>
     <?php
