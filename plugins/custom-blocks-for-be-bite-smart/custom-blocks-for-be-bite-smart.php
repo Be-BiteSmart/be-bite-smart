@@ -38,10 +38,10 @@ function documentary_video_register_block() {
 }
 add_action( 'init', 'documentary_video_register_block' );
 
-function pdf_toggle_register_block() {
-    register_block_type( __DIR__ . '/build/pdf-toggle' );
+function read_more_register_block() {
+    register_block_type( __DIR__ . '/build/read-more' );
 }
-add_action( 'init', 'pdf_toggle_register_block' );
+add_action( 'init', 'read_more_register_block' );
 
 function unfunded_episode_register_block() {
     register_block_type( __DIR__ . '/build/unfunded-episode' );
@@ -155,24 +155,47 @@ add_action( 'init', 'hero_register_block' );
 // Enqueue shared front-end JS
 // These two files are shared across multiple blocks so they can't be
 // owned by a single block's viewScript — they stay as manual enqueues.
-// pdf-toggle.js  — used by pdf-toggle block and article-or-commentary block
-// video-toggle.js — used by video-quote block and episode-card block
+
+
 // -----------------------------
+
 function custom_blocks_scripts() {
+    $video_toggle_asset = include plugin_dir_path( __FILE__ ) . 'build/video-toggle.asset.php';
     wp_enqueue_script(
         'video-toggle',
-        plugins_url( 'video-toggle.js', __FILE__ ),
+        plugins_url( 'build/video-toggle.js', __FILE__ ),
         array(),
-        '1.0',
+        $video_toggle_asset['version'],
         true
     );
 
+    $read_more_asset = include plugin_dir_path( __FILE__ ) . 'build/read-more.asset.php';
     wp_enqueue_script(
-        'pdf-toggle',
-        plugins_url( 'pdf-toggle.js', __FILE__ ),
+        'read-more',
+        plugins_url( 'build/read-more.js', __FILE__ ),
         array(),
-        '1.0',
+        $read_more_asset['version'],
         true
+    );
+
+    $toggle_system_asset = include plugin_dir_path( __FILE__ ) . 'build/toggle-system.asset.php';
+    wp_enqueue_script(
+        'toggle-system',
+        plugins_url( 'build/toggle-system.js', __FILE__ ),
+        array(),
+        $toggle_system_asset['version'],
+        true
+    );
+
+    // pdf-toggle stylesheet — enqueued globally because the block is used
+    // as an InnerBlock inside article-or-commentary, so WordPress won't
+    // detect it on the page and load it automatically.
+    $pdf_toggle_asset = include plugin_dir_path( __FILE__ ) . 'build/pdf-toggle/index.asset.php';
+    wp_enqueue_style(
+        'pdf-toggle-style',
+        plugins_url( 'build/pdf-toggle/style-index.css', __FILE__ ),
+        array(),
+        $pdf_toggle_asset['version']
     );
 }
 add_action( 'wp_enqueue_scripts', 'custom_blocks_scripts' );

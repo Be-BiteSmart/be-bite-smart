@@ -6,10 +6,8 @@
   "category": "widgets",
   "textdomain": "custom-blocks",
   "editorScript": "file:./index.js",
-   "style": "file:./style-index.css",
+  "style": "file:./style-index.css",
   "editorStyle": "file:./style.css",
-  
-   "viewScript": "file:./press-release-expand.js",
 
   "supports": {}
 }

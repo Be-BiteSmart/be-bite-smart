@@ -380,20 +380,16 @@ registerBlockType("custom/educational-content-download", {
       .join(" · ");
 
     // Per-language button helper — viewer > download > coming soon
-    const renderButton = (
-      hasPdf,
-      hasDownload,
-      viewerClass,
-      downloadClass,
-      comingSoonClass,
-      targetId,
-      label,
-    ) => {
+    const renderButton = (hasPdf, hasDownload, isOutline, targetId, label) => {
+      const base =
+        "ecd-toggle block-toggle-btn" +
+        (isOutline ? " is-style-outline ecd-toggle--outline" : "");
+
       if (hasPdf) {
         return wp.element.createElement(
           "button",
           {
-            className: viewerClass,
+            className: base,
             "data-target": targetId,
             "data-group": groupId,
             "data-expanded": "false",
@@ -406,7 +402,7 @@ registerBlockType("custom/educational-content-download", {
           "a",
           {
             href: hasDownload,
-            className: downloadClass,
+            className: base + " ecd-toggle--download",
             download: true,
             "aria-label": "Download " + label + " version",
           },
@@ -416,7 +412,7 @@ registerBlockType("custom/educational-content-download", {
       return wp.element.createElement(
         "button",
         {
-          className: comingSoonClass,
+          className: base + " ecd-toggle--coming-soon",
           disabled: true,
           "aria-disabled": "true",
         },
@@ -463,24 +459,8 @@ registerBlockType("custom/educational-content-download", {
       wp.element.createElement(
         "div",
         { className: "ecd-buttons" },
-        renderButton(
-          attributes.pdfUrl,
-          downloadUrlEn,
-          "ecd-toggle",
-          "ecd-toggle ecd-toggle--download",
-          "ecd-toggle ecd-toggle--coming-soon",
-          enId,
-          "EN",
-        ),
-        renderButton(
-          attributes.pdfUrlEs,
-          downloadUrlEs,
-          "ecd-toggle ecd-toggle--outline",
-          "ecd-toggle ecd-toggle--outline ecd-toggle--download",
-          "ecd-toggle ecd-toggle--outline ecd-toggle--coming-soon",
-          esId,
-          "ES",
-        ),
+        renderButton(attributes.pdfUrl, downloadUrlEn, false, enId, "EN"),
+        renderButton(attributes.pdfUrlEs, downloadUrlEs, true, esId, "ES"),
       ),
 
       // PDF viewers — only rendered when a PDF (not a download link) is provided

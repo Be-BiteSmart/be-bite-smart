@@ -5,6 +5,5 @@
   "title": "Educational Content Download Card",
   "category": "widgets",
   "editorScript": "file:./index.js",
-  "style": "file:./style-index.css",
-   "viewScript": "file:./educational-content-pdf-toggle.js"
+  "style": "file:./style-index.css"
 }

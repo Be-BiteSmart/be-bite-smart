@@ -8,9 +8,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (!showMoreBtn || !showLessBtn || !content) return;
 
-    // Give each section 1 a unique id
-    section1.id = `bio-section-1-${index}`;
-
     showMoreBtn.addEventListener("click", () => {
       showMoreBtn.classList.add("hidden");
       content.classList.add("expanded");
@@ -22,20 +19,19 @@ document.addEventListener("DOMContentLoaded", function () {
       section1.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   });
-   // checking if expanded bio is empty
- document.querySelectorAll(".bio-section-2").forEach((section) => {
-  const contentEls = [...section.querySelectorAll("p, h2, h3, h4, li, img")];
-  const hasContent = contentEls.some(
-    (el) => el.tagName === "IMG" || el.textContent.trim().length > 0
-  );
+  // checking if expanded bio is empty
+  document.querySelectorAll(".bio-section-2").forEach((section) => {
+    const contentEls = [...section.querySelectorAll("p, h2, h3, h4, li, img")];
+    const hasContent = contentEls.some(
+      (el) => el.tagName === "IMG" || el.textContent.trim().length > 0,
+    );
 
-  if (!hasContent) {
-    section.style.display = "none";
+    if (!hasContent) {
+      section.style.display = "none";
 
-    const btn = section.closest(".bio-main")?.querySelector(".show-more-btn");
-    console.log("found btn:", btn); // is this null?
-    if (btn) btn.style.display = "none";
-  }
-});
-
+      const btn = section.closest(".bio-main")?.querySelector(".show-more-btn");
+      console.log("found btn:", btn); // is this null?
+      if (btn) btn.style.display = "none";
+    }
+  });
 });
