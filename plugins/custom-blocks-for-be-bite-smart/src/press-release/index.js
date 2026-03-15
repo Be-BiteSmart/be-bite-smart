@@ -485,33 +485,26 @@ registerBlockType("custom/press-release", {
 
       // ── Expandable InnerBlocks (text or pdf) ──────────────────────────
       attributes.expandableType !== "none"
-        ? wp.element.createElement(
-            "div",
-            null,
-            wp.element.createElement(
+        ? attributes.expandableType === "pdf"
+          ? wp.element.createElement(InnerBlocks.Content)
+          : wp.element.createElement(
               "div",
-              {
-                // expandable-content / pdf-viewer-container base styles live in global CSS
-                className:
-                  attributes.expandableType === "pdf"
-                    ? "pdf-viewer-container"
-                    : "expandable-content",
-              },
-              wp.element.createElement(InnerBlocks.Content),
-            ),
-            wp.element.createElement(
-              "button",
-              {
-                className:
-                  attributes.expandableType === "pdf"
-                    ? "pdf-toggle block-toggle-btn"
-                    : "read-more-toggle block-toggle-btn",
-                "data-expanded": "false",
-                type: "button",
-              },
-              attributes.expandableType === "pdf" ? "View PDF" : "Read More",
-            ),
-          )
+              null,
+              wp.element.createElement(
+                "div",
+                { className: "expandable-content" },
+                wp.element.createElement(InnerBlocks.Content),
+              ),
+              wp.element.createElement(
+                "button",
+                {
+                  className: "read-more-toggle block-toggle-btn",
+                  "data-expanded": "false",
+                  type: "button",
+                },
+                "Read More",
+              ),
+            )
         : null,
     );
   },
