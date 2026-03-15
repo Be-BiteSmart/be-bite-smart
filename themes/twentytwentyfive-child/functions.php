@@ -94,16 +94,16 @@ add_action( 'post_updated', function( $post_id ) {
 }, 10, 1 );
 
 // defers jquery, to improve loading speed. Only done on landing page, since forminator on the contact page will break otherwise
+//Logged-in users get jQuery normally otherwise translate press's edit screen won't appear for the 1st page, visitors get the deferred version
 add_filter( 'script_loader_tag', function( $tag, $handle ) {
     if ( ! is_front_page() ) return $tag;
-    
+    if ( is_user_logged_in() ) return $tag;
     $defer = [ 'jquery-core', 'jquery-migrate', 'trp-language-switcher-js-v2' ];
     if ( in_array( $handle, $defer ) ) {
         return str_replace( '<script ', '<script defer ', $tag );
     }
     return $tag;
 }, 10, 2 );
-
 // preloads fonts used above the fold on the front page
 add_action( 'wp_head', function() {
     if ( ! is_front_page() ) return;
