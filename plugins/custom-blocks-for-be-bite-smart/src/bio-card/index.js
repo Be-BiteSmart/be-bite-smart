@@ -284,7 +284,11 @@ registerBlockType("custom/bio-card", {
     );
   },
 
+  /* Why your other attributes work fine but innerBlocks needs special handling: 
+  
+  fields like name, role, shortBio, etc. are stored as block attributes in the block comment delimiter (<!-- wp:custom/bio-card {"name":"..."} -->), so they survive a null save just fine. InnerBlocks content is different — it lives as actual HTML between the delimiters, which only gets written if save emits InnerBlocks.Content.*/
+
   save: function () {
-    return null;
+    return el(InnerBlocks.Content, {});
   },
 });
