@@ -275,3 +275,28 @@ add_filter( 'the_content', function( $content ) {
         $content
     );
 } );
+
+/* improve accessibility of go to top button, when a keyboard users clicks it they now get sent to the skip link. Instead of being sent to the top of the browser */
+add_action( 'wp_footer', function() {
+    ?>
+    <script>
+    (function() {
+        document.addEventListener('DOMContentLoaded', function() {
+            var btn = document.getElementById('wpfront-scroll-top-container');
+            if (!btn) return;
+
+            btn.addEventListener('click', function() {
+                var target = document.getElementById('wp--skip-link--target');
+                if (!target) return;
+
+                target.setAttribute('tabindex', '-1');
+
+                setTimeout(function() {
+                    target.focus({ preventScroll: true });
+                }, 300);
+            });
+        });
+    })();
+    </script>
+    <?php
+});
