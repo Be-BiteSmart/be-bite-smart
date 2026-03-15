@@ -107,14 +107,15 @@ add_filter( 'script_loader_tag', function( $tag, $handle ) {
 // preloads fonts used above the fold on the front page
 add_action( 'wp_head', function() {
     if ( ! is_front_page() ) return;
-  $font_path = content_url() . '/uploads/fonts/';
-    echo '<link rel="preload" href="' . $font_path . 'Omnes-Medium.woff2" as="font" type="font/woff2" crossorigin>' . "\n";
-    echo '<link rel="preload" href="' . $font_path . 'Omnes-SemiBold.woff2" as="font" type="font/woff2" crossorigin>' . "\n";
-    echo '<link rel="preload" href="' . $font_path . 'Urbanist-Medium.woff2" as="font" type="font/woff2" crossorigin>' . "\n";
-    echo '<link rel="preload" href="' . $font_path . 'Urbanist-SemiBold.woff2" as="font" type="font/woff2" crossorigin>' . "\n";
-    echo '<link rel="preload" href="' . $font_path . 'Urbanist-Bold.woff2" as="font" type="font/woff2" crossorigin>' . "\n";
+    $base = 'https://bebitesmart.dreamhosters.com/wp-content/uploads/fonts/';
+    // Urbanist — above fold fonts preloaded first
+    echo '<link rel="preload" href="' . $base . 'L0xjDF02iFML4hGCyOCpRdycFsGxSrqD-R4fE5OrS8SlKw.woff2" as="font" type="font/woff2" crossorigin>' . "\n";
+    echo '<link rel="preload" href="' . $base . 'L0xjDF02iFML4hGCyOCpRdycFsGxSrqDFRkfE5OrS8SlKw.woff2" as="font" type="font/woff2" crossorigin>' . "\n";
+    echo '<link rel="preload" href="' . $base . 'L0xjDF02iFML4hGCyOCpRdycFsGxSrqDLBkfE5OrS8SlKw.woff2" as="font" type="font/woff2" crossorigin>' . "\n";
+    // Omnes — above fold fonts
+    echo '<link rel="preload" href="' . $base . 'Omnes-Medium.woff2" as="font" type="font/woff2" crossorigin>' . "\n";
+    echo '<link rel="preload" href="' . $base . 'Omnes-SemiBold.woff2" as="font" type="font/woff2" crossorigin>' . "\n";
 }, 1 );
-
 
 
 // removes page author information from discord embeds
