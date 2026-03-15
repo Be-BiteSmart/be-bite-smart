@@ -283,18 +283,16 @@ add_filter( 'the_content', function( $content ) {
    immediately, and we check each click as it happens. By which point the button 
    definitely exists. */
 
-/*  jQuery's stopPropagation — the plugin's return false kills event bubbling upward through the DOM. Capture phase travels downward through the DOM before bubbling happens, so your listener fires before jQuery even gets a chance to stop anything.
-
-The plugin's code that lead to our listener being blocked:
-"e.on("click", function(o) {
-    // ...
-    return !1
-})"
-
-return false inside a jQuery event handler is shorthand for calling both e.preventDefault() and e.stopPropagation() simultaneously. 
-
- That's what was killing the bubbling and preventing your delegated listeners from ever seeing the click.
+/* Capture phase (the third argument, true) means our listener travels DOWN the DOM 
+   before jQuery's bubbling phase, so it fires before jQuery gets a chance to suppress it.
+   The plugin's click handler ends with `return !1` which in jQuery is shorthand for 
+   both e.preventDefault() and e.stopPropagation() — that's what was killing the bubbling 
+   and blocking our previous delegated listeners. 
 */
+
+/* so when we clicked on the button, it was supposed to bubble up to the document which was where the listener was waiting. However jquery's stopPropation blocked this entirely. 
+
+jQuery's stopPropagation only stops the bubble — it has no power over the capture phase that already happened.*/
 
 add_action( 'wp_footer', function() {
     ?>
@@ -304,10 +302,18 @@ add_action( 'wp_footer', function() {
             if (!e.target.closest('#wpfront-scroll-top-container')) return;
 
             var target = document.getElementById('wp--skip-link--target');
+            // wp--skip-link--target is on main, so our target is main
+
+            // When the browser follows the skip link natively, it handles moving focus to <main> itself as part of its built-in anchor navigation behaviour — it has special handling for this that bypasses the normal focusability rules.
+
+            // But when JavaScript calls .focus() on <main>, it has no such special handling — it strictly requires the element to be programmatically focusable. Without tabindex="-1", it silently does nothing.
             if (!target) return;
 
             target.setAttribute('tabindex', '-1');
 
+             //timeout is so it waits for the plugin's scroll animation to finish after 400ms(+ a small buffer)
+
+             // If you call target.focus() immediately, the page is still mid-scroll. The browser can get confused about where focus should land while the viewport is moving, and may override it — which would send focus back to the browser chrome.
             setTimeout(function() {
                 target.focus({ preventScroll: true });
             }, 450);
