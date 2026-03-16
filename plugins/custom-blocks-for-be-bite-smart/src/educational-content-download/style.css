@@ -86,14 +86,16 @@ html
 }
 
 /* ── Coming soon — disabled state global doesn't handle ── */
-body:not(.block-editor-page) .ecd-toggle--coming-soon {
+html body:not(.block-editor-page) .ecd-toggle--coming-soon.block-toggle-btn {
   background: #e8edf2;
   color: #4e6475;
   border-color: #c8d4dc;
   cursor: not-allowed;
   pointer-events: none;
 }
-body:not(.block-editor-page) .ecd-toggle--outline.ecd-toggle--coming-soon {
+html
+  body:not(.block-editor-page)
+  .ecd-toggle--outline.ecd-toggle--coming-soon.block-toggle-btn {
   background: #ffffff;
   color: #4e6475;
   border-color: #c8d4dc;
