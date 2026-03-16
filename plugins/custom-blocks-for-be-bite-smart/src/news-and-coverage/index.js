@@ -81,7 +81,8 @@ registerBlockType("custom/news-and-coverage", {
           wp.element.createElement(TextControl, {
             label: __("Link Button Label", "custom-blocks"),
             value: attributes.linkLabel || "",
-            placeholder: "Read Full Article ↗",
+            placeholder: "Read Full Article",
+            help: __('The "↗" arrow is added automatically.', "custom-blocks"),
             onChange: (val) => setAttributes({ linkLabel: val }),
           }),
         ),
@@ -310,7 +311,22 @@ registerBlockType("custom/news-and-coverage", {
             opacity: 0.8,
           },
         },
-        (attributes.linkLabel || "Read Full Article") + " ↗",
+        //  \uFE0E == telling the arrow to render as plain text, don't become an emoji with a blue background
+        wp.element.createElement(
+          "a",
+          {
+            href: attributes.linkUrl,
+            className: "block-toggle-btn",
+            target: "_blank",
+            rel: "noopener noreferrer",
+          },
+          attributes.linkLabel,
+          wp.element.createElement(
+            "span",
+            { style: { marginLeft: "6px" } },
+            "↗\uFE0E",
+          ),
+        ),
       ),
     );
   },
@@ -370,7 +386,12 @@ registerBlockType("custom/news-and-coverage", {
             target: "_blank",
             rel: "noopener noreferrer",
           },
-          (attributes.linkLabel || "Read Full Article") + " ↗",
+          attributes.linkLabel,
+          wp.element.createElement(
+            "span",
+            { style: { marginLeft: "6px" } },
+            "↗\uFE0E",
+          ),
         ),
     );
   },
