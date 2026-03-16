@@ -13,6 +13,8 @@ body:not(.block-editor-page) .pdf-toggle-block .pdf-toggle-buttons {
 /* Global adds margin-top: 1rem — not wanted here */
 body:not(.block-editor-page) .pdf-toggle-block .pdf-toggle.block-toggle-btn {
   margin-top: 0;
+  min-width: 160px; /* holds the width during Translates press's text swap */
+  min-height: 44px; /* holds the height during Translates press's text swap */
 }
 
 /* When open, button 1 flips from filled → outlined */
