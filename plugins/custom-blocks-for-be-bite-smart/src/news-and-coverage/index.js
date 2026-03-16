@@ -42,7 +42,7 @@ registerBlockType("custom/news-and-coverage", {
     headline: { type: "string", default: "" },
     excerpt: { type: "string", default: "" },
     linkUrl: { type: "string", default: "" },
-    linkLabel: { type: "string", default: "Read Full Article" },
+    linkLabel: { type: "string", default: "Read Full Article ↗" },
   },
 
   edit: ({ attributes, setAttributes }) => {
@@ -81,7 +81,7 @@ registerBlockType("custom/news-and-coverage", {
           wp.element.createElement(TextControl, {
             label: __("Link Button Label", "custom-blocks"),
             value: attributes.linkLabel || "",
-            placeholder: "Read Full Article",
+            placeholder: "Read Full Article ↗",
             onChange: (val) => setAttributes({ linkLabel: val }),
           }),
         ),
@@ -310,8 +310,7 @@ registerBlockType("custom/news-and-coverage", {
             opacity: 0.8,
           },
         },
-        attributes.linkLabel || "Read Full Article",
-        " ↗",
+        (attributes.linkLabel || "Read Full Article") + " ↗",
       ),
     );
   },
@@ -371,7 +370,7 @@ registerBlockType("custom/news-and-coverage", {
             target: "_blank",
             rel: "noopener noreferrer",
           },
-          attributes.linkLabel || "Read Full Article ↗",
+          (attributes.linkLabel || "Read Full Article") + " ↗",
         ),
     );
   },
