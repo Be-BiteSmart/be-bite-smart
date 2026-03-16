@@ -21,7 +21,7 @@ export function renderPdfButton(
     ),
     wp.element.createElement(
       "span",
-      { className: "btn-label btn-label--hide", style: { display: "none" } },
+      { className: "btn-label btn-label--hide" },
       labelHide,
     ),
   );
