@@ -42,7 +42,7 @@ registerBlockType("custom/news-and-coverage", {
     headline: { type: "string", default: "" },
     excerpt: { type: "string", default: "" },
     linkUrl: { type: "string", default: "" },
-    linkLabel: { type: "string", default: "Read Full Article ↗" },
+    linkLabel: { type: "string", default: "Read Full Article" },
   },
 
   edit: ({ attributes, setAttributes }) => {
