@@ -394,7 +394,12 @@ registerBlockType("custom/educational-content-download", {
             "data-group": groupId,
             "data-expanded": "false",
           },
-          "View PDF (" + label + ")",
+          // text is in span to translate press doesn't get confused and try to translate the button and a text node
+          wp.element.createElement(
+            "span",
+            { className: "btn-label" },
+            "View PDF (" + label + ")",
+          ),
         );
       }
       if (hasDownload) {
@@ -404,9 +409,12 @@ registerBlockType("custom/educational-content-download", {
             href: hasDownload,
             className: base + " ecd-toggle--download",
             download: true,
-            "aria-label": "Download " + label + " version",
           },
-          "Download (" + label + ")",
+          wp.element.createElement(
+            "span",
+            { className: "btn-label" },
+            "Download (" + label + ")",
+          ),
         );
       }
       return wp.element.createElement(
@@ -416,7 +424,11 @@ registerBlockType("custom/educational-content-download", {
           disabled: true,
           "aria-disabled": "true",
         },
-        "Coming Soon (" + label + ")",
+        wp.element.createElement(
+          "span",
+          { className: "btn-label" },
+          "Coming Soon (" + label + ")",
+        ),
       );
     };
 

@@ -203,7 +203,14 @@ registerBlockType("custom/pdf-toggle", {
               "data-group": groupId,
               "data-expanded": "false",
             },
-            "View PDF (ENG)",
+            wp.element.createElement(
+              // giving TranslatePress one unambiguous target to translate by putting the text into a span, otherwise  { className: "pdf-toggle block-toggle-btn", ... },
+              // would confuse it into thinking it had a button and text node to translate
+              "View PDF (ENG)",
+              "span",
+              { className: "btn-label" },
+              "View PDF (ENG)",
+            ),
           ),
         attributes.pdfUrlEs &&
           wp.element.createElement(
@@ -214,7 +221,11 @@ registerBlockType("custom/pdf-toggle", {
               "data-group": groupId,
               "data-expanded": "false",
             },
-            "View PDF (ES)",
+            wp.element.createElement(
+              "span",
+              { className: "btn-label" },
+              "View PDF (ES)",
+            ),
           ),
       ),
 
