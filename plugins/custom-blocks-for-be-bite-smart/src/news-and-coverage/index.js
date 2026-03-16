@@ -338,24 +338,23 @@ registerBlockType("custom/news-and-coverage", {
       "article",
       {
         ...blockProps,
-        className:
-          "custom-block-card custom-block-border          media-mention-block",
+        className: "custom-block-card custom-block-border media-mention-block",
       },
 
       // Outlet badge
       (attributes.outletName || attributes.logoUrl) &&
         wp.element.createElement(
           "div",
-          { className: "media-mention-outlet" },
+          { className: "media-mention-outlet outlet-badge-wrapper" },
           attributes.outletType === "logo" && attributes.logoUrl
             ? wp.element.createElement("img", {
                 src: attributes.logoUrl,
                 alt: attributes.logoAlt || attributes.outletName || "",
-                className: "media-mention-logo",
+                className: "media-mention-logo outlet-badge-logo",
               })
             : wp.element.createElement(
                 "span",
-                { className: "media-mention-outlet-name" },
+                { className: "media-mention-outlet-name outlet-badge-name" },
                 attributes.outletName,
               ),
         ),
@@ -365,7 +364,7 @@ registerBlockType("custom/news-and-coverage", {
         wp.element.createElement(RichText.Content, {
           tagName: "h3",
           value: attributes.headline,
-          className: "media-mention-headline",
+          className: "media-mention-headline article-headline",
         }),
 
       // Excerpt

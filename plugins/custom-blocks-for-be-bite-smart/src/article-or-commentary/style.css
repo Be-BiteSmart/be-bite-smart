@@ -15,22 +15,14 @@ body:not(.block-editor-page)
   line-height: 1.4;
   font-weight: 700;
   color: #000000;
-  font-size: 1.5rem;
-}
-
-@media (max-width: 768px) {
-  body:not(.block-editor-page)
-    article.expandable-article-block
-    .article-headline {
-    font-size: 1.25rem;
-  }
+  font-size: var(--wp--preset--font-size--large);
 }
 
 /* ── Meta (Author & Date) ── */
 body:not(.block-editor-page) article.expandable-article-block .article-meta {
   margin-bottom: 1.5rem;
-  font-size: 0.9rem;
-  color: #6b7280;
+  font-size: var(--wp--preset--font-size--small);
+  color: var(--wp--preset--color--accent-4);
   font-style: italic;
 }
 

@@ -12,62 +12,10 @@
    Buttons use WordPress default .wp-block-button / .wp-element-button styles.
    ───────────────────────────────────────────────────────────────────────────── */
 
-/* ── Outlet badge ── */
-body:not(.block-editor-page) article.press-release-block .press-release-outlet {
-  display: inline-flex;
-  align-items: center;
-  margin-bottom: 0.85rem;
-}
-
-body:not(.block-editor-page)
-  article.press-release-block
-  .press-release-outlet-name {
-  display: inline-block;
-  padding: 0.2rem 0.65rem;
-  background: #f3f4f6;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.25rem;
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: #374151;
-}
-
-body:not(.block-editor-page) article.press-release-block .press-release-logo {
-  max-height: 36px;
-  max-width: 160px;
-  width: auto;
-  object-fit: contain;
-  display: block;
-}
-
-/* ── Headline ── */
-body:not(.block-editor-page)
-  article.press-release-block
-  .press-release-headline {
-  margin-top: 0;
-  margin-bottom: 0.75rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid #e5e7eb;
-  line-height: 1.4;
-  font-weight: 700;
-  color: #000000;
-  font-size: 1.5rem;
-}
-
-@media (max-width: 768px) {
-  body:not(.block-editor-page)
-    article.press-release-block
-    .press-release-headline {
-    font-size: 1.25rem;
-  }
-}
-
 /* ── Meta (date) ── */
 body:not(.block-editor-page) article.press-release-block .press-release-meta {
   margin-bottom: 1.25rem;
-  font-size: 0.9rem;
+  font-size: var(--wp--preset--font-size--small);
   color: #6b7280;
   font-style: italic;
 }
@@ -84,7 +32,7 @@ body:not(.block-editor-page)
   margin-bottom: 1.5rem;
   line-height: 1.7;
   color: #111827;
-  font-size: 1rem;
+  font-size: var(--wp--preset--font-size--medium);
   border-bottom: none;
 }
 
@@ -112,7 +60,7 @@ body:not(.block-editor-page) article.press-release-block .expandable-content {
   border-top: 1px solid #e5e7eb;
   line-height: 1.7;
   color: #374151;
-  font-size: 1rem;
+  font-size: var(--wp--preset--font-size--medium);
 }
 
 body:not(.block-editor-page)

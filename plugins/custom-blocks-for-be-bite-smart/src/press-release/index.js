@@ -438,16 +438,16 @@ registerBlockType("custom/press-release", {
       (attributes.outletName || attributes.logoUrl) &&
         wp.element.createElement(
           "div",
-          { className: "press-release-outlet" },
+          { className: "press-release-outlet outlet-badge-wrapper" },
           attributes.outletType === "logo" && attributes.logoUrl
             ? wp.element.createElement("img", {
                 src: attributes.logoUrl,
                 alt: attributes.logoAlt || attributes.outletName || "",
-                className: "press-release-logo",
+                className: "press-release-logo outlet-badge-logo",
               })
             : wp.element.createElement(
                 "span",
-                { className: "press-release-outlet-name" },
+                { className: "press-release-outlet-name outlet-badge-name" },
                 attributes.outletName,
               ),
         ),
@@ -457,7 +457,7 @@ registerBlockType("custom/press-release", {
         wp.element.createElement(RichText.Content, {
           tagName: "h3",
           value: attributes.headline,
-          className: "press-release-headline",
+          className: "press-release-headline article-headline",
         }),
 
       // ── Date ─────────────────────────────────────────────────────────

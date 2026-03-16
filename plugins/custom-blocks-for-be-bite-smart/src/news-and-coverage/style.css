@@ -10,51 +10,6 @@
   News and Coverage Block – FRONTEND ONLY
    ───────────────────────────────────────────────────────────────────────────── */
 
-/* ── Outlet badge (wraps either the logo or text name) ── */
-body:not(.block-editor-page) article.media-mention-block .media-mention-outlet {
-  display: inline-flex;
-  align-items: center;
-  margin-bottom: 0.85rem;
-}
-
-/* Text-based outlet name */
-body:not(.block-editor-page)
-  article.media-mention-block
-  .media-mention-outlet-name {
-  display: inline-block;
-  padding: 0.2rem 0.65rem;
-  background: #f3f4f6;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.25rem;
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--wp--preset--color--accent-4);
-}
-
-/* Logo image */
-body:not(.block-editor-page) article.media-mention-block .media-mention-logo {
-  max-height: 36px;
-  max-width: 160px;
-  width: auto;
-  object-fit: contain;
-  display: block;
-}
-
-/* ── Headline ── */
-body:not(.block-editor-page)
-  article.media-mention-block
-  .media-mention-headline {
-  margin-top: 0;
-  margin-bottom: 0.75rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid #e5e7eb;
-  line-height: 1.4;
-  font-weight: 700;
-  font-size: 1.35rem;
-}
-
 /* ── Excerpt ── */
 body:not(.block-editor-page)
   article.media-mention-block
@@ -63,41 +18,6 @@ body:not(.block-editor-page)
   font-weight: 500;
   line-height: 1.65;
   font-size: var(--wp--preset--font-size--medium);
-}
-
-/* ── External link button ── */
-body:not(.block-editor-page) article.media-mention-block .media-mention-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.65rem 1.4rem;
-  font-size: 0.95rem;
-  font-weight: 600;
-  border-radius: 0.375rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-decoration: none;
-
-  /* Filled */
-  background-color: #1e5480;
-  color: white;
-  border: 2px solid #1e5480;
-}
-
-body:not(.block-editor-page)
-  article.media-mention-block
-  .media-mention-link:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
-  color: white;
-  text-decoration: none;
-}
-
-body:not(.block-editor-page)
-  article.media-mention-block
-  .media-mention-link:active {
-  transform: translateY(0);
 }
 
 /* ── Responsive ── */
@@ -109,6 +29,6 @@ body:not(.block-editor-page)
   body:not(.block-editor-page)
     article.media-mention-block
     .media-mention-headline {
-    font-size: 1.1rem;
+    font-size: var(--wp--preset--font-size--large);
   }
 }
