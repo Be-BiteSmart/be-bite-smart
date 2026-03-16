@@ -197,3 +197,45 @@ body:not(.block-editor-page) .capitalized-and-colored {
   justify-content: center;
   flex-shrink: 0;
 }
+
+/* small badges with optional logo */
+
+/* ── Shared outlet badge ── */
+
+body:not(.block-editor-page) .outlet-badge-wrapper {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 0.85rem;
+}
+body:not(.block-editor-page) .outlet-badge-name {
+  display: inline-block;
+  padding: 0.2rem 0.65rem;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.25rem;
+  font-size: var(--wp--preset--font-size--small);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--wp--preset--color--accent-4);
+}
+
+body:not(.block-editor-page) .outlet-badge-logo {
+  max-height: 36px;
+  max-width: 160px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+}
+
+/* article heading */
+
+body:not(.block-editor-page) .article-headline {
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+  line-height: 1.4;
+  font-weight: 700;
+  font-size: var(--wp--preset--font-size--large);
+}
