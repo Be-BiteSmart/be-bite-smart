@@ -1,4 +1,5 @@
 import "./style.css";
+import { renderPdfButton } from "../components/pdf-button";
 
 import { registerBlockType } from "@wordpress/blocks";
 import {
@@ -386,20 +387,14 @@ registerBlockType("custom/educational-content-download", {
         (isOutline ? " is-style-outline ecd-toggle--outline" : "");
 
       if (hasPdf) {
-        return wp.element.createElement(
-          "button",
-          {
-            className: base,
-            "data-target": targetId,
-            "data-group": groupId,
-            "data-expanded": "false",
-          },
-          // text is in span to translate press doesn't get confused and try to translate the button and a text node
-          wp.element.createElement(
-            "span",
-            { className: "btn-label" },
-            "View PDF (" + label + ")",
-          ),
+        // needs a return because its inside of an if statement, renderButton needs an explicit return to return this object
+        return renderPdfButton(
+          wp,
+          base,
+          targetId,
+          groupId,
+          "View PDF (" + label + ")",
+          "Hide PDF (" + label + ")",
         );
       }
       if (hasDownload) {

@@ -8,6 +8,7 @@ import {
 } from "@wordpress/block-editor";
 import { PanelBody, TextControl } from "@wordpress/components";
 import { __ } from "@wordpress/i18n";
+import { renderPdfButton } from "../components/pdf-button";
 
 const editor_font_size = "18px";
 
@@ -194,38 +195,25 @@ registerBlockType("custom/pdf-toggle", {
       wp.element.createElement(
         "div",
         { className: "pdf-toggle-buttons" },
+
         attributes.pdfUrl &&
-          wp.element.createElement(
-            "button",
-            {
-              className: "pdf-toggle block-toggle-btn",
-              "data-target": enId,
-              "data-group": groupId,
-              "data-expanded": "false",
-            },
-            wp.element.createElement(
-              // giving TranslatePress one unambiguous target to translate by putting the text into a span, otherwise  { className: "pdf-toggle block-toggle-btn", ... },
-              // would confuse it into thinking it had a button and text node to translate
-              "View PDF (ENG)",
-              "span",
-              { className: "btn-label" },
-              "View PDF (ENG)",
-            ),
+          //called as immediate child arguement, so doesn't need a return
+          renderPdfButton(
+            wp,
+            "pdf-toggle block-toggle-btn",
+            enId,
+            groupId,
+            "View PDF (ENG)",
+            "Hide PDF (ENG)",
           ),
         attributes.pdfUrlEs &&
-          wp.element.createElement(
-            "button",
-            {
-              className: "pdf-toggle block-toggle-btn is-style-outline",
-              "data-target": esId,
-              "data-group": groupId,
-              "data-expanded": "false",
-            },
-            wp.element.createElement(
-              "span",
-              { className: "btn-label" },
-              "View PDF (ES)",
-            ),
+          renderPdfButton(
+            wp,
+            "pdf-toggle block-toggle-btn is-style-outline",
+            esId,
+            groupId,
+            "View PDF (ES)",
+            "Hide PDF (ES)",
           ),
       ),
 

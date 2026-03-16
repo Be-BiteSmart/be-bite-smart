@@ -10,11 +10,10 @@
         document
           .querySelectorAll(buttonSelector + '[data-group="' + groupId + '"]')
           .forEach(function (b) {
-            b.setAttribute("data-expanded", "false");
-            const bLabel = b.querySelector(".btn-label");
-            // The if (bLabel) / if (btnLabel) guards are important — they make sure it gracefully skips any button that doesn't have a .btn-label span (like a "Coming Soon" button or any other toggle on the page that uses the same script).
-            if (bLabel)
-              bLabel.textContent = bLabel.textContent.replace("Hide", "View");
+            const viewLabel = b.querySelector(".btn-label--view");
+            const hideLabel = b.querySelector(".btn-label--hide");
+            if (viewLabel) viewLabel.style.display = "";
+            if (hideLabel) hideLabel.style.display = "none";
           });
         document.querySelectorAll(viewerSelector).forEach(function (v) {
           if (v.id && v.id.includes(groupId.replace(groupPrefix, ""))) {
@@ -34,9 +33,8 @@
             viewer.classList.add("expanded");
           }
           btn.setAttribute("data-expanded", "true");
-          const btnLabel = btn.querySelector(".btn-label");
-          if (btnLabel)
-            btnLabel.textContent = btnLabel.textContent.replace("View", "Hide");
+          btn.querySelector(".btn-label--view").style.display = "none";
+          btn.querySelector(".btn-label--hide").style.display = "";
         }
       });
     });
