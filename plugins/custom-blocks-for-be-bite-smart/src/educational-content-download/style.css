@@ -65,7 +65,8 @@ body:not(.block-editor-page) .ecd-buttons {
 body:not(.block-editor-page) .ecd-toggle.block-toggle-btn {
   font-weight: 700; /* global is 600 */
   white-space: nowrap;
-  min-width: 200px; /* wide enough for "Coming Soon (EN/ES)" */
+  min-width: 200px; /* wide enough for "Coming Soon (EN/ES)" also min-width height being declared keeps the buttons from collapsing with translate press takes a second to send the translation for the new text*/
+  min-height: 44px;
   margin-top: 0; /* global adds 1rem */
 }
 
