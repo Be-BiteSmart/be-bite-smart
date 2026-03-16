@@ -203,7 +203,7 @@ registerBlockType("custom/pdf-toggle", {
               "data-group": groupId,
               "data-expanded": "false",
             },
-            "View PDF (English)",
+            "View PDF (ENG)",
           ),
         attributes.pdfUrlEs &&
           wp.element.createElement(
@@ -214,7 +214,7 @@ registerBlockType("custom/pdf-toggle", {
               "data-group": groupId,
               "data-expanded": "false",
             },
-            "View PDF (Spanish)",
+            "View PDF (ES)",
           ),
       ),
 
@@ -231,7 +231,7 @@ registerBlockType("custom/pdf-toggle", {
             width: "100%",
             height: "600px",
             style: { border: "1px solid #ddd", marginTop: "10px" },
-            title: "PDF Document (English)",
+            title: "PDF Document (ENG)",
           }),
         ),
 
@@ -248,7 +248,7 @@ registerBlockType("custom/pdf-toggle", {
             width: "100%",
             height: "600px",
             style: { border: "1px solid #ddd", marginTop: "10px" },
-            title: "PDF Document (Spanish)",
+            title: "PDF Document (ES)",
           }),
         ),
     );
