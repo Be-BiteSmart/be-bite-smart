@@ -1,9 +1,13 @@
-import './style.css';
+import "./style.css";
 
-import { registerBlockType } from '@wordpress/blocks';
-import { useBlockProps, RichText, InspectorControls } from '@wordpress/block-editor';
-import { PanelBody, ToggleControl } from '@wordpress/components';
-import { __ } from '@wordpress/i18n';
+import { registerBlockType } from "@wordpress/blocks";
+import {
+  useBlockProps,
+  RichText,
+  InspectorControls,
+} from "@wordpress/block-editor";
+import { PanelBody, ToggleControl } from "@wordpress/components";
+import { __ } from "@wordpress/i18n";
 /**
  * Centralized Quote Configuration
  * Labels as translation keys - will be translated at render time
@@ -253,7 +257,9 @@ registerBlockType("custom/research-article", {
           ];
         const source =
           attributes[
-            `${quote.key.charAt(0).toLowerCase() + quote.key.slice(1)}QuoteSource`
+            `${
+              quote.key.charAt(0).toLowerCase() + quote.key.slice(1)
+            }QuoteSource`
           ];
 
         if (!show) return null;
@@ -284,8 +290,9 @@ registerBlockType("custom/research-article", {
               value: value,
               onChange: (val) =>
                 setAttributes({
-                  [`${quote.key.charAt(0).toLowerCase() + quote.key.slice(1)}Quote`]:
-                    val,
+                  [`${
+                    quote.key.charAt(0).toLowerCase() + quote.key.slice(1)
+                  }Quote`]: val,
                 }),
               placeholder: __("Enter quote…", "custom-blocks"),
               style: {
@@ -302,8 +309,9 @@ registerBlockType("custom/research-article", {
                 value: source,
                 onChange: (val) =>
                   setAttributes({
-                    [`${quote.key.charAt(0).toLowerCase() + quote.key.slice(1)}QuoteSource`]:
-                      val,
+                    [`${
+                      quote.key.charAt(0).toLowerCase() + quote.key.slice(1)
+                    }QuoteSource`]: val,
                   }),
                 placeholder: __("Source (optional)", "custom-blocks"),
                 style: {
@@ -324,8 +332,9 @@ registerBlockType("custom/research-article", {
       "article",
       {
         ...blockProps,
-        className:
-          `${blockProps.className || ""} custom-block-card custom-block-border`.trim(),
+        className: `${
+          blockProps.className || ""
+        } custom-block-card custom-block-border`.trim(),
       },
 
       attributes.title &&
@@ -353,7 +362,7 @@ registerBlockType("custom/research-article", {
       attributes.citation &&
         wp.element.createElement(RichText.Content, {
           tagName: "p",
-          className: "capitalized-and-colored",
+          className: "capitalized-and-colored authors",
           value: attributes.citation,
         }),
 
@@ -385,7 +394,9 @@ registerBlockType("custom/research-article", {
           ];
         const source =
           attributes[
-            `${quote.key.charAt(0).toLowerCase() + quote.key.slice(1)}QuoteSource`
+            `${
+              quote.key.charAt(0).toLowerCase() + quote.key.slice(1)
+            }QuoteSource`
           ];
 
         if (!show || !value) return null;

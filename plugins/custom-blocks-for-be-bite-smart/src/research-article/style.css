@@ -24,6 +24,11 @@ body:not(.block-editor-page)
   text-decoration-thickness: 1px;
 }
 
+body:not(.block-editor-page) p.authors {
+  font-size: var(--wp--preset--font-size--small);
+  margin: 1.5rem 0;
+}
+
 body:not(.block-editor-page)
   article.wp-block-custom-research-article
   h4.wp-block-heading
@@ -54,7 +59,7 @@ body:not(.block-editor-page)
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  font-size: 1.1rem;
+  font-size: var(--wp--preset--font-size--medium);
 }
 
 body:not(.block-editor-page)
@@ -62,7 +67,7 @@ body:not(.block-editor-page)
   .why-it-matters-content {
   margin: 0;
   line-height: 1.7;
-  font-size: 1.1rem;
+  font-size: var(--wp--preset--font-size--medium);
 }
 
 /* ── Quote label ── */
@@ -83,7 +88,7 @@ body:not(.block-editor-page)
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  font-size: 1rem;
+  font-size: var(--wp--preset--font-size--medium);
 }
 
 /* ── Blockquote reset (all quote types) ── */
@@ -113,7 +118,7 @@ body:not(.block-editor-page)
   blockquote
   .quote-content {
   margin: 0 0 0 2.5rem;
-  font-size: 1.1rem;
+  font-size: var(--wp--preset--font-size--medium);
   font-style: italic;
   color: var(--wp--preset-color--accent-5);
   line-height: 1.7;
@@ -125,7 +130,7 @@ body:not(.block-editor-page)
   blockquote
   cite {
   font-style: normal;
-  font-size: 0.875rem;
+  font-size: var(--wp--preset--font-size--medium);
   color: var(--wp--preset-color-accent-4);
   display: inline;
 }
