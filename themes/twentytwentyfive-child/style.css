@@ -512,3 +512,9 @@ html
   outline-offset: 3px;
   box-shadow: none;
 }
+
+/* pdf toggle button, hide */
+
+.btn-label--hide {
+  display: none;
+}
