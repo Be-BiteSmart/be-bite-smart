@@ -11,6 +11,8 @@
   ) !important;
   padding-left: 0 !important;
   padding-right: 0 !important;
+  /*isolate needed otherwise the stacking context interfers with the desktops drop down nav menu, where it messes with the mouseenter logic so the menu suddenly closes once the mouse is over the hero */
+  isolation: isolate;
 }
 
 /* ── Section wrapper ──────────────────────────────────────── */
