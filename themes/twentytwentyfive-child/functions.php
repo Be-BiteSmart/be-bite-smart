@@ -98,7 +98,8 @@ add_action( 'post_updated', function( $post_id ) {
 add_filter( 'script_loader_tag', function( $tag, $handle ) {
     if ( ! is_front_page() ) return $tag;
     if ( is_user_logged_in() ) return $tag;
-    $defer = [ 'jquery-core', 'jquery-migrate', 'trp-language-switcher-js-v2' ];
+    $defer = [ 'jquery-core', 'jquery-migrate', 'trp-language-switcher-js-v2','eeb-js-frontend' ];
+    // eeb-js-frontend is the email/phone encoder plugin
     if ( in_array( $handle, $defer ) ) {
         return str_replace( '<script ', '<script defer ', $tag );
     }
