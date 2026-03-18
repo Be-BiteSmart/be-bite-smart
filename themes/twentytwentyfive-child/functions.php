@@ -107,7 +107,7 @@ add_filter( 'script_loader_tag', function( $tag, $handle ) {
 // preloads fonts used above the fold on the front page
 add_action( 'wp_head', function() {
     if ( ! is_front_page() ) return;
-    $base = 'https://bebitesmart.com/wp-content/uploads/fonts/';
+    $base = 'https://bebitesmart.org/wp-content/uploads/fonts/';
     // Urbanist — above fold fonts preloaded first
     echo '<link rel="preload" href="' . $base . 'L0xjDF02iFML4hGCyOCpRdycFsGxSrqD-R4fE5OrS8SlKw.woff2" as="font" type="font/woff2" crossorigin>' . "\n";
     echo '<link rel="preload" href="' . $base . 'L0xjDF02iFML4hGCyOCpRdycFsGxSrqDFRkfE5OrS8SlKw.woff2" as="font" type="font/woff2" crossorigin>' . "\n";
