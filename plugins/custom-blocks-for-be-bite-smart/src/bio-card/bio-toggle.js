@@ -30,7 +30,7 @@ document.addEventListener("DOMContentLoaded", function () {
       section.style.display = "none";
 
       const btn = section.closest(".bio-main")?.querySelector(".show-more-btn");
-      console.log("found btn:", btn); // is this null?
+
       if (btn) btn.style.display = "none";
     }
   });
