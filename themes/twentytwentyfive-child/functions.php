@@ -93,15 +93,20 @@ add_action( 'post_updated', function( $post_id ) {
     ) );
 }, 10, 1 );
 
-// Cloudflare Web Analytics 
-
-// ============  Cloudflare Web Analytics ================
+// ============  Google Web Analytics ================
  // wp_head to inject script into header
+// Google Analytics 4
 add_action('wp_head', function() {
-    echo '<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon=\'{"token": "467ba6dc088e4a908aa098f23c6dd666"}\'></script>';
+    ?>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-4B1GQ3L8CY');
+    </script>
+    <?php
 });
-
-
 function track_download_clicks() {
     ?>
     <script>
