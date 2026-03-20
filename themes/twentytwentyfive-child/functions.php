@@ -100,17 +100,17 @@ add_action( 'post_updated', function( $post_id ) {
 add_action('wp_head', function() {
     echo '<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon=\'{"token": "467ba6dc088e4a908aa098f23c6dd666"}\'></script>';
 });
+
+
 function track_download_clicks() {
     ?>
     <script>
         document.querySelectorAll('.ecd-toggle--download').forEach(btn => {
             btn.addEventListener('click', () => {
-                if (window.zaraz) {
-                    // check means it silently does nothing if Cloudflare Analytics hasn't loaded yet, so no JS errors
-                   zaraz.track('download', { 
-                    // decodeURIComponent remove any %20 used for spaces, so file names are cleaner to read
-    file: decodeURIComponent(btn.href.split('/').pop()) 
-});
+                if (window.gtag) {
+                    gtag('event', 'download', {
+                        file_name: decodeURIComponent(btn.href.split('/').pop())
+                    });
                 }
             });
         });
