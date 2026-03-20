@@ -98,7 +98,12 @@ add_action( 'post_updated', function( $post_id ) {
 // Google Analytics 4
 add_action('wp_head', function() {
     ?>
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+    <!-- // Google Analytics 4
+// G-XXXXXXXXXX is intentionally left in plain sight — this is the Measurement ID,
+// not a secret key. It's designed to be public and is visible in the page source
+// to anyone who inspects it. It only tells Google which account to send data to,
+// it cannot be used to access or modify an analytics account. -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-B1GQ3L8CY"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
         function gtag(){dataLayer.push(arguments);}
@@ -158,15 +163,25 @@ function track_user_interactions() {
         // ── Education page — episode videos and downloads ──────────────
 
         // Track video downloads
-        document.querySelectorAll('.ecd-toggle--download').forEach(btn => {
-            btn.addEventListener('click', () => {
-                if (window.gtag) {
-                    gtag('event', 'video_downloaded', {
-                        file_name: decodeURIComponent(btn.href.split('/').pop())
-                    });
-                }
+      document.querySelectorAll('.ecd-toggle--download').forEach(btn => {
+    btn.addEventListener('click', () => {
+        if (window.gtag) {
+            // get raw href as it appears in html, since btn.href was leading to the % encoding for spaced to not be stripped back to spaces
+            const raw = btn.getAttribute('href').split('/').pop();
+
+            let fileName;
+            try {
+                // removes % encoding
+                fileName = decodeURIComponent(raw);
+            } catch(e) {
+                fileName = raw; // fallback to raw if decoding fails
+            }
+            gtag('event', 'video_downloaded', {
+                file_name: fileName
             });
-        });
+        }
+    });
+});
 
         // Track episode videos watched
         document.querySelectorAll('.watch-now-button, .video-episode-block .play-button').forEach(btn => {
