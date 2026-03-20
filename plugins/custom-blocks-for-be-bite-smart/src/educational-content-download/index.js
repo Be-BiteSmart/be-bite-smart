@@ -367,12 +367,17 @@ registerBlockType("custom/educational-content-download", {
         if (url.includes("?dl=")) return url.replace(/\?dl=0/, "?dl=1");
         return url + (url.includes("?") ? "&dl=1" : "?dl=1");
       }
-      // R2 / any other direct link — force download at the server level
-      if (url.includes("r2.dev") || url.includes("r2.cloudflarestorage.com")) {
-        return (
-          url +
-          (url.includes("?") ? "&" : "?") +
-          "response-content-disposition=attachment"
+      if (url.includes("r2.dev")) {
+        return url.replace(
+          // R2 files are publicly available, so no secret link is needed here.
+          // We swap the native r2.dev URL with a Cloudflare Worker URL because:
+          //   1. The `download` attribute on <a> tags is ignored by browsers for cross-origin URLs
+          //      (r2.dev is a different origin than bebitesmart.org)
+          //   2. The Worker intercepts the request and adds a `Content-Disposition: attachment` header,
+          //      which is a server-side instruction that browsers always respect regardless of origin —
+          //      forcing a file download instead of playing the video in the browser.
+          "pub-280e86f4e3a9426085703634463f9bc7.r2.dev",
+          "bbs-downloads.janet-spellman.workers.dev",
         );
       }
       return url;
