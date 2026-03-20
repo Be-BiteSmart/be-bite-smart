@@ -423,6 +423,8 @@ registerBlockType("custom/research-article", {
             }),
             wp.element.createElement("span", null, "\u201d"),
             source &&
+              // make sure no empty spans or whitespace for the cite source leads to a  — showing
+              source.replace(/<[^>]*>/g, "").trim() &&
               wp.element.createElement(
                 "cite",
                 null,
