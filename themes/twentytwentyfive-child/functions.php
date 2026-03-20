@@ -216,7 +216,7 @@ function track_user_interactions() {
         <?php echo $track_pdf_clicks; ?>
         <?php echo $track_documentary; ?>
 
-    <?php elseif ( is_page( 'news' ) ) : ?>
+    <?php elseif ( is_page( 'news-media' ) ) : ?>
         // ── News page — press releases, news coverage, articles ────────
 
         // for outbound articles
