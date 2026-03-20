@@ -107,22 +107,131 @@ add_action('wp_head', function() {
     </script>
     <?php
 });
-function track_download_clicks() {
+
+function track_user_interactions() {
+
+    $track_documentary = "
+        // Track mini-documentary watched
+        document.querySelectorAll('.video-quote-watch-button, .video-quote-block .play-button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (window.gtag) {
+                    const block = btn.closest('.video-quote-block');
+                    const title = block ? block.querySelector('.video-quote-title')?.textContent : 'Mini-Documentary';
+                    gtag('event', 'video_watched', {
+                        episode_title: title?.trim() || 'Mini-Documentary',
+                        episode_number: 'documentary'
+                    });
+                }
+            });
+        });
+    ";
+
+    // for outbound articles
+    $track_article_clicks = "
+        // Track external link clicks (news/coverage + research article title links)
+        document.querySelectorAll('.custom-block-card a[target=\"_blank\"]').forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.gtag) {
+                    const card = link.closest('.custom-block-card');
+                    const title = card?.querySelector('h3, h4')?.textContent?.trim() || 'Unknown';
+                    gtag('event', 'article_clicked', { article_title: title });
+                }
+            });
+        });
+    ";
+
+    $track_pdf_clicks = "
+        // Track PDF view opens — only fires on open, not on close
+        document.querySelectorAll('.pdf-toggle').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (window.gtag && btn.getAttribute('data-expanded') !== 'true') {
+                    const card = btn.closest('.custom-block-card');
+                    const title = card?.querySelector('h3, h4')?.textContent?.trim() || 'Unknown';
+                    gtag('event', 'pdf_viewed', { article_title: title });
+                }
+            });
+        });
+    ";
     ?>
     <script>
+    <?php if ( is_page( 'education' ) ) : ?>
+        // ── Education page — episode videos and downloads ──────────────
+
+        // Track video downloads
         document.querySelectorAll('.ecd-toggle--download').forEach(btn => {
             btn.addEventListener('click', () => {
                 if (window.gtag) {
-                    gtag('event', 'download', {
+                    gtag('event', 'video_downloaded', {
                         file_name: decodeURIComponent(btn.href.split('/').pop())
                     });
                 }
             });
         });
+
+        // Track episode videos watched
+        document.querySelectorAll('.watch-now-button, .video-episode-block .play-button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (window.gtag) {
+                    const card = btn.closest('.video-episode-block');
+                    const title = card ? card.querySelector('.episode-title')?.textContent : 'Unknown';
+                    const episode = card ? card.querySelector('.episode-number')?.textContent : 'Unknown';
+                    const activeLang = card ? card.querySelector('.toggle-label.active')?.dataset.lang : 'unknown';
+                    gtag('event', 'video_watched', {
+                        episode_title: title,
+                        episode_number: episode,
+                        language: activeLang
+                    });
+                }
+            });
+        });
+
+        // Track PDF views on education page (ecd block pdf buttons)
+        document.querySelectorAll('.ecd-toggle:not(.ecd-toggle--download):not(.ecd-toggle--coming-soon)').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (window.gtag && btn.getAttribute('data-expanded') !== 'true') {
+                    const label = btn.querySelector('.btn-label')?.textContent || btn.textContent;
+                    gtag('event', 'pdf_viewed', { pdf_label: label.trim() });
+                }
+            });
+        });
+
+        <?php echo $track_pdf_clicks; ?>
+        <?php echo $track_documentary; ?>
+
+    <?php elseif ( is_page( 'news' ) ) : ?>
+        // ── News page — press releases, news coverage, articles ────────
+
+        // for outbound articles
+        <?php echo $track_article_clicks; ?>
+        // for pdf clicks
+        <?php echo $track_pdf_clicks; ?>
+
+        // Track "Read More" opens on press releases and text articles/commentary
+        document.querySelectorAll('.read-more-toggle').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (window.gtag && btn.getAttribute('data-expanded') !== 'true') {
+                    const card = btn.closest('.custom-block-card');
+                    const title = card?.querySelector('h3')?.textContent?.trim() || 'Unknown';
+                    gtag('event', 'article_expanded', { article_title: title });
+                }
+            });
+        });
+
+    <?php elseif ( is_page( 'library' ) ) : ?>
+        // ── Library page — research articles ───────────────────────────
+
+        <?php echo $track_article_clicks; ?>
+
+    <?php elseif ( is_front_page() ) : ?>
+        // ── Home page — mini documentary ───────────────────────────────
+
+        <?php echo $track_documentary; ?>
+
+    <?php endif; ?>
     </script>
     <?php
 }
-add_action('wp_footer', 'track_download_clicks');
+add_action('wp_footer', 'track_user_interactions');
 
 // ======================== Jquery =========================
 
