@@ -93,6 +93,34 @@ add_action( 'post_updated', function( $post_id ) {
     ) );
 }, 10, 1 );
 
+// Cloudflare Web Analytics 
+
+// ============  Cloudflare Web Analytics ================
+ // wp_head to inject script into header
+add_action('wp_head', function() {
+    echo '<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon=\'{"token": "467ba6dc088e4a908aa098f23c6dd666"}\'></script>';
+});
+function track_download_clicks() {
+    ?>
+    <script>
+        document.querySelectorAll('.ecd-toggle--download').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (window.zaraz) {
+                    // check means it silently does nothing if Cloudflare Analytics hasn't loaded yet, so no JS errors
+                   zaraz.track('download', { 
+                    // decodeURIComponent remove any %20 used for spaces, so file names are cleaner to read
+    file: decodeURIComponent(btn.href.split('/').pop()) 
+});
+                }
+            });
+        });
+    </script>
+    <?php
+}
+add_action('wp_footer', 'track_download_clicks');
+
+// ======================== Jquery =========================
+
 // defers jquery, to improve loading speed. Only done on landing page, since forminator on the contact page will break otherwise
 //Logged-in users get jQuery normally otherwise translate press's edit screen won't appear for the 1st page, visitors get the deferred version
 add_filter( 'script_loader_tag', function( $tag, $handle ) {
