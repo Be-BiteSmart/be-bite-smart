@@ -367,6 +367,14 @@ registerBlockType("custom/educational-content-download", {
         if (url.includes("?dl=")) return url.replace(/\?dl=0/, "?dl=1");
         return url + (url.includes("?") ? "&dl=1" : "?dl=1");
       }
+      // R2 / any other direct link — force download at the server level
+      if (url.includes("r2.dev") || url.includes("r2.cloudflarestorage.com")) {
+        return (
+          url +
+          (url.includes("?") ? "&" : "?") +
+          "response-content-disposition=attachment"
+        );
+      }
       return url;
     };
 
