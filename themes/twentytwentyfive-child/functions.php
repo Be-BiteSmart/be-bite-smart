@@ -60,6 +60,9 @@ add_action( 'wp_head', function() {
     }
 }, 1 );
 
+add_action('wp_head', function() {
+    echo '<link rel="preconnect" href="https://www.googletagmanager.com">' . "\n";
+}, 0); // priority 0 = very early, want that DNS connection starting before anything else
 
 // went with optional rather than swap to avoid CLS
 // Optional: the browser gets a very short window (roughly 100ms) to load the font. If it loads in time, great. If not, it uses the fallback for that entire page load and doesn't swap at all. Zero layout shift, and on the next visit the font is cached so it loads instantly.
@@ -96,7 +99,7 @@ add_action( 'post_updated', function( $post_id ) {
 // ============  Google Web Analytics ================
  // wp_head to inject script into header
 // Google Analytics 4
-add_action('wp_head', function() {
+add_action('wp_footer', function() {
     ?>
     <!-- // Google Analytics 4
 // G-XXXXXXXXXX is intentionally left in plain sight — this is the Measurement ID,
@@ -111,7 +114,7 @@ add_action('wp_head', function() {
         gtag('config', 'G-4B1GQ3L8CY');
     </script>
     <?php
-});
+}, 5); // priority 5, in case we want to add anything after it later, but it just has to be 9 or lower. It has to run before track_user_interactions
 
 function track_user_interactions() {
 
@@ -246,7 +249,8 @@ function track_user_interactions() {
     </script>
     <?php
 }
-add_action('wp_footer', 'track_user_interactions');
+
+add_action('wp_footer', 'track_user_interactions', 10); // priority 10 (the default), low priority but makes sure it loads after 5 (the google tags manager);
 
 // ======================== Jquery =========================
 
