@@ -518,3 +518,9 @@ html
 .btn-label--hide {
   display: none;
 }
+
+.donate-image {
+  max-width: 500px;
+  width: 100%;
+  height: auto;
+}
