@@ -132,43 +132,40 @@ add_action( 'init', 'press_release_register_block' );
 // -----------------------------
 
 function custom_blocks_scripts() {
-    $video_toggle_asset = include plugin_dir_path( __FILE__ ) . 'build/video-toggle.asset.php';
-    wp_enqueue_script(
-        'video-toggle',
-        plugins_url( 'build/video-toggle.js', __FILE__ ),
-        array(),
-        $video_toggle_asset['version'],
-        true
-    );
 
-    $read_more_asset = include plugin_dir_path( __FILE__ ) . 'build/read-more.asset.php';
-    wp_enqueue_script(
-        'read-more',
-        plugins_url( 'build/read-more.js', __FILE__ ),
-        array(),
-        $read_more_asset['version'],
-        true
-    );
+    $on_education  = is_page( 'education' );
+    $on_news       = is_page( 'news-media' );
+    $on_front      = is_front_page();
 
-    $toggle_system_asset = include plugin_dir_path( __FILE__ ) . 'build/toggle-system.asset.php';
-    wp_enqueue_script(
-        'toggle-system',
-        plugins_url( 'build/toggle-system.js', __FILE__ ),
-        array(),
-        $toggle_system_asset['version'],
-        true
-    );
+
+       if ( $on_education || $on_front ) {
+        $asset = include plugin_dir_path( __FILE__ ) . 'build/video-toggle.asset.php';
+        wp_enqueue_script( 'video-toggle', plugins_url( 'build/video-toggle.js', __FILE__ ), array(), $asset['version'], true );
+    }
+ 
+ 
+    if ( $on_news ) {
+        $asset = include plugin_dir_path( __FILE__ ) . 'build/read-more.asset.php';
+        wp_enqueue_script( 'read-more', plugins_url( 'build/read-more.js', __FILE__ ), array(), $asset['version'], true );
+
+        // the front page's read more logic is handled by logic in functions.php
+        // bio read more has its own logic in its bio-toggle.js within the block
+        // they're different enough to keep seperate
+    }
 
     // pdf-toggle stylesheet — enqueued globally because the block is used
     // as an InnerBlock inside article-or-commentary, so WordPress won't
     // detect it on the page and load it automatically.
-    $pdf_toggle_asset = include plugin_dir_path( __FILE__ ) . 'build/pdf-toggle/index.asset.php';
-    wp_enqueue_style(
-        'pdf-toggle-style',
-        plugins_url( 'build/pdf-toggle/style-index.css', __FILE__ ),
-        array(),
-        $pdf_toggle_asset['version']
-    );
+
+        // pdf-toggle only loads on pages that actually use it
+    if ( $on_education || $on_news) {
+  $asset = include plugin_dir_path( __FILE__ ) . 'build/toggle-system.asset.php';
+        wp_enqueue_script( 'toggle-system', plugins_url( 'build/toggle-system.js', __FILE__ ), array(), $asset['version'], true );
+
+        $asset = include plugin_dir_path( __FILE__ ) . 'build/pdf-toggle/index.asset.php';
+        wp_enqueue_style( 'pdf-toggle-style', plugins_url( 'build/pdf-toggle/style-index.css', __FILE__ ), array(), $asset['version'] );
+
+    }
 }
 add_action( 'wp_enqueue_scripts', 'custom_blocks_scripts' );
 
