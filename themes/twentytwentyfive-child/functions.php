@@ -270,7 +270,10 @@ add_filter( 'script_loader_tag', function( $tag, $handle ) {
 // preloads fonts used above the fold on the front page
 add_action( 'wp_head', function() {
     if ( ! is_front_page() ) return;
-    $base = 'https://www.bebitesmart.org/wp-content/uploads/fonts/';
+ // Font Library auto-generates font URLs without www at upload time.
+// Better Search Replace found no stored URLs to fix — they're generated
+// dynamically at render time, so the preload must match the output instead.
+    $base = 'https://bebitesmart.org/wp-content/uploads/fonts/';
     // Urbanist 400 // hero text
     echo '<link rel="preload" href="' . $base . 'L0xjDF02iFML4hGCyOCpRdycFsGxSrqD-R4fE5OrS8SlKw.woff2" as="font" type="font/woff2" crossorigin>' . "\n";
     // Urbanist 600, buttons and navbar donate
