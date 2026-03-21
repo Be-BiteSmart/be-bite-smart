@@ -416,7 +416,8 @@ add_action('wp_footer', 'submenu_hover_logic');
 // Toggles visibility of hidden content sections on the about page.
 // Looks for a .show-more-button wrapper and a .show-more-content target,
 // and toggles the is-visible class on click to show/hide the content.
-function show_more_button_logic() {
+function show_more_button_about_page() {
+        if ( ! is_page( 'about' ) ) return;
     ?>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -446,7 +447,7 @@ function show_more_button_logic() {
     </script>
     <?php
 }
-add_action('wp_footer', 'show_more_button_logic');
+add_action('wp_footer', 'show_more_button_about_page');
 
 /* force lazy load for images that aren't actually the lcp */
 
