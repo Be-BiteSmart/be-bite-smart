@@ -266,17 +266,17 @@ add_filter( 'script_loader_tag', function( $tag, $handle ) {
     }
     return $tag;
 }, 10, 2 );
+
 // preloads fonts used above the fold on the front page
 add_action( 'wp_head', function() {
     if ( ! is_front_page() ) return;
     $base = 'https://www.bebitesmart.org/wp-content/uploads/fonts/';
-    // Urbanist — above fold fonts preloaded first
+    // Urbanist 400 // hero text
     echo '<link rel="preload" href="' . $base . 'L0xjDF02iFML4hGCyOCpRdycFsGxSrqD-R4fE5OrS8SlKw.woff2" as="font" type="font/woff2" crossorigin>' . "\n";
-    echo '<link rel="preload" href="' . $base . 'L0xjDF02iFML4hGCyOCpRdycFsGxSrqDFRkfE5OrS8SlKw.woff2" as="font" type="font/woff2" crossorigin>' . "\n";
+    // Urbanist 600, buttons and navbar donate
     echo '<link rel="preload" href="' . $base . 'L0xjDF02iFML4hGCyOCpRdycFsGxSrqDLBkfE5OrS8SlKw.woff2" as="font" type="font/woff2" crossorigin>' . "\n";
-    // Omnes — above fold fonts
+    // Omnes 500 — navbar, logo, top hero text
     echo '<link rel="preload" href="' . $base . 'Omnes-Medium.woff2" as="font" type="font/woff2" crossorigin>' . "\n";
-    echo '<link rel="preload" href="' . $base . 'Omnes-SemiBold.woff2" as="font" type="font/woff2" crossorigin>' . "\n";
 }, 1 );
 
 
