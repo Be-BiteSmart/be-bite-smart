@@ -417,7 +417,7 @@ add_action('wp_footer', 'submenu_hover_logic');
 // Looks for a .show-more-button wrapper and a .show-more-content target,
 // and toggles the is-visible class on click to show/hide the content.
 function show_more_button_about_page() {
-        if ( ! is_page( 'about' ) ) return;
+        if ( ! is_front_page()) return;
     ?>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
