@@ -118,6 +118,12 @@ add_action('wp_footer', function() {
 
 function track_user_interactions() {
 
+    $content_name_helper = "
+        function toContentName(type, text) {
+            return type + '-' + (text || 'unknown').toLowerCase().replace(/\\s+/g, '-');
+        }
+    ";
+
     $track_documentary = "
         // Track mini-documentary watched
         document.querySelectorAll('.video-quote-watch-button, .video-quote-block .play-button').forEach(btn => {
@@ -126,8 +132,7 @@ function track_user_interactions() {
                     const block = btn.closest('.video-quote-block');
                     const title = block ? block.querySelector('.video-quote-title')?.textContent : 'Mini-Documentary';
                     gtag('event', 'video_watched', {
-                        episode_title: title?.trim() || 'Mini-Documentary',
-                        episode_number: 'documentary'
+                        content_name: toContentName('video', title?.trim() || 'mini-documentary')
                     });
                 }
             });
@@ -142,7 +147,7 @@ function track_user_interactions() {
                 if (window.gtag) {
                     const card = link.closest('.custom-block-card');
                     const title = card?.querySelector('h3, h4')?.textContent?.trim() || 'Unknown';
-                    gtag('event', 'article_clicked', { article_title: title });
+                    gtag('event', 'article_clicked', { content_name: toContentName('article', title) });
                 }
             });
         });
@@ -155,36 +160,38 @@ function track_user_interactions() {
                 if (window.gtag && btn.getAttribute('data-expanded') !== 'true') {
                     const card = btn.closest('.custom-block-card');
                     const title = card?.querySelector('h3, h4')?.textContent?.trim() || 'Unknown';
-                    gtag('event', 'pdf_viewed', { article_title: title });
+                    gtag('event', 'pdf_viewed', { content_name: toContentName('pdf', title) });
                 }
             });
         });
     ";
     ?>
     <script>
+    <?php echo $content_name_helper; ?>
+
     <?php if ( is_page( 'education' ) ) : ?>
         // ── Education page — episode videos and downloads ──────────────
 
         // Track video downloads
-      document.querySelectorAll('.ecd-toggle--download').forEach(btn => {
-    btn.addEventListener('click', () => {
-        if (window.gtag) {
-            // get raw href as it appears in html, since btn.href was leading to the % encoding for spaced to not be stripped back to spaces
-            const raw = btn.getAttribute('href').split('/').pop();
+        document.querySelectorAll('.ecd-toggle--download').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (window.gtag) {
+                    // get raw href as it appears in html, since btn.href was leading to the % encoding for spaces to not be stripped back to spaces
+                    const raw = btn.getAttribute('href').split('/').pop();
 
-            let fileName;
-            try {
-                // removes % encoding
-                fileName = decodeURIComponent(raw);
-            } catch(e) {
-                fileName = raw; // fallback to raw if decoding fails
-            }
-            gtag('event', 'video_downloaded', {
-                file_name: fileName
+                    let fileName;
+                    try {
+                        // removes % encoding
+                        fileName = decodeURIComponent(raw);
+                    } catch(e) {
+                        fileName = raw; // fallback to raw if decoding fails
+                    }
+                    gtag('event', 'video_downloaded', {
+                        content_name: toContentName('video', fileName)
+                    });
+                }
             });
-        }
-    });
-});
+        });
 
         // Track episode videos watched
         document.querySelectorAll('.watch-now-button, .video-episode-block .play-button').forEach(btn => {
@@ -192,12 +199,9 @@ function track_user_interactions() {
                 if (window.gtag) {
                     const card = btn.closest('.video-episode-block');
                     const title = card ? card.querySelector('.episode-title')?.textContent : 'Unknown';
-                    const episode = card ? card.querySelector('.episode-number')?.textContent : 'Unknown';
                     const activeLang = card ? card.querySelector('.toggle-label.active')?.dataset.lang : 'unknown';
                     gtag('event', 'video_watched', {
-                        episode_title: title,
-                        episode_number: episode,
-                        language: activeLang
+                        content_name: toContentName('video', title) + '-' + (activeLang || 'unknown').toLowerCase()
                     });
                 }
             });
@@ -208,7 +212,7 @@ function track_user_interactions() {
             btn.addEventListener('click', () => {
                 if (window.gtag && btn.getAttribute('data-expanded') !== 'true') {
                     const label = btn.querySelector('.btn-label')?.textContent || btn.textContent;
-                    gtag('event', 'pdf_viewed', { pdf_label: label.trim() });
+                    gtag('event', 'pdf_viewed', { content_name: toContentName('pdf', label.trim()) });
                 }
             });
         });
@@ -230,7 +234,7 @@ function track_user_interactions() {
                 if (window.gtag && btn.getAttribute('data-expanded') !== 'true') {
                     const card = btn.closest('.custom-block-card');
                     const title = card?.querySelector('h3')?.textContent?.trim() || 'Unknown';
-                    gtag('event', 'article_expanded', { article_title: title });
+                    gtag('event', 'article_expanded', { content_name: toContentName('article', title) });
                 }
             });
         });
@@ -249,6 +253,8 @@ function track_user_interactions() {
     </script>
     <?php
 }
+
+add_action('wp_footer', 'track_user_interactions', 10); // priority 10 (the default), low priority but makes sure it loads after 5 (the google tags manager)
 
 add_action('wp_footer', 'track_user_interactions', 10); // priority 10 (the default), low priority but makes sure it loads after 5 (the google tags manager);
 
