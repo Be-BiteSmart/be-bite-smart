@@ -135,6 +135,7 @@ function custom_blocks_scripts() {
 
     $on_education  = is_page( 'education' );
     $on_news       = is_page( 'news-media' );
+    $on_legal       = is_page( 'legal' );
     $on_front      = is_front_page();
 
 
@@ -144,7 +145,7 @@ function custom_blocks_scripts() {
     }
  
  
-    if ( $on_news ) {
+    if ( $on_news || $on_legal ) {
         $asset = include plugin_dir_path( __FILE__ ) . 'build/read-more.asset.php';
         wp_enqueue_script( 'read-more', plugins_url( 'build/read-more.js', __FILE__ ), array(), $asset['version'], true );
 
