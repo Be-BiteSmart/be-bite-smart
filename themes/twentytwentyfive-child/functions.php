@@ -220,7 +220,7 @@ function track_user_interactions() {
         <?php echo $track_pdf_clicks; ?>
         <?php echo $track_documentary; ?>
 
-    <?php elseif ( is_page( 'news-media' ) ) : ?>
+    <?php elseif  ( is_page( ['news-media', 'legal'] ) ) : ?>
         // ── News page — press releases, news coverage, articles ────────
 
         // for outbound articles
@@ -255,8 +255,6 @@ function track_user_interactions() {
 }
 
 add_action('wp_footer', 'track_user_interactions', 10); // priority 10 (the default), low priority but makes sure it loads after 5 (the google tags manager)
-
-add_action('wp_footer', 'track_user_interactions', 10); // priority 10 (the default), low priority but makes sure it loads after 5 (the google tags manager);
 
 // ======================== Jquery =========================
 
