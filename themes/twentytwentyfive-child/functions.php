@@ -96,6 +96,18 @@ add_action( 'post_updated', function( $post_id ) {
     ) );
 }, 10, 1 );
 
+
+// translate press, remove currently viewed language from dropdown list. This way this logic will work with 3+ language. Translate press' native logic only can do this is theres only two languages.
+add_filter('trp_languages', function($languages){
+    foreach ($languages as $code => $language){
+        if (isset($language['current_language']) && $language['current_language'] == 1){
+            unset($languages[$code]);
+        }
+    }
+    return $languages;
+});
+
+
 // ============  Google Web Analytics ================
  // wp_head to inject script into header
 // Google Analytics 4
@@ -116,144 +128,201 @@ add_action('wp_footer', function() {
     <?php
 }, 5); // priority 5, in case we want to add anything after it later, but it just has to be 9 or lower. It has to run before track_user_interactions
 
-function track_user_interactions() {
 
-    $content_name_helper = "
-        function toContentName(type, text) {
-            return type + '-' + (text || 'unknown').toLowerCase().replace(/\\s+/g, '-');
+function track_user_interactions() {
+ 
+    // ── Shared helpers ─────────────────────────────────────────────────────────
+    //
+    // toContentName(type, text, lang)
+    //   Format (with language):    "video - my-title - english"
+    //   Format (without language): "video - my-title"
+    //   Pass null for lang on content with no language variant (articles, documentary).
+    //
+    // getLang(btn)
+    //   Detects language from two sources:
+    //   1. Button label text — checks .btn-label (or full text) for (EN), (ENG), (ES).
+    //      Used by ECD download/PDF buttons and pdf-toggle buttons.
+    //   2. Active language toggle — reads .toggle-label.active[data-lang] on the episode card.
+    //      Used by Watch Now / play buttons which have no label text to read.
+    //   Returns 'english', 'spanish', or null (for content with no language variant).
+ 
+    $shared_helpers = "
+        function toContentName(type, text, lang) {
+            var name = (text || 'unknown').toLowerCase().replace(/\s+/g, '-');
+            return lang ? type + ' - ' + name + ' - ' + lang : type + ' - ' + name;
+        }
+ 
+        function getLang(btn) {
+            // Check button label text for language markers like (EN), (ENG), (ES)
+            var label = (btn.querySelector('.btn-label')?.textContent || btn.textContent || '').toUpperCase();
+            if (/\(EN\b|\(ENG\b/.test(label)) return 'english';
+            if (/\(ES\b/.test(label)) return 'spanish';
+            // Fall back to active language toggle (for Watch Now / play buttons on episode cards)
+            var card = btn.closest('.video-episode-block');
+            if (card) {
+                var active = card.querySelector('.toggle-label.active');
+                if (active?.dataset.lang === 'en') return 'english';
+                if (active?.dataset.lang === 'es') return 'spanish';
+            }
+            return null;
         }
     ";
-
+ 
+    // ── Reusable event blocks ──────────────────────────────────────────────────
+    //
+    // Each block fires one GA4 event and sends:
+    //   content_name  — "pdf - my-title - english"   (overview / at-a-glance)
+    //   content_type  — "pdf" | "article" | "video" | "download"
+    //   language      — "english" | "spanish" | null  (only set when content has language variants)
+    //
+    // Articles and the documentary have no language variants, so they omit the language parameter.
+ 
+    // Mini-documentary play buttons (home + education pages) — no language variant
     $track_documentary = "
-        // Track mini-documentary watched
-        document.querySelectorAll('.video-quote-watch-button, .video-quote-block .play-button').forEach(btn => {
-            btn.addEventListener('click', () => {
-                if (window.gtag) {
-                    const block = btn.closest('.video-quote-block');
-                    const title = block ? block.querySelector('.video-quote-title')?.textContent : 'Mini-Documentary';
-                    gtag('event', 'video_watched', {
-                        content_name: toContentName('video', title?.trim() || 'mini-documentary')
-                    });
-                }
+        document.querySelectorAll('.video-quote-watch-button, .video-quote-block .play-button').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                if (!window.gtag) return;
+                var block = btn.closest('.video-quote-block');
+                var title = block ? block.querySelector('.video-quote-title')?.textContent?.trim() : 'mini-documentary';
+                gtag('event', 'video_watched', {
+                    content_name: toContentName('video', title || 'mini-documentary'),
+                    content_type: 'video'
+                });
             });
         });
     ";
-
-    // for outbound articles
+ 
+    // External article link clicks (news + library pages) — no language variant
     $track_article_clicks = "
-        // Track external link clicks (news/coverage + research article title links)
-        document.querySelectorAll('.custom-block-card a[target=\"_blank\"]').forEach(link => {
-            link.addEventListener('click', () => {
-                if (window.gtag) {
-                    const card = link.closest('.custom-block-card');
-                    const title = card?.querySelector('h3, h4')?.textContent?.trim() || 'Unknown';
-                    gtag('event', 'article_clicked', { content_name: toContentName('article', title) });
-                }
+        document.querySelectorAll('.custom-block-card a[target=\"_blank\"]').forEach(function(link) {
+            link.addEventListener('click', function() {
+                if (!window.gtag) return;
+                var card  = link.closest('.custom-block-card');
+                var title = card?.querySelector('h3, h4')?.textContent?.trim()
+                         || link.querySelector('h3, h4')?.textContent?.trim()
+                         || link.textContent?.trim()
+                         || 'unknown';
+                gtag('event', 'article_viewed', {
+                    content_name: toContentName('article', title),
+                    content_type: 'article'
+                });
             });
         });
     ";
-
+ 
+    // PDF inline viewer opens via pdf-toggle block — has EN/ES variants, fires only on open
     $track_pdf_clicks = "
-        // Track PDF view opens — only fires on open, not on close
-        document.querySelectorAll('.pdf-toggle').forEach(btn => {
-            btn.addEventListener('click', () => {
-                if (window.gtag && btn.getAttribute('data-expanded') !== 'true') {
-                    const card = btn.closest('.custom-block-card');
-                    const title = card?.querySelector('h3, h4')?.textContent?.trim() || 'Unknown';
-                    gtag('event', 'pdf_viewed', { content_name: toContentName('pdf', title) });
-                }
+        document.querySelectorAll('.pdf-toggle').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                if (!window.gtag) return;
+                if (btn.getAttribute('data-expanded') === 'true') return;
+                var card  = btn.closest('.custom-block-card');
+                var title = card?.querySelector('h3, h4')?.textContent?.trim() || 'unknown';
+                var lang  = getLang(btn);
+                gtag('event', 'pdf_viewed', {
+                    content_name: toContentName('pdf', title, lang),
+                    content_type: 'pdf',
+                    language: lang
+                });
             });
         });
     ";
+ 
     ?>
     <script>
-    <?php echo $content_name_helper; ?>
-
+    <?php echo $shared_helpers; ?>
+ 
     <?php if ( is_page( 'education' ) ) : ?>
-        // ── Education page — episode videos and downloads ──────────────
-
-        // Track video downloads
-        document.querySelectorAll('.ecd-toggle--download').forEach(btn => {
-            btn.addEventListener('click', () => {
-                if (window.gtag) {
-                    // get raw href as it appears in html, since btn.href was leading to the % encoding for spaces to not be stripped back to spaces
-                    const raw = btn.getAttribute('href').split('/').pop();
-
-                    let fileName;
-                    try {
-                        // removes % encoding
-                        fileName = decodeURIComponent(raw);
-                    } catch(e) {
-                        fileName = raw; // fallback to raw if decoding fails
-                    }
-                    gtag('event', 'video_downloaded', {
-                        content_name: toContentName('video', fileName)
-                    });
-                }
+        // ── Education page ─────────────────────────────────────────────
+ 
+        // Video file downloads — getLang reads (EN)/(ES) from button label text
+        document.querySelectorAll('.ecd-toggle--download').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                if (!window.gtag) return;
+                var raw = btn.getAttribute('href').split('/').pop();
+                var fileName;
+                try   { fileName = decodeURIComponent(raw); }
+                catch (e) { fileName = raw; }
+                var lang = getLang(btn);
+                gtag('event', 'video_downloaded', {
+                    content_name: toContentName('video', fileName, lang),
+                    content_type: 'download',
+                    language: lang
+                });
             });
         });
-
-        // Track episode videos watched
-        document.querySelectorAll('.watch-now-button, .video-episode-block .play-button').forEach(btn => {
-            btn.addEventListener('click', () => {
-                if (window.gtag) {
-                    const card = btn.closest('.video-episode-block');
-                    const title = card ? card.querySelector('.episode-title')?.textContent : 'Unknown';
-                    const activeLang = card ? card.querySelector('.toggle-label.active')?.dataset.lang : 'unknown';
-                    gtag('event', 'video_watched', {
-                        content_name: toContentName('video', title) + '-' + (activeLang || 'unknown').toLowerCase()
-                    });
-                }
+ 
+        // Episode video plays — getLang reads the active EN/ES toggle on the card
+        document.querySelectorAll('.watch-now-button, .video-episode-block .play-button').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                if (!window.gtag) return;
+                var card  = btn.closest('.video-episode-block');
+                var title = card?.querySelector('.episode-title')?.textContent?.trim() || 'unknown';
+                var lang  = getLang(btn);
+                gtag('event', 'video_watched', {
+                    content_name: toContentName('video', title, lang),
+                    content_type: 'video',
+                    language: lang
+                });
             });
         });
-
-        // Track PDF views on education page (ecd block pdf buttons)
-        document.querySelectorAll('.ecd-toggle:not(.ecd-toggle--download):not(.ecd-toggle--coming-soon)').forEach(btn => {
-            btn.addEventListener('click', () => {
-                if (window.gtag && btn.getAttribute('data-expanded') !== 'true') {
-                    const label = btn.querySelector('.btn-label')?.textContent || btn.textContent;
-                    gtag('event', 'pdf_viewed', { content_name: toContentName('pdf', label.trim()) });
-                }
+ 
+        // PDF viewer opens on education page (ecd buttons, excluding download + coming-soon)
+        // getLang reads (EN)/(ES) from button label text
+        document.querySelectorAll('.ecd-toggle:not(.ecd-toggle--download):not(.ecd-toggle--coming-soon)').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                if (!window.gtag) return;
+                if (btn.getAttribute('data-expanded') === 'true') return;
+                var label = btn.querySelector('.btn-label')?.textContent?.trim() || btn.textContent.trim();
+                var lang  = getLang(btn);
+                gtag('event', 'pdf_viewed', {
+                    content_name: toContentName('pdf', label, lang),
+                    content_type: 'pdf',
+                    language: lang
+                });
             });
         });
-
+ 
         <?php echo $track_pdf_clicks; ?>
         <?php echo $track_documentary; ?>
-
-    <?php elseif  ( is_page( ['news-media', 'legal'] ) ) : ?>
-        // ── News page — press releases, news coverage, articles ────────
-
-        // for outbound articles
+ 
+ 
+    <?php elseif ( is_page( ['news-media', 'legal'] ) ) : ?>
+        // ── News / Legal pages ─────────────────────────────────────────
+ 
         <?php echo $track_article_clicks; ?>
-        // for pdf clicks
         <?php echo $track_pdf_clicks; ?>
-
-        // Track "Read More" opens on press releases and text articles/commentary
-        document.querySelectorAll('.read-more-toggle').forEach(btn => {
-            btn.addEventListener('click', () => {
-                if (window.gtag && btn.getAttribute('data-expanded') !== 'true') {
-                    const card = btn.closest('.custom-block-card');
-                    const title = card?.querySelector('h3')?.textContent?.trim() || 'Unknown';
-                    gtag('event', 'article_expanded', { content_name: toContentName('article', title) });
-                }
+ 
+        // "Read More" expands on press releases and text articles — no language variant
+        document.querySelectorAll('.read-more-toggle').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                if (!window.gtag) return;
+                if (btn.getAttribute('data-expanded') === 'true') return;
+                var card  = btn.closest('.custom-block-card');
+                var title = card?.querySelector('h3')?.textContent?.trim() || 'unknown';
+                gtag('event', 'article_viewed', {
+                    content_name: toContentName('article', title),
+                    content_type: 'article'
+                });
             });
         });
-
+ 
+ 
     <?php elseif ( is_page( 'library' ) ) : ?>
-        // ── Library page — research articles ───────────────────────────
-
+        // ── Library page ───────────────────────────────────────────────
+ 
         <?php echo $track_article_clicks; ?>
-
+ 
+ 
     <?php elseif ( is_front_page() ) : ?>
-        // ── Home page — mini documentary ───────────────────────────────
-
+        // ── Home page ──────────────────────────────────────────────────
+ 
         <?php echo $track_documentary; ?>
-
+ 
     <?php endif; ?>
     </script>
     <?php
 }
-
 add_action('wp_footer', 'track_user_interactions', 10); // priority 10 (the default), low priority but makes sure it loads after 5 (the google tags manager)
 
 // ======================== Jquery =========================
