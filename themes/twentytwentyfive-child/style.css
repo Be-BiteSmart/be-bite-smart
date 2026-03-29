@@ -139,9 +139,9 @@ main {
   margin-top: 0 !important;
 }
 
-.entry-content blockquote,
+.entry-content blockquote:not(.is-style-plain),
 .wp-block-quote,
-blockquote {
+blockquote:not(.is-style-plain) {
   border-left: 4px solid var(--wp--preset--color--accent-1);
 }
 
