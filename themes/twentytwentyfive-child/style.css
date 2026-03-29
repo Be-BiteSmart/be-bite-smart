@@ -528,8 +528,9 @@ html
 
 /* force the footer menu to center when it wraps to the next line on tablet screens*/
 @media (max-width: 1126px) {
-  #footer-top-row #footer-nav-group {
+  .footer-top-row .footer-nav-group {
     width: 100%;
-    margin: 0 auto;
+    margin: 0 auto !important;
+    /* important needed to win over wordpress specificity*/
   }
 }
