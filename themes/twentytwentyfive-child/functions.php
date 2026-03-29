@@ -128,7 +128,6 @@ add_action('wp_footer', function() {
     <?php
 }, 5); // priority 5, in case we want to add anything after it later, but it just has to be 9 or lower. It has to run before track_user_interactions
 
-
 function track_user_interactions() {
  
     // ── Shared helpers ─────────────────────────────────────────────────────────
@@ -172,8 +171,8 @@ function track_user_interactions() {
     //
     // Each block fires one GA4 event and sends:
     //   content_name  — "pdf - my-title - english"   (overview / at-a-glance)
-    //   content_type  — "pdf" | "article" | "video" | "download"
-    //   language      — "english" | "spanish" | null  (only set when content has language variants)
+    //   content_type  — "pdf" | "article" | "video" | "download" | "language_switcher"
+    //   content_language — "english" | "spanish" | null  (only set when content has language variants)
     //
     // Articles and the documentary have no language variants, so they omit the language parameter.
  
@@ -222,7 +221,7 @@ function track_user_interactions() {
                 gtag('event', 'pdf_viewed', {
                     content_name: toContentName('pdf', title, lang),
                     content_type: 'pdf',
-                    language: lang
+                    content_language: lang
                 });
             });
         });
@@ -231,6 +230,21 @@ function track_user_interactions() {
     ?>
     <script>
     <?php echo $shared_helpers; ?>
+ 
+    // ── Global — fires on every page ───────────────────────────────────────────
+    // Track TranslatePress language switcher clicks.
+    // Reads the language name from .trp-language-item-name (e.g. "spanish").
+    document.querySelectorAll('.trp-switcher-dropdown-list .trp-language-item').forEach(function(link) {
+        link.addEventListener('click', function() {
+            if (!window.gtag) return;
+            var lang = link.querySelector('.trp-language-item-name')?.textContent?.trim().toLowerCase() || 'unknown';
+            gtag('event', 'language_switched', {
+                content_name: 'language-switcher - ' + lang,
+                content_type: 'language_switcher',
+                content_language: lang
+            });
+        });
+    });
  
     <?php if ( is_page( 'education' ) ) : ?>
         // ── Education page ─────────────────────────────────────────────
@@ -247,7 +261,7 @@ function track_user_interactions() {
                 gtag('event', 'video_downloaded', {
                     content_name: toContentName('video', fileName, lang),
                     content_type: 'download',
-                    language: lang
+                    content_language: lang
                 });
             });
         });
@@ -262,7 +276,7 @@ function track_user_interactions() {
                 gtag('event', 'video_watched', {
                     content_name: toContentName('video', title, lang),
                     content_type: 'video',
-                    language: lang
+                    content_language: lang
                 });
             });
         });
@@ -278,7 +292,7 @@ function track_user_interactions() {
                 gtag('event', 'pdf_viewed', {
                     content_name: toContentName('pdf', label, lang),
                     content_type: 'pdf',
-                    language: lang
+                    content_language: lang
                 });
             });
         });
@@ -323,6 +337,7 @@ function track_user_interactions() {
     </script>
     <?php
 }
+ 
 add_action('wp_footer', 'track_user_interactions', 10); // priority 10 (the default), low priority but makes sure it loads after 5 (the google tags manager)
 
 // ======================== Jquery =========================
