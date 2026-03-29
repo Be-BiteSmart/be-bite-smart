@@ -140,7 +140,7 @@ main {
 }
 
 .entry-content blockquote:not(.is-style-plain),
-.wp-block-quote,
+.wp-block-quote:not(.is-style-plain),
 blockquote:not(.is-style-plain) {
   border-left: 4px solid var(--wp--preset--color--accent-1);
 }
