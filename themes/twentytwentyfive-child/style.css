@@ -527,7 +527,10 @@ html
 }
 
 /* force the footer menu to center when it wraps to the next line on tablet screens*/
-.footer-top-row::after {
-  content: "";
-  flex: 0 0 30%;
+@media (max-width: 1126px) {
+  .footer-nav-group {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+  }
 }
