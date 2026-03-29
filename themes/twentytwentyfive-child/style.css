@@ -531,7 +531,9 @@ html
   .footer-top-row .footer-nav-group {
     flex-basis: 100% !important;
     width: 100% !important;
-    margin: 0 auto !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    margin-top: 40px !important;
     /* important needed to win over wordpress specificity*/
     gap: 200px;
     /* add more space (gap) between the 2 menu lists, so it looks cleaner on desktop and mobile. Otherwise it looks weirdly bunched together */
