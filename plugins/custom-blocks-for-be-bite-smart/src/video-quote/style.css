@@ -120,7 +120,11 @@
 
 /* center watch button on tablet and mobile screens */
 @media (max-width: 899px) {
-  .video-quote-watch-button {
+  body:not(.block-editor-page)
+    .video-quote-block
+    .video-quote-text-side
+    .video-quote-watch-button {
+    /*needs those classes to beat the specificity of a competing style of block toggle button styling */
     display: block;
     margin-left: auto;
     margin-right: auto;
