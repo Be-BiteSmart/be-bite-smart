@@ -525,3 +525,9 @@ html
   width: 100%;
   height: auto;
 }
+
+/* force the footer menu to center when it wraps to the next line on tablet screens*/
+.footer-top-row::after {
+  content: "";
+  flex: 0 0 30%;
+}

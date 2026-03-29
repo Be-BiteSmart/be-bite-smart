@@ -97,17 +97,6 @@ add_action( 'post_updated', function( $post_id ) {
 }, 10, 1 );
 
 
-// translate press, remove currently viewed language from dropdown list. This way this logic will work with 3+ language. Translate press' native logic only can do this is theres only two languages.
-add_filter('trp_languages', function($languages){
-    foreach ($languages as $code => $language){
-        if (isset($language['current_language']) && $language['current_language'] == 1){
-            unset($languages[$code]);
-        }
-    }
-    return $languages;
-});
-
-
 // ============  Google Web Analytics ================
  // wp_head to inject script into header
 // Google Analytics 4
