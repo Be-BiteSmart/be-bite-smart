@@ -533,5 +533,10 @@ html
     width: 100% !important;
     margin: 0 auto !important;
     /* important needed to win over wordpress specificity*/
+    gap: 200px;
+    /* add more space (gap) between the 2 menu lists, so it looks cleaner on desktop and mobile. Otherwise it looks weirdly bunched together */
+    padding-top: 40px;
+    /* give the menu more breathing room, make it feel like its own section with a top border */
+    border-top: 1px solid #e5e7eb;
   }
 }
