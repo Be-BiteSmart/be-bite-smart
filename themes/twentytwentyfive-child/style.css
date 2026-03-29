@@ -535,10 +535,17 @@ html
     margin-right: auto !important;
     margin-top: 40px !important;
     /* important needed to win over wordpress specificity*/
-    gap: 200px;
-    /* add more space (gap) between the 2 menu lists, so it looks cleaner on desktop and mobile. Otherwise it looks weirdly bunched together */
+
     padding-top: 40px;
     /* give the menu more breathing room, make it feel like its own section with a top border */
     border-top: 1px solid #e5e7eb;
+  }
+}
+
+/* tablet only styling */
+@media (min-width: 447px) and (max-width: 1126px) {
+  .footer-top-row .footer-nav-group {
+    gap: 200px;
+    /* add more space (gap) between the 2 menu lists, so it looks cleaner on tablet and mobile. Otherwise it looks weirdly bunched together on tablet view. Do not use on mobile or it adds a giant space between the two menus */
   }
 }
