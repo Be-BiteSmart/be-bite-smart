@@ -112,11 +112,18 @@ add_action('wp_footer', function() {
         window.dataLayer = window.dataLayer || [];
         function gtag(){dataLayer.push(arguments);}
         gtag('js', new Date());
-        gtag('config', 'G-4B1GQ3L8CY');
+        gtag('config', 'G-4B1GQ3L8CY', {
+    anonymize_ip: true, // Google Analytics normally logs the full IP address of every visitor, which can pinpoint someone's location to a city or neighborhood. This setting truncates the last portion of every IP address before it's stored, so you get a general region (state/country level) but never a precise location. In GA4 this is actually on by default, so we're just making it explicit.
+    allow_google_signals: false,    // disables advertising/remarketing features
+    allow_ad_personalization_signals: false,  // disables ad personalization
+    client_storage: 'none'          // disables GA cookies entirely, so we're no longer storing anything on the user's device.
+});
     </script>
     <?php
 }, 5); // priority 5, in case we want to add anything after it later, but it just has to be 9 or lower. It has to run before track_user_interactions
 
+
+ 
 function track_user_interactions() {
  
     // ── Shared helpers ─────────────────────────────────────────────────────────
@@ -276,8 +283,12 @@ function track_user_interactions() {
             btn.addEventListener('click', function() {
                 if (!window.gtag) return;
                 if (btn.getAttribute('data-expanded') === 'true') return;
-                var label = btn.querySelector('.btn-label')?.textContent?.trim() || btn.textContent.trim();
-                var lang  = getLang(btn);
+                var block   = btn.closest('.educational-content-download-block');
+                var span    = block?.querySelector('.capitalized-and-colored')?.textContent?.trim() || '';
+                var title   = block?.querySelector('.ecd-title')?.textContent?.trim() || 'unknown';
+                // e.g. "Episode 1 · Coloring book - Respect the Bubble"
+                var label   = span ? span + ' - ' + title : title;
+                var lang    = getLang(btn);
                 gtag('event', 'pdf_viewed', {
                     content_name: toContentName('pdf', label, lang),
                     content_type: 'pdf',
