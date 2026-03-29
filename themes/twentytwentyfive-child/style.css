@@ -528,7 +528,7 @@ html
 
 /* force the footer menu to center when it wraps to the next line on tablet screens*/
 @media (max-width: 1126px) {
-  .footer-nav-group {
+  #footer-nav-group {
     width: 100%;
     margin-left: auto;
     margin-right: auto;
