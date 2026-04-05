@@ -126,7 +126,7 @@ add_action('wp_footer', function() {
  
 function track_user_interactions() {
  
-    // ── Shared helpers ─────────────────────────────────────────────────────────
+    // ── Shared helpers ─────────────────────────────────────────────────────────-
     //
     // toContentName(type, text, lang)
     //   Format (with language):    "video - my-title - english"
