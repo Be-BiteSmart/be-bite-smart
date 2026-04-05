@@ -97,36 +97,15 @@ add_action( 'post_updated', function( $post_id ) {
 }, 10, 1 );
 
 
-// ============  Google Web Analytics ================
- // wp_head to inject script into header
-// Google Analytics 4
-add_action('wp_footer', function() {
-    ?>
-    <!-- // Google Analytics 4
-// G-XXXXXXXXXX is intentionally left in plain sight — this is the Measurement ID,
-// not a secret key. It's designed to be public and is visible in the page source
-// to anyone who inspects it. It only tells Google which account to send data to,
-// it cannot be used to access or modify an analytics account. -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-B1GQ3L8CY"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        gtag('js', new Date());
-        gtag('config', 'G-4B1GQ3L8CY', {
-    anonymize_ip: true, // Google Analytics normally logs the full IP address of every visitor, which can pinpoint someone's location to a city or neighborhood. This setting truncates the last portion of every IP address before it's stored, so you get a general region (state/country level) but never a precise location. In GA4 this is actually on by default, so we're just making it explicit.
-    allow_google_signals: false,    // disables advertising/remarketing features
-    allow_ad_personalization_signals: false,  // disables ad personalization
-    client_storage: 'none'          // disables GA cookies entirely, so we're no longer storing anything on the user's device.
-});
-    </script>
-    <?php
-}, 5); // priority 5, in case we want to add anything after it later, but it just has to be 9 or lower. It has to run before track_user_interactions
-
-
+// ============  Plausible Custom Event Tracking ================
+// The Plausible script itself is injected by the Plausible Analytics
+// WordPress plugin — no manual script tag needed here.
+// Custom Events are enabled by default in the plugin, so window.plausible
+// is available on every page.
  
 function track_user_interactions() {
  
-    // ── Shared helpers ─────────────────────────────────────────────────────────-
+    // ── Shared helpers ─────────────────────────────────────────────────────────
     //
     // toContentName(type, text, lang)
     //   Format (with language):    "video - my-title - english"
@@ -140,6 +119,10 @@ function track_user_interactions() {
     //   2. Active language toggle — reads .toggle-label.active[data-lang] on the episode card.
     //      Used by Watch Now / play buttons which have no label text to read.
     //   Returns 'english', 'spanish', or null (for content with no language variant).
+    //
+    // buildProps(contentName, contentType, lang)
+    //   Builds the Plausible props object, omitting content_language entirely
+    //   when lang is null rather than sending a null value.
  
     $shared_helpers = "
         function toContentName(type, text, lang) {
@@ -161,28 +144,35 @@ function track_user_interactions() {
             }
             return null;
         }
+ 
+        function buildProps(contentName, contentType, lang) {
+            var props = { content_name: contentName, content_type: contentType };
+            if (lang) props.content_language = lang;
+            return props;
+        }
     ";
  
     // ── Reusable event blocks ──────────────────────────────────────────────────
     //
-    // Each block fires one GA4 event and sends:
-    //   content_name  — "pdf - my-title - english"   (overview / at-a-glance)
-    //   content_type  — "pdf" | "article" | "video" | "download" | "language_switcher"
-    //   content_language — "english" | "spanish" | null  (only set when content has language variants)
+    // Each block fires one Plausible custom event and sends:
+    //   content_name     — "pdf - my-title - english"
+    //   content_type     — "pdf" | "article" | "video" | "download" | "language_switcher"
+    //   content_language — "english" | "spanish"  (omitted entirely when content has no language variant)
     //
-    // Articles and the documentary have no language variants, so they omit the language parameter.
+    // Articles and the documentary have no language variants, so they omit content_language.
  
     // Mini-documentary play buttons (home + education pages) — no language variant
     $track_documentary = "
         document.querySelectorAll('.video-quote-watch-button, .video-quote-block .play-button').forEach(function(btn) {
             btn.addEventListener('click', function() {
-                if (!window.gtag) return;
+                if (!window.plausible) return;
                 var block = btn.closest('.video-quote-block');
                 var title = block ? block.querySelector('.video-quote-title')?.textContent?.trim() : 'mini-documentary';
-                gtag('event', 'video_watched', {
-                    content_name: toContentName('video', title || 'mini-documentary'),
-                    content_type: 'video'
-                });
+                plausible('video_watched', { props: buildProps(
+                    toContentName('video', title || 'mini-documentary'),
+                    'video',
+                    null
+                )});
             });
         });
     ";
@@ -191,16 +181,17 @@ function track_user_interactions() {
     $track_article_clicks = "
         document.querySelectorAll('.custom-block-card a[target=\"_blank\"]').forEach(function(link) {
             link.addEventListener('click', function() {
-                if (!window.gtag) return;
+                if (!window.plausible) return;
                 var card  = link.closest('.custom-block-card');
                 var title = card?.querySelector('h3, h4')?.textContent?.trim()
                          || link.querySelector('h3, h4')?.textContent?.trim()
                          || link.textContent?.trim()
                          || 'unknown';
-                gtag('event', 'article_viewed', {
-                    content_name: toContentName('article', title),
-                    content_type: 'article'
-                });
+                plausible('article_viewed', { props: buildProps(
+                    toContentName('article', title),
+                    'article',
+                    null
+                )});
             });
         });
     ";
@@ -209,16 +200,16 @@ function track_user_interactions() {
     $track_pdf_clicks = "
         document.querySelectorAll('.pdf-toggle').forEach(function(btn) {
             btn.addEventListener('click', function() {
-                if (!window.gtag) return;
+                if (!window.plausible) return;
                 if (btn.getAttribute('data-expanded') === 'true') return;
                 var card  = btn.closest('.custom-block-card');
                 var title = card?.querySelector('h3, h4')?.textContent?.trim() || 'unknown';
                 var lang  = getLang(btn);
-                gtag('event', 'pdf_viewed', {
-                    content_name: toContentName('pdf', title, lang),
-                    content_type: 'pdf',
-                    content_language: lang
-                });
+                plausible('pdf_viewed', { props: buildProps(
+                    toContentName('pdf', title, lang),
+                    'pdf',
+                    lang
+                )});
             });
         });
     ";
@@ -232,13 +223,13 @@ function track_user_interactions() {
     // Reads the language name from .trp-language-item-name (e.g. "spanish").
     document.querySelectorAll('.trp-switcher-dropdown-list .trp-language-item').forEach(function(link) {
         link.addEventListener('click', function() {
-            if (!window.gtag) return;
+            if (!window.plausible) return;
             var lang = link.querySelector('.trp-language-item-name')?.textContent?.trim().toLowerCase() || 'unknown';
-            gtag('event', 'language_switched', {
+            plausible('language_switched', { props: {
                 content_name: 'language-switcher - ' + lang,
                 content_type: 'language_switcher',
                 content_language: lang
-            });
+            }});
         });
     });
  
@@ -248,32 +239,32 @@ function track_user_interactions() {
         // Video file downloads — getLang reads (EN)/(ES) from button label text
         document.querySelectorAll('.ecd-toggle--download').forEach(function(btn) {
             btn.addEventListener('click', function() {
-                if (!window.gtag) return;
+                if (!window.plausible) return;
                 var raw = btn.getAttribute('href').split('/').pop();
                 var fileName;
                 try   { fileName = decodeURIComponent(raw); }
                 catch (e) { fileName = raw; }
                 var lang = getLang(btn);
-                gtag('event', 'video_downloaded', {
-                    content_name: toContentName('video', fileName, lang),
-                    content_type: 'download',
-                    content_language: lang
-                });
+                plausible('video_downloaded', { props: buildProps(
+                    toContentName('video', fileName, lang),
+                    'download',
+                    lang
+                )});
             });
         });
  
         // Episode video plays — getLang reads the active EN/ES toggle on the card
         document.querySelectorAll('.watch-now-button, .video-episode-block .play-button').forEach(function(btn) {
             btn.addEventListener('click', function() {
-                if (!window.gtag) return;
+                if (!window.plausible) return;
                 var card  = btn.closest('.video-episode-block');
                 var title = card?.querySelector('.episode-title')?.textContent?.trim() || 'unknown';
                 var lang  = getLang(btn);
-                gtag('event', 'video_watched', {
-                    content_name: toContentName('video', title, lang),
-                    content_type: 'video',
-                    content_language: lang
-                });
+                plausible('video_watched', { props: buildProps(
+                    toContentName('video', title, lang),
+                    'video',
+                    lang
+                )});
             });
         });
  
@@ -281,7 +272,7 @@ function track_user_interactions() {
         // getLang reads (EN)/(ES) from button label text
         document.querySelectorAll('.ecd-toggle:not(.ecd-toggle--download):not(.ecd-toggle--coming-soon)').forEach(function(btn) {
             btn.addEventListener('click', function() {
-                if (!window.gtag) return;
+                if (!window.plausible) return;
                 if (btn.getAttribute('data-expanded') === 'true') return;
                 var block   = btn.closest('.educational-content-download-block');
                 var span    = block?.querySelector('.capitalized-and-colored')?.textContent?.trim() || '';
@@ -289,11 +280,11 @@ function track_user_interactions() {
                 // e.g. "Episode 1 · Coloring book - Respect the Bubble"
                 var label   = span ? span + ' - ' + title : title;
                 var lang    = getLang(btn);
-                gtag('event', 'pdf_viewed', {
-                    content_name: toContentName('pdf', label, lang),
-                    content_type: 'pdf',
-                    content_language: lang
-                });
+                plausible('pdf_viewed', { props: buildProps(
+                    toContentName('pdf', label, lang),
+                    'pdf',
+                    lang
+                )});
             });
         });
  
@@ -310,14 +301,15 @@ function track_user_interactions() {
         // "Read More" expands on press releases and text articles — no language variant
         document.querySelectorAll('.read-more-toggle').forEach(function(btn) {
             btn.addEventListener('click', function() {
-                if (!window.gtag) return;
+                if (!window.plausible) return;
                 if (btn.getAttribute('data-expanded') === 'true') return;
                 var card  = btn.closest('.custom-block-card');
                 var title = card?.querySelector('h3')?.textContent?.trim() || 'unknown';
-                gtag('event', 'article_viewed', {
-                    content_name: toContentName('article', title),
-                    content_type: 'article'
-                });
+                plausible('article_viewed', { props: buildProps(
+                    toContentName('article', title),
+                    'article',
+                    null
+                )});
             });
         });
  
@@ -338,8 +330,8 @@ function track_user_interactions() {
     <?php
 }
  
-add_action('wp_footer', 'track_user_interactions', 10); // priority 10 (the default), low priority but makes sure it loads after 5 (the google tags manager)
-
+add_action('wp_footer', 'track_user_interactions', 10);
+ 
 // ======================== Jquery =========================
 
 // defers jquery, to improve loading speed. Only done on landing page, since forminator on the contact page will break otherwise
