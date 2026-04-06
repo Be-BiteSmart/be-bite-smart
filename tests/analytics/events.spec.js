@@ -42,6 +42,76 @@ test("Watch Now fires video_watched for all episodes in both languages", async (
   expect(allCalls).toHaveLength(episodeCount * 2);
 });
 
+// ********************** Test video download *********************
+
+test("Download video fires video_downloaded for all episodes in both languages", async ({
+  page,
+}, testInfo) => {
+  test.setTimeout(60000);
+  await page.goto("/education");
+
+  const sections = page.locator(
+    "#download-videos .educational-content-download-block",
+  );
+  const sectionCount = await sections.count();
+  const allCalls = [];
+
+  for (let i = 0; i < sectionCount; i++) {
+    const section = sections.nth(i);
+    const title = await section.locator(".ecd-title").textContent();
+    const episodeLabel = await section
+      .locator(".capitalized-and-colored")
+      .textContent();
+
+    const downloads = [
+      // the ecd-toggle--download elements do not have data-attributes to say what language they are
+      // so instead the only way we can figure out if they're english or spanish is with the text
+      {
+        selector: ".ecd-toggle--download:has(.btn-label:text('(EN)'))",
+        lang: "english",
+      },
+      {
+        selector: ".ecd-toggle--download:has(.btn-label:text('(ES)'))",
+        lang: "spanish",
+      },
+    ];
+
+    for (const { selector, lang } of downloads) {
+      await spyOnPlausible(page);
+
+      // Intercept the download so the browser doesn't try to save a file
+      const [download] = await Promise.all([
+        page.waitForEvent("download"),
+        section.locator(selector).click(),
+      ]);
+      await download.cancel();
+
+      const calls = await getPlausibleCalls(page);
+      await testInfo.attach(`${episodeLabel} ${lang} plausible event`, {
+        body: JSON.stringify(calls, null, 2),
+        contentType: "application/json",
+      });
+
+      expect(calls).toHaveLength(1);
+      expect(calls[0].event).toBe("video_downloaded");
+      expect(calls[0].options.props.content_type).toBe("download");
+      expect(calls[0].options.props.content_language).toBe(lang);
+      expect(calls[0].options.props.content_name).toMatch(
+        new RegExp(`^video - .+ - ${lang}$`),
+      );
+
+      allCalls.push({ episode: episodeLabel.trim(), lang, ...calls[0] });
+    }
+  }
+
+  await testInfo.attach("all download events", {
+    body: JSON.stringify(allCalls, null, 2),
+    contentType: "application/json",
+  });
+
+  expect(allCalls).toHaveLength(sectionCount * 2);
+});
+
 test("PDF toggle fires pdf_viewed on education page", async ({
   page,
 }, testInfo) => {
