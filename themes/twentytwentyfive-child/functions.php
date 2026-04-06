@@ -162,18 +162,19 @@ function track_user_interactions() {
     // Articles and the documentary have no language variants, so they omit content_language.
  
     // Mini-documentary play buttons (home + education pages) — no language variant
-    $track_documentary = "
-        document.querySelectorAll('.video-quote-watch-button, .video-quote-block .play-button').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                if (!window.plausible) return;
-                plausible('video_watched', { props: buildProps(
-                toContentName('video', 'mini-documentary - $page_context'),
+    // PAGE_CONTEXT will be replaced with the actually page when echo'ed
+   $track_documentary = "
+    document.querySelectorAll('.video-quote-watch-button, .video-quote-block .play-button').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            if (!window.plausible) return;
+            plausible('video_watched', { props: buildProps(
+                toContentName('video', 'mini-documentary - __PAGE_CONTEXT__'),
                 'video',
                 null
-                )});
-            });
+            )});
         });
-    ";
+    });
+";
  
     // External article link clicks (news + library pages) — no language variant
     $track_article_clicks = "
@@ -287,7 +288,8 @@ function track_user_interactions() {
         });
  
         <?php echo $track_pdf_clicks; ?>
-        <?php echo $track_documentary; ?>
+        <?php echo str_replace('__PAGE_CONTEXT__', 'education-page', $track_documentary); ?>
+
  
  
     <?php elseif ( is_page( ['news-media', 'legal'] ) ) : ?>
@@ -321,7 +323,8 @@ function track_user_interactions() {
     <?php elseif ( is_front_page() ) : ?>
         // ── Home page ──────────────────────────────────────────────────
  
-        <?php echo $track_documentary; ?>
+          <?php echo str_replace('__PAGE_CONTEXT__', 'home-page', $track_documentary); ?>
+
  
     <?php endif; ?>
     </script>
