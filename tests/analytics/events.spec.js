@@ -10,6 +10,8 @@ import {
 test("Watch Now fires video_watched for all episodes in both languages", async ({
   page,
 }, testInfo) => {
+  test.setTimeout(120000);
+  // long timeout since it has to wait for iframes multiple times
   await page.goto("/education");
 
   const episodes = page.locator("#developed-episodes article");

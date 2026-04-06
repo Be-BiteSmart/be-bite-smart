@@ -35,17 +35,16 @@ export async function testEpisodeLanguage(page, testInfo, episode, lang) {
   // Spy fresh for this click
   await spyOnPlausible(page);
   await episode.locator(".watch-now-button").click();
-  await page.waitForTimeout(60000);
-  // long timeout since its waiting on the iframes to load
 
-  // ****** Part 2: Check iframe loaded after click was done ********
-  const iframeVisible = await episode
-    .locator(".video-player iframe")
-    .isVisible();
+  // ****** Part 2: Check iframe loaded after click was done  ********
+
+  // Wait for iframe to appear rather than a fixed waitForTimeout delay
+  await episode.locator(".video-player iframe").waitFor({ state: "visible" });
 
   // added iframe result to html report
   await testInfo.attach(`${episodeNumber} ${lang} iframe visible`, {
-    body: String(iframeVisible),
+    // true is hardcoded since if it got past the waitFor, then the iframe is guaranteed  to of happened
+    body: "true",
     contentType: "text/plain",
   });
   await expect(episode.locator(".video-player iframe")).toBeVisible();
