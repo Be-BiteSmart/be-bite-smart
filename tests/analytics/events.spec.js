@@ -3,7 +3,7 @@ import {
   spyOnPlausible,
   getPlausibleCalls,
   testEpisodeLanguage,
-} from "../helpers/plausible.js";
+} from "./helpers/plausible";
 
 // ── Education page ─────────────────────────────────────────────
 
