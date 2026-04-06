@@ -1,0 +1,26 @@
+{
+  "name": "testing",
+  "version": "1.0.0",
+  "description": "for testing with playwright",
+  "homepage": "https://github.com/ghiblimagic/be-bite-smart#readme",
+  "bugs": {
+    "url": "https://github.com/ghiblimagic/be-bite-smart/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ghiblimagic/be-bite-smart.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1"
+  }
+}
