@@ -1,3 +1,5 @@
+import { expect } from "@playwright/test";
+
 export async function testEpisodeLanguage(page, testInfo, episode, lang) {
   const episodeNumber = await episode.locator(".episode-number").textContent();
   const toggle = episode.locator(
