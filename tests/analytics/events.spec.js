@@ -1,19 +1,9 @@
 import { test, expect } from "@playwright/test";
-import { testEpisodeLanguage } from "./helpers/plausible";
-
-async function spyOnPlausible(page) {
-  await page.evaluate(() => {
-    window._plausibleCalls = [];
-    window.plausible = function (event, options) {
-      window._plausibleCalls.push({ event, options });
-      //event captured but never sent to plausible
-    };
-  });
-}
-
-async function getPlausibleCalls(page) {
-  return page.evaluate(() => window._plausibleCalls);
-}
+import {
+  spyOnPlausible,
+  getPlausibleCalls,
+  testEpisodeLanguage,
+} from "../helpers/plausible.js";
 
 // ── Education page ─────────────────────────────────────────────
 

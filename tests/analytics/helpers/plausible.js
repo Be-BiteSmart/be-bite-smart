@@ -1,5 +1,19 @@
 import { expect } from "@playwright/test";
 
+export async function spyOnPlausible(page) {
+  await page.evaluate(() => {
+    window._plausibleCalls = [];
+    window.plausible = function (event, options) {
+      window._plausibleCalls.push({ event, options });
+      //event captured but never sent to plausible
+    };
+  });
+}
+
+export async function getPlausibleCalls(page) {
+  return page.evaluate(() => window._plausibleCalls);
+}
+
 export async function testEpisodeLanguage(page, testInfo, episode, lang) {
   const episodeNumber = await episode.locator(".episode-number").textContent();
   const toggle = episode.locator(
