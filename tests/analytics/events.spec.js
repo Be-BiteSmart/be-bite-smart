@@ -221,12 +221,7 @@ test("Documentary on Education page play fires video_watched without content_lan
 test("News Page Outbound Article link click fires article_viewed", async ({
   page,
 }, testInfo) => {
-  await testOutboundArticleClick(
-    page,
-    testInfo,
-    "/news-media",
-    "plausible events",
-  );
+  await testOutboundArticleClick(page, testInfo, "/news-media");
 });
 
 // ****************  READ MORE WORKS **********************
@@ -256,12 +251,7 @@ test("News Page Read More fires article_viewed", async ({ page }, testInfo) => {
 test("Library Page Article link click fires article_viewed", async ({
   page,
 }, testInfo) => {
-  await testOutboundArticleClick(
-    page,
-    testInfo,
-    "/library",
-    "plausible events",
-  );
+  await testOutboundArticleClick(page, testInfo, "/library");
 });
 
 // ── Home page ──────────────────────────────────────────────────

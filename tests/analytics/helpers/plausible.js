@@ -67,14 +67,8 @@ export async function testEpisodeLanguage(page, testInfo, episode, lang) {
   return { episode: `${episodeNumber}`.trim(), lang, ...calls[0] };
 }
 
-export async function testOutboundArticleClick(
-  page,
-  testInfo,
-  url,
-  attachmentLabel,
-) {
+export async function testOutboundArticleClick(page, testInfo, url) {
   await page.goto(url);
-  await spyOnPlausible(page);
 
   // Acts like an event listener — stays active for the lifetime of the context,
   // intercepting every matching request after registration.
@@ -84,7 +78,6 @@ export async function testOutboundArticleClick(
         // New tab request — abort it.
         // request.frame() can throw if the frame hasn't been created yet,
         // the catch below handles that case.
-
         route.abort();
         return;
       }
@@ -94,29 +87,41 @@ export async function testOutboundArticleClick(
       route.abort();
       return;
     }
-
     route.continue();
   });
 
-  await page.locator(".custom-block-card a[target='_blank']").first().click();
-  // target="_blank" opens in a new tab — spy stays intact on the current page,
-  // and the route handler above aborts the new tab before it loads.
-  await page.waitForTimeout(500);
+  const links = page.locator(".custom-block-card a[target='_blank']");
+  const linkCount = await links.count();
+  const allCalls = [];
 
-  const calls = await getPlausibleCalls(page);
-  await testInfo.attach(attachmentLabel, {
-    body: JSON.stringify(calls, null, 2),
+  for (let i = 0; i < linkCount; i++) {
+    await spyOnPlausible(page);
+    await links.nth(i).click();
+    // target="_blank" opens in a new tab — spy stays intact on the current page,
+    // and the route handler above aborts the new tab before it loads.
+    await page.waitForTimeout(500);
+
+    const calls = await getPlausibleCalls(page);
+    await testInfo.attach(`link ${i + 1} of ${linkCount} plausible event`, {
+      body: JSON.stringify(calls, null, 2),
+      contentType: "application/json",
+    });
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0].event).toBe("article_viewed");
+    expect(calls[0].options.props.content_type).toBe("article");
+    expect(calls[0].options.props.content_name).toMatch(/^article - /);
+
+    allCalls.push(calls[0]);
+  }
+
+  await testInfo.attach("all article click events", {
+    body: JSON.stringify(allCalls, null, 2),
     contentType: "application/json",
   });
 
-  expect(calls).toHaveLength(1);
-  expect(calls[0].event).toBe("article_viewed");
-  expect(calls[0].options.props.content_type).toBe("article");
-  expect(calls[0].options.props.content_name).toMatch(/^article - /);
-
-  return calls[0];
+  return allCalls;
 }
-
 export async function testMiniDocPlay(page, testInfo, url) {
   await page.goto(url);
   await spyOnPlausible(page);
