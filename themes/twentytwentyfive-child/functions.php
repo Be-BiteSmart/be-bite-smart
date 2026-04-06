@@ -168,8 +168,7 @@ function track_user_interactions() {
                 if (!window.plausible) return;
                 var block = btn.closest('.video-quote-block');
                 var title = block ? block.querySelector('.video-quote-title')?.textContent?.trim() : 'mini-documentary';
-                plausible('video_watched', { props: buildProps(
-                    toContentName('video', title || 'mini-documentary'),
+                 toContentName('video', (title || 'mini-documentary') + ' - $page_context'),
                     'video',
                     null
                 )});
