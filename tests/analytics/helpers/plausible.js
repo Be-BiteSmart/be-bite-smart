@@ -76,11 +76,15 @@ export async function testOutboundArticleClick(
   await page.goto(url);
   await spyOnPlausible(page);
 
-  // Block new tab from opening to prevent flakiness
-
-  //  Playwright may try to track the new tab that opens, which can cause flakiness. It's cleaner to explicitly block the new tab from opening since you don't need it:
+  // Acts like an event listener — stays active for the lifetime of the context,
+  // intercepting every matching request after registration.
   await page.context().route("**/*", (route, request) => {
-    if (request.frame() !== page.mainFrame()) {
+    if (request.isNavigationRequest() && request.frame() !== page.mainFrame()) {
+      // isNavigationRequest() must come first — calling request.frame() on a
+      // new-tab navigation crashes because the frame doesn't fully exist yet (returns null, ect).
+      // Together these two checks abort only new-tab navigations, leaving
+      // normal same-tab navigation untouched.
+
       route.abort();
     } else {
       route.continue();
@@ -88,7 +92,8 @@ export async function testOutboundArticleClick(
   });
 
   await page.locator(".custom-block-card a[target='_blank']").first().click();
-  // article opens in a new tab, so the spy stays intact, abort code above stops it from trying to track the new tab
+  // target="_blank" opens in a new tab — spy stays intact on the current page,
+  // and the route handler above aborts the new tab before it loads.
   await page.waitForTimeout(500);
 
   const calls = await getPlausibleCalls(page);
