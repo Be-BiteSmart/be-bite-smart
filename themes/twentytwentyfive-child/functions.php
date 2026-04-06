@@ -166,11 +166,10 @@ function track_user_interactions() {
         document.querySelectorAll('.video-quote-watch-button, .video-quote-block .play-button').forEach(function(btn) {
             btn.addEventListener('click', function() {
                 if (!window.plausible) return;
-                var block = btn.closest('.video-quote-block');
-                var title = block ? block.querySelector('.video-quote-title')?.textContent?.trim() : 'mini-documentary';
-                 toContentName('video', (title || 'mini-documentary') + ' - $page_context'),
-                    'video',
-                    null
+                plausible('video_watched', { props: buildProps(
+                toContentName('video', 'mini-documentary - $page_context'),
+                'video',
+                null
                 )});
             });
         });
