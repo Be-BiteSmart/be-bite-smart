@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { testEpisodeLanguage } from "./helpers/plausible";
 
 async function spyOnPlausible(page) {
   await page.evaluate(() => {
@@ -16,28 +17,37 @@ async function getPlausibleCalls(page) {
 
 // ── Education page ─────────────────────────────────────────────
 
-test("Watch Now fires video_watched with correct props", async ({
+test("Watch Now fires video_watched for all episodes in both languages", async ({
   page,
 }, testInfo) => {
   await page.goto("/education");
-  await spyOnPlausible(page);
 
-  await page.locator(".watch-now-button").first().click();
-  await page.waitForTimeout(500);
+  const episodes = page.locator("#childrens-video-series article");
+  const episodeCount = await episodes.count();
+  const allCalls = [];
 
-  const calls = await getPlausibleCalls(page);
-  await testInfo.attach("plausible events", {
-    body: JSON.stringify(calls, null, 2),
+  for (let i = 0; i < episodeCount; i++) {
+    const episode = episodes.nth(i);
+
+    // Switch to EN first (default), test it
+    await episode.locator(".toggle-label[data-lang='en']").click();
+    allCalls.push(
+      await testEpisodeLanguage(page, testInfo, episode, "english"),
+    );
+
+    // Switch to ES, test it
+    await episode.locator(".toggle-label[data-lang='es']").click();
+    allCalls.push(
+      await testEpisodeLanguage(page, testInfo, episode, "spanish"),
+    );
+  }
+
+  await testInfo.attach("all plausible events", {
+    body: JSON.stringify(allCalls, null, 2),
     contentType: "application/json",
   });
 
-  expect(calls).toHaveLength(1);
-  expect(calls[0].event).toBe("video_watched");
-  expect(calls[0].options.props.content_type).toBe("video");
-  expect(calls[0].options.props.content_language).toMatch(/english|spanish/);
-  expect(calls[0].options.props.content_name).toMatch(
-    /^video - .+ - (english|spanish)$/,
-  );
+  expect(allCalls).toHaveLength(episodeCount * 2);
 });
 
 test("PDF toggle fires pdf_viewed on education page", async ({
