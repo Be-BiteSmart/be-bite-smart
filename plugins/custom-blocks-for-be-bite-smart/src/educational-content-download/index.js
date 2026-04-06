@@ -394,7 +394,13 @@ registerBlockType("custom/educational-content-download", {
       .join(" · ");
 
     // Per-language button helper — viewer > download > coming soon
-    const renderButton = (hasPdf, hasDownload, isOutline, targetId, label) => {
+    const renderButton = (
+      hasPdf,
+      hasDownload,
+      isOutline,
+      targetId,
+      language,
+    ) => {
       const base =
         "ecd-toggle block-toggle-btn" +
         (isOutline ? " is-style-outline ecd-toggle--outline" : "");
@@ -406,8 +412,9 @@ registerBlockType("custom/educational-content-download", {
           base,
           targetId,
           groupId,
-          "View PDF (" + label + ")",
-          "Hide PDF (" + label + ")",
+          "View PDF (" + language + ")",
+          "Hide PDF (" + language + ")",
+          language.toLowerCase(), // pass lang
         );
       }
       if (hasDownload) {
@@ -417,11 +424,13 @@ registerBlockType("custom/educational-content-download", {
             href: hasDownload,
             className: base + " ecd-toggle--download",
             download: true,
+            // data-lang is used for testing with playwright
+            "data-lang": language.toLowerCase(), // "en" or "es"
           },
           wp.element.createElement(
             "span",
             { className: "btn-label" },
-            "Download (" + label + ")",
+            "Download (" + language + ")",
           ),
         );
       }
@@ -435,7 +444,7 @@ registerBlockType("custom/educational-content-download", {
         wp.element.createElement(
           "span",
           { className: "btn-label" },
-          "Coming Soon (" + label + ")",
+          "Coming Soon (" + language + ")",
         ),
       );
     };
