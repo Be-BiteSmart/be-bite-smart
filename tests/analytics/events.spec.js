@@ -66,14 +66,8 @@ test("Download video fires video_downloaded for all episodes in both languages",
     const downloads = [
       // the ecd-toggle--download elements do not have data-attributes to say what language they are
       // so instead the only way we can figure out if they're english or spanish is with the text
-      {
-        selector: ".ecd-toggle--download:has(.btn-label:text('(EN)'))",
-        lang: "english",
-      },
-      {
-        selector: ".ecd-toggle--download:has(.btn-label:text('(ES)'))",
-        lang: "spanish",
-      },
+      { selector: ".ecd-toggle--download[data-lang='en']", lang: "english" },
+      { selector: ".ecd-toggle--download[data-lang='es']", lang: "spanish" },
     ];
 
     for (const { selector, lang } of downloads) {
