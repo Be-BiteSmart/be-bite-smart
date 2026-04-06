@@ -66,3 +66,41 @@ export async function testEpisodeLanguage(page, testInfo, episode, lang) {
 
   return { episode: `${episodeNumber}`.trim(), lang, ...calls[0] };
 }
+
+export async function testOutboundArticleClick(
+  page,
+  testInfo,
+  url,
+  attachmentLabel,
+) {
+  await page.goto(url);
+  await spyOnPlausible(page);
+
+  // Block new tab from opening to prevent flakiness
+
+  //  Playwright may try to track the new tab that opens, which can cause flakiness. It's cleaner to explicitly block the new tab from opening since you don't need it:
+  await page.context().route("**/*", (route, request) => {
+    if (request.frame() !== page.mainFrame()) {
+      route.abort();
+    } else {
+      route.continue();
+    }
+  });
+
+  await page.locator(".custom-block-card a[target='_blank']").first().click();
+  // article opens in a new tab, so the spy stays intact, abort code above stops it from trying to track the new tab
+  await page.waitForTimeout(500);
+
+  const calls = await getPlausibleCalls(page);
+  await testInfo.attach(attachmentLabel, {
+    body: JSON.stringify(calls, null, 2),
+    contentType: "application/json",
+  });
+
+  expect(calls).toHaveLength(1);
+  expect(calls[0].event).toBe("article_viewed");
+  expect(calls[0].options.props.content_type).toBe("article");
+  expect(calls[0].options.props.content_name).toMatch(/^article - /);
+
+  return calls[0];
+}

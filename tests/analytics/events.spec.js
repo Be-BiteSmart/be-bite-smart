@@ -3,9 +3,13 @@ import {
   spyOnPlausible,
   getPlausibleCalls,
   testEpisodeLanguage,
+  testOutboundArticleClick,
+  testMiniDocPlay,
 } from "./helpers/plausible";
 
 // ── Education page ─────────────────────────────────────────────
+
+// ************ EPISODES WATCHED ********************
 
 test("Watch Now fires video_watched for all episodes in both languages", async ({
   page,
@@ -42,7 +46,7 @@ test("Watch Now fires video_watched for all episodes in both languages", async (
   expect(allCalls).toHaveLength(episodeCount * 2);
 });
 
-// ********************** Test video download *********************
+// ********************** EPISODE DOWNLOADS *********************
 
 test("Download video fires video_downloaded for all episodes in both languages", async ({
   page,
@@ -106,31 +110,75 @@ test("Download video fires video_downloaded for all episodes in both languages",
   expect(allCalls).toHaveLength(sectionCount * 2);
 });
 
-test("PDF toggle fires pdf_viewed on education page", async ({
+// ********************** COLORING BOOK ********************
+test("Coloring Book PDF toggle fires pdf_viewed for all available episodes", async ({
   page,
 }, testInfo) => {
   await page.goto("/education");
-  await spyOnPlausible(page);
 
-  await page
-    .locator(
-      ".ecd-toggle:not(.ecd-toggle--download):not(.ecd-toggle--coming-soon)",
-    )
-    .first()
-    .click();
-  await page.waitForTimeout(500);
+  const sections = page.locator(
+    "#download-coloring-books .educational-content-download-block",
+  );
+  const sectionCount = await sections.count();
+  const allCalls = [];
 
-  const calls = await getPlausibleCalls(page);
-  await testInfo.attach("plausible events", {
-    body: JSON.stringify(calls, null, 2),
+  for (let i = 0; i < sectionCount; i++) {
+    const section = sections.nth(i);
+    const episodeLabel = await section
+      .locator(".capitalized-and-colored")
+      .textContent();
+    const title = await section.locator(".ecd-title").textContent();
+    const label = `${episodeLabel.trim()} - ${title.trim()}`;
+
+    const allButtons = section.locator(".ecd-toggle");
+    const buttonCount = await allButtons.count();
+
+    for (let j = 0; j < buttonCount; j++) {
+      const btn = allButtons.nth(j);
+      const classList = (await btn.getAttribute("class")) ?? "";
+
+      if (classList.includes("ecd-toggle--coming-soon")) {
+        await testInfo.attach(`${label} button ${j + 1} status`, {
+          body: "skipped — coming soon",
+          contentType: "text/plain",
+        });
+        continue;
+      }
+
+      const lang = await btn.getAttribute("data-lang");
+
+      await spyOnPlausible(page);
+      await btn.click();
+      await page.waitForTimeout(500);
+
+      const calls = await getPlausibleCalls(page);
+      await testInfo.attach(`${label} ${lang} plausible event`, {
+        body: JSON.stringify(calls, null, 2),
+        contentType: "application/json",
+      });
+
+      expect(calls).toHaveLength(1);
+      expect(calls[0].event).toBe("pdf_viewed");
+      expect(calls[0].options.props.content_type).toBe("pdf");
+      expect(calls[0].options.props.content_language).toMatch(
+        /english|spanish/,
+      );
+      expect(calls[0].options.props.content_name).toMatch(/^pdf - /);
+
+      allCalls.push({ episode: label, lang, ...calls[0] });
+
+      await btn.click();
+      await page.waitForTimeout(300);
+    }
+  }
+
+  await testInfo.attach("all coloring book pdf events", {
+    body: JSON.stringify(allCalls, null, 2),
     contentType: "application/json",
   });
-
-  expect(calls).toHaveLength(1);
-  expect(calls[0].event).toBe("pdf_viewed");
-  expect(calls[0].options.props.content_type).toBe("pdf");
-  expect(calls[0].options.props.content_name).toMatch(/^pdf - /);
 });
+
+// *************** PDF NOT FIRING AGAIN ON CLOSE **************
 
 test("PDF toggle does not fire again when closing", async ({
   page,
@@ -158,54 +206,32 @@ test("PDF toggle does not fire again when closing", async ({
   expect(calls).toHaveLength(0);
 });
 
-test("Documentary play fires video_watched without content_language", async ({
+// *********** DOCUMENTARY ON EDUCATION PAGE WORKS ************
+
+test("Documentary on Education page play fires video_watched without content_language", async ({
   page,
 }, testInfo) => {
-  await page.goto("/education");
-  await spyOnPlausible(page);
-
-  await page
-    .locator(".video-quote-watch-button, .video-quote-block .play-button")
-    .first()
-    .click();
-  await page.waitForTimeout(500);
-
-  const calls = await getPlausibleCalls(page);
-  await testInfo.attach("plausible events", {
-    body: JSON.stringify(calls, null, 2),
-    contentType: "application/json",
-  });
-
-  expect(calls).toHaveLength(1);
-  expect(calls[0].event).toBe("video_watched");
-  expect(calls[0].options.props.content_type).toBe("video");
-  expect(calls[0].options.props.content_language).toBeUndefined();
+  await testMiniDocPlay(page, testInfo, "/education");
 });
 
 // ── News / Legal pages ─────────────────────────────────────────
 
-test("Article link click fires article_viewed", async ({ page }, testInfo) => {
-  await page.goto("/news-media");
-  await spyOnPlausible(page);
+// ***************** ARTICLE OUTBOUND LINK CLICK WORKS ************
 
-  await page.locator(".custom-block-card a[target='_blank']").first().click();
-  await page.waitForTimeout(500);
-
-  const calls = await getPlausibleCalls(page);
-  await testInfo.attach("plausible events", {
-    body: JSON.stringify(calls, null, 2),
-    contentType: "application/json",
-  });
-
-  expect(calls).toHaveLength(1);
-  expect(calls[0].event).toBe("article_viewed");
-  expect(calls[0].options.props.content_type).toBe("article");
-  expect(calls[0].options.props.content_name).toMatch(/^article - /);
-});
-
-test("Read More fires article_viewed on news page", async ({
+test("News Page Outbound Article link click fires article_viewed", async ({
   page,
 }, testInfo) => {
+  await testOutboundArticleClick(
+    page,
+    testInfo,
+    "/news-media",
+    "plausible events",
+  );
+});
+
+// ****************  READ MORE WORKS **********************
+
+test("News Page Read More fires article_viewed", async ({ page }, testInfo) => {
   await page.goto("/news-media");
   await spyOnPlausible(page);
 
@@ -225,47 +251,25 @@ test("Read More fires article_viewed on news page", async ({
 
 // ── Library page ───────────────────────────────────────────────
 
-test("Article link click fires article_viewed on library page", async ({
+// ***************** ARTICLE OUTBOUND CLICK ****************
+
+test("Library Page Article link click fires article_viewed", async ({
   page,
 }, testInfo) => {
-  await page.goto("/library");
-  await spyOnPlausible(page);
-
-  await page.locator(".custom-block-card a[target='_blank']").first().click();
-  await page.waitForTimeout(500);
-
-  const calls = await getPlausibleCalls(page);
-  await testInfo.attach("plausible events", {
-    body: JSON.stringify(calls, null, 2),
-    contentType: "application/json",
-  });
-
-  expect(calls).toHaveLength(1);
-  expect(calls[0].event).toBe("article_viewed");
-  expect(calls[0].options.props.content_type).toBe("article");
+  await testOutboundArticleClick(
+    page,
+    testInfo,
+    "/library",
+    "plausible events",
+  );
 });
 
 // ── Home page ──────────────────────────────────────────────────
 
-test("Documentary play fires video_watched on home page", async ({
+// ************ MINI DOC HOME PAGE **************************
+
+test("Home Page Documentary play fires video_watched", async ({
   page,
 }, testInfo) => {
-  await page.goto("/");
-  await spyOnPlausible(page);
-
-  await page
-    .locator(".video-quote-watch-button, .video-quote-block .play-button")
-    .first()
-    .click();
-  await page.waitForTimeout(500);
-
-  const calls = await getPlausibleCalls(page);
-  await testInfo.attach("plausible events", {
-    body: JSON.stringify(calls, null, 2),
-    contentType: "application/json",
-  });
-
-  expect(calls).toHaveLength(1);
-  expect(calls[0].event).toBe("video_watched");
-  expect(calls[0].options.props.content_language).toBeUndefined();
+  await testMiniDocPlay(page, testInfo, "/");
 });
