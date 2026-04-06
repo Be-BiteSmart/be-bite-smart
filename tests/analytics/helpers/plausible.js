@@ -90,7 +90,9 @@ export async function testOutboundArticleClick(page, testInfo, url) {
     route.continue();
   });
 
-  const links = page.locator(".custom-block-card a[target='_blank']");
+  const links = page.locator(
+    ".custom-block-card a.block-toggle-btn[target='_blank']",
+  );
   const linkCount = await links.count();
   const allCalls = [];
 
