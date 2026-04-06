@@ -79,16 +79,23 @@ export async function testOutboundArticleClick(
   // Acts like an event listener — stays active for the lifetime of the context,
   // intercepting every matching request after registration.
   await page.context().route("**/*", (route, request) => {
-    if (request.isNavigationRequest() && request.frame() !== page.mainFrame()) {
-      // isNavigationRequest() must come first — calling request.frame() on a
-      // new-tab navigation crashes because the frame doesn't fully exist yet (returns null, ect).
-      // Together these two checks abort only new-tab navigations, leaving
-      // normal same-tab navigation untouched.
+    try {
+      if (request.frame() !== page.mainFrame()) {
+        // New tab request — abort it.
+        // request.frame() can throw if the frame hasn't been created yet,
+        // the catch below handles that case.
 
+        route.abort();
+        return;
+      }
+    } catch {
+      // request.frame() threw — the frame doesn't fully exist yet, meaning this is
+      // a new tab navigation mid-creation. Abort it.
       route.abort();
-    } else {
-      route.continue();
+      return;
     }
+
+    route.continue();
   });
 
   await page.locator(".custom-block-card a[target='_blank']").first().click();
