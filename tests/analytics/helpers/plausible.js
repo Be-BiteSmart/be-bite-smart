@@ -35,7 +35,8 @@ export async function testEpisodeLanguage(page, testInfo, episode, lang) {
   // Spy fresh for this click
   await spyOnPlausible(page);
   await episode.locator(".watch-now-button").click();
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(60000);
+  // long timeout since its waiting on the iframes to load
 
   // ****** Part 2: Check iframe loaded after click was done ********
   const iframeVisible = await episode

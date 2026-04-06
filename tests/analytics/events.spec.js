@@ -12,7 +12,7 @@ test("Watch Now fires video_watched for all episodes in both languages", async (
 }, testInfo) => {
   await page.goto("/education");
 
-  const episodes = page.locator("#childrens-video-series article");
+  const episodes = page.locator("#developed-episodes article");
   const episodeCount = await episodes.count();
   const allCalls = [];
 
