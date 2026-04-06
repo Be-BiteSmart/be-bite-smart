@@ -3,10 +3,9 @@ import { test, expect } from "@playwright/test";
 async function spyOnPlausible(page) {
   await page.evaluate(() => {
     window._plausibleCalls = [];
-
     window.plausible = function (event, options) {
       window._plausibleCalls.push({ event, options });
-      //  event is captured but never sent to plausible
+      //event captured but never sent to plausible
     };
   });
 }
@@ -17,7 +16,9 @@ async function getPlausibleCalls(page) {
 
 // ── Education page ─────────────────────────────────────────────
 
-test("Watch Now fires video_watched with correct props", async ({ page }) => {
+test("Watch Now fires video_watched with correct props", async ({
+  page,
+}, testInfo) => {
   await page.goto("/education");
   await spyOnPlausible(page);
 
@@ -25,6 +26,10 @@ test("Watch Now fires video_watched with correct props", async ({ page }) => {
   await page.waitForTimeout(500);
 
   const calls = await getPlausibleCalls(page);
+  await testInfo.attach("plausible events", {
+    body: JSON.stringify(calls, null, 2),
+    contentType: "application/json",
+  });
 
   expect(calls).toHaveLength(1);
   expect(calls[0].event).toBe("video_watched");
@@ -35,7 +40,9 @@ test("Watch Now fires video_watched with correct props", async ({ page }) => {
   );
 });
 
-test("PDF toggle fires pdf_viewed on education page", async ({ page }) => {
+test("PDF toggle fires pdf_viewed on education page", async ({
+  page,
+}, testInfo) => {
   await page.goto("/education");
   await spyOnPlausible(page);
 
@@ -48,6 +55,10 @@ test("PDF toggle fires pdf_viewed on education page", async ({ page }) => {
   await page.waitForTimeout(500);
 
   const calls = await getPlausibleCalls(page);
+  await testInfo.attach("plausible events", {
+    body: JSON.stringify(calls, null, 2),
+    contentType: "application/json",
+  });
 
   expect(calls).toHaveLength(1);
   expect(calls[0].event).toBe("pdf_viewed");
@@ -55,7 +66,9 @@ test("PDF toggle fires pdf_viewed on education page", async ({ page }) => {
   expect(calls[0].options.props.content_name).toMatch(/^pdf - /);
 });
 
-test("PDF toggle does not fire again when closing", async ({ page }) => {
+test("PDF toggle does not fire again when closing", async ({
+  page,
+}, testInfo) => {
   await page.goto("/education");
 
   const btn = page
@@ -67,16 +80,21 @@ test("PDF toggle does not fire again when closing", async ({ page }) => {
   await page.waitForTimeout(500);
 
   await spyOnPlausible(page);
-  await btn.click(); // close it
+  await btn.click();
   await page.waitForTimeout(500);
 
   const calls = await getPlausibleCalls(page);
+  await testInfo.attach("plausible events", {
+    body: JSON.stringify(calls, null, 2),
+    contentType: "application/json",
+  });
+
   expect(calls).toHaveLength(0);
 });
 
 test("Documentary play fires video_watched without content_language", async ({
   page,
-}) => {
+}, testInfo) => {
   await page.goto("/education");
   await spyOnPlausible(page);
 
@@ -87,6 +105,10 @@ test("Documentary play fires video_watched without content_language", async ({
   await page.waitForTimeout(500);
 
   const calls = await getPlausibleCalls(page);
+  await testInfo.attach("plausible events", {
+    body: JSON.stringify(calls, null, 2),
+    contentType: "application/json",
+  });
 
   expect(calls).toHaveLength(1);
   expect(calls[0].event).toBe("video_watched");
@@ -96,7 +118,7 @@ test("Documentary play fires video_watched without content_language", async ({
 
 // ── News / Legal pages ─────────────────────────────────────────
 
-test("Article link click fires article_viewed", async ({ page }) => {
+test("Article link click fires article_viewed", async ({ page }, testInfo) => {
   await page.goto("/news-media");
   await spyOnPlausible(page);
 
@@ -104,6 +126,10 @@ test("Article link click fires article_viewed", async ({ page }) => {
   await page.waitForTimeout(500);
 
   const calls = await getPlausibleCalls(page);
+  await testInfo.attach("plausible events", {
+    body: JSON.stringify(calls, null, 2),
+    contentType: "application/json",
+  });
 
   expect(calls).toHaveLength(1);
   expect(calls[0].event).toBe("article_viewed");
@@ -111,7 +137,9 @@ test("Article link click fires article_viewed", async ({ page }) => {
   expect(calls[0].options.props.content_name).toMatch(/^article - /);
 });
 
-test("Read More fires article_viewed on news page", async ({ page }) => {
+test("Read More fires article_viewed on news page", async ({
+  page,
+}, testInfo) => {
   await page.goto("/news-media");
   await spyOnPlausible(page);
 
@@ -119,6 +147,10 @@ test("Read More fires article_viewed on news page", async ({ page }) => {
   await page.waitForTimeout(500);
 
   const calls = await getPlausibleCalls(page);
+  await testInfo.attach("plausible events", {
+    body: JSON.stringify(calls, null, 2),
+    contentType: "application/json",
+  });
 
   expect(calls).toHaveLength(1);
   expect(calls[0].event).toBe("article_viewed");
@@ -129,7 +161,7 @@ test("Read More fires article_viewed on news page", async ({ page }) => {
 
 test("Article link click fires article_viewed on library page", async ({
   page,
-}) => {
+}, testInfo) => {
   await page.goto("/library");
   await spyOnPlausible(page);
 
@@ -137,6 +169,10 @@ test("Article link click fires article_viewed on library page", async ({
   await page.waitForTimeout(500);
 
   const calls = await getPlausibleCalls(page);
+  await testInfo.attach("plausible events", {
+    body: JSON.stringify(calls, null, 2),
+    contentType: "application/json",
+  });
 
   expect(calls).toHaveLength(1);
   expect(calls[0].event).toBe("article_viewed");
@@ -145,7 +181,9 @@ test("Article link click fires article_viewed on library page", async ({
 
 // ── Home page ──────────────────────────────────────────────────
 
-test("Documentary play fires video_watched on home page", async ({ page }) => {
+test("Documentary play fires video_watched on home page", async ({
+  page,
+}, testInfo) => {
   await page.goto("/");
   await spyOnPlausible(page);
 
@@ -156,6 +194,10 @@ test("Documentary play fires video_watched on home page", async ({ page }) => {
   await page.waitForTimeout(500);
 
   const calls = await getPlausibleCalls(page);
+  await testInfo.attach("plausible events", {
+    body: JSON.stringify(calls, null, 2),
+    contentType: "application/json",
+  });
 
   expect(calls).toHaveLength(1);
   expect(calls[0].event).toBe("video_watched");
