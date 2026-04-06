@@ -104,3 +104,27 @@ export async function testOutboundArticleClick(
 
   return calls[0];
 }
+
+export async function testMiniDocPlay(page, testInfo, url) {
+  await page.goto(url);
+  await spyOnPlausible(page);
+
+  await page
+    .locator(".video-quote-watch-button, .video-quote-block .play-button")
+    .first()
+    .click();
+  await page.waitForTimeout(500);
+
+  const calls = await getPlausibleCalls(page);
+  await testInfo.attach("plausible events", {
+    body: JSON.stringify(calls, null, 2),
+    contentType: "application/json",
+  });
+
+  expect(calls).toHaveLength(1);
+  expect(calls[0].event).toBe("video_watched");
+  expect(calls[0].options.props.content_type).toBe("video");
+  expect(calls[0].options.props.content_language).toBeUndefined();
+
+  return calls[0];
+}
