@@ -1,6 +1,12 @@
 <?php
 function twentytwentyfive_child_enqueue_styles() {
 
+
+add_filter('theme_page_templates', function($templates) {
+    $templates['page-qr-landing.php'] = 'QR Landing Page';
+    return $templates;
+});
+
 //  the asset.php files only contain a version hash — WordPress never actually loads the compiled JS files from build/. The CSS files themselves still live at their original paths (style.css, css/navbar.css etc.) — the build step just generates the hash fingerprint we use for versioning to avoid css caching issues.
         // why not filemtime? because it has issues with git
         // manual version control would of continued to work, but its tedious and easy to forget to update the version number
