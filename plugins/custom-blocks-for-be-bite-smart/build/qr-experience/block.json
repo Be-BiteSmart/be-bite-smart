@@ -1,0 +1,54 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 2,
+  "name": "custom/qr-experience",
+  "title": "QR Experience",
+  "category": "widgets",
+  "textdomain": "custom-blocks",
+  "editorScript": "file:./index.js",
+  "style": "file:./style-index.css",
+  "editorStyle": "file:./style.css",
+  "supports": {},
+  "attributes": {
+    "introText": {
+      "type": "string",
+      "default": ""
+    },
+    "openingAudioUrl": {
+      "type": "string",
+      "default": ""
+    },
+    "openingAudioId": {
+      "type": "number",
+      "default": 0
+    },
+    "openingTranscript": {
+      "type": "string",
+      "default": ""
+    },
+    "vimeoId": {
+      "type": "string",
+      "default": ""
+    },
+    "closingAudioUrl": {
+      "type": "string",
+      "default": ""
+    },
+    "closingAudioId": {
+      "type": "number",
+      "default": 0
+    },
+    "closingTranscript": {
+      "type": "string",
+      "default": ""
+    },
+    "buttonUrl": {
+      "type": "string",
+      "default": ""
+    },
+    "buttonLabel": {
+      "type": "string",
+      "default": "Come Home"
+    }
+  }
+}

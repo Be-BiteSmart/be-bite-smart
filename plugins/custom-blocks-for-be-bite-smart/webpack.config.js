@@ -21,6 +21,7 @@ module.exports = {
     "read-more": "./src/read-more.js",
     "toggle-system": "./src/toggle-system.js",
     "video-toggle": "./src/video-toggle.js",
+    "qr-experience/index": "./src/qr-experience/index.js",
   },
   output: {
     path: path.resolve(__dirname, "build"),
