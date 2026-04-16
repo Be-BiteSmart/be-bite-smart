@@ -1,11 +1,16 @@
 <?php
-function twentytwentyfive_child_enqueue_styles() {
 
-
-add_filter('theme_page_templates', function($templates) {
-    $templates['page-qr-landing.php'] = 'QR Landing Page';
-    return $templates;
+add_filter('template_include', function($template) {
+    if (is_page()) {
+        $post = get_post();
+        if ($post && has_block('custom/qr-experience', $post)) {
+            return get_stylesheet_directory() . '/no-header-footer.php';
+        }
+    }
+    return $template;
 });
+
+function twentytwentyfive_child_enqueue_styles() {
 
 //  the asset.php files only contain a version hash — WordPress never actually loads the compiled JS files from build/. The CSS files themselves still live at their original paths (style.css, css/navbar.css etc.) — the build step just generates the hash fingerprint we use for versioning to avoid css caching issues.
         // why not filemtime? because it has issues with git
@@ -44,7 +49,7 @@ add_action( 'wp_enqueue_scripts', 'twentytwentyfive_child_enqueue_styles' );
 
 /* load hero image immediately on front page */
 add_action( 'wp_head', function() {
-    if ( ! is_front_page() ) return;
+   if ( has_block( 'your-namespace/qr-experience' ) ) {
 
     global $post;
     $blocks = parse_blocks( $post->post_content );
@@ -64,6 +69,7 @@ add_action( 'wp_head', function() {
 
         break;
     }
+   }
 }, 1 );
 
 add_action('wp_head', function() {
@@ -344,7 +350,7 @@ add_action('wp_footer', 'track_user_interactions', 10);
 // defers jquery, to improve loading speed. Only done on landing page, since forminator on the contact page will break otherwise
 //Logged-in users get jQuery normally otherwise translate press's edit screen won't appear for the 1st page, visitors get the deferred version
 add_filter( 'script_loader_tag', function( $tag, $handle ) {
-    if ( ! is_front_page() ) return $tag;
+    if ( !is_front_page() ) return $tag;
     if ( is_user_logged_in() ) return $tag;
     $defer = [ 'jquery-core', 'jquery-migrate', 'trp-language-switcher-js-v2','eeb-js-frontend' ];
     // eeb-js-frontend is the email/phone encoder plugin
@@ -356,7 +362,7 @@ add_filter( 'script_loader_tag', function( $tag, $handle ) {
 
 // preloads fonts used above the fold on the front page
 add_action( 'wp_head', function() {
-    if ( ! is_front_page() ) return;
+    if ( !is_front_page() ) return;
  // Font Library auto-generates font URLs without www at upload time.
 // Better Search Replace found no stored URLs to fix — they're generated
 // dynamically at render time, so the preload must match the output instead.
@@ -507,7 +513,7 @@ add_action('wp_footer', 'submenu_hover_logic');
 // Looks for a .show-more-button wrapper and a .show-more-content target,
 // and toggles the is-visible class on click to show/hide the content.
 function show_more_button_about_page() {
-        if ( ! is_front_page()) return;
+        if ( !is_front_page()) return;
     ?>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
