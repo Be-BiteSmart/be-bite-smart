@@ -1,14 +1,38 @@
 <?php
+
+add_filter('template_include', function($template) {
+    if (is_page()) {
+        $post = get_post();
+        if ($post && has_block('custom/qr-experience', $post)) {
+            return get_stylesheet_directory() . '/no-header-footer.php';
+        }
+    }
+    return $template;
+});
+
+// its only used in twentytwentyfive_child_enqueue_style, so technically this could go in that function. However, defining functions inside other functions in PHP works but is bad practice.
+
+function get_asset( $path ) {
+
+// this would cause a fatal error if the style.asset.php didn't exist: $style_asset = include get_stylesheet_directory() . '/build/style.asset.php';
+
+// this version checks if the file exists before trying to include it
+// If it's missing, instead of crashing it just returns a dummy fallback array [ 'version' => '1.0.0' ]. WordPress then loads the CSS without a version hash — not ideal, but the site stays up.
+    $full = get_stylesheet_directory() . '/build/' . $path;
+    return file_exists( $full ) ? include $full : [ 'version' => '1.0.0', 'dependencies' => [] ];
+}
+
 function twentytwentyfive_child_enqueue_styles() {
 
 //  the asset.php files only contain a version hash — WordPress never actually loads the compiled JS files from build/. The CSS files themselves still live at their original paths (style.css, css/navbar.css etc.) — the build step just generates the hash fingerprint we use for versioning to avoid css caching issues.
         // why not filemtime? because it has issues with git
         // manual version control would of continued to work, but its tedious and easy to forget to update the version number
 
+
     // Enqueue parent style
     wp_enqueue_style( 'twentytwentyfive-parent', get_template_directory_uri() . '/style.css' );
 
-    $style_asset = include get_stylesheet_directory() . '/build/style.asset.php';
+       $style_asset = get_asset( 'style.asset.php' );
     wp_enqueue_style(
         'twentytwentyfive-child',
         get_stylesheet_directory_uri() . '/style.css',
@@ -16,7 +40,7 @@ function twentytwentyfive_child_enqueue_styles() {
         $style_asset['version']
     );
 
-    $navbar_asset = include get_stylesheet_directory() . '/build/navbar.asset.php';
+     $navbar_asset = get_asset( 'navbar.asset.php' );
     wp_enqueue_style(
         'child-navbar',
         get_stylesheet_directory_uri() . '/css/navbar.css',
@@ -24,7 +48,7 @@ function twentytwentyfive_child_enqueue_styles() {
         $navbar_asset['version']
     );
 
-   $forminator_asset = include get_stylesheet_directory() . '/build/forminator.asset.php';
+     $forminator_asset = get_asset( 'forminator.asset.php' );
 if ( is_page( 'contact' ) ) {
     wp_enqueue_style(
         'child-forminator',
@@ -73,7 +97,7 @@ add_filter( 'wp_font_face_resolver_style_properties', function( $properties ) {
 
 // enqueue_block_assets since these styles are also used in the editor
 add_action( 'enqueue_block_assets', function() {
-    $shared_blocks_asset = include get_stylesheet_directory() . '/build/shared-blocks.asset.php';
+    $shared_blocks_asset =  get_asset( 'shared-blocks.asset.php' );
     wp_enqueue_style(
         'child-shared-blocks',
         get_stylesheet_directory_uri() . '/css/shared-block-styles.css',
@@ -338,7 +362,7 @@ add_action('wp_footer', 'track_user_interactions', 10);
 // defers jquery, to improve loading speed. Only done on landing page, since forminator on the contact page will break otherwise
 //Logged-in users get jQuery normally otherwise translate press's edit screen won't appear for the 1st page, visitors get the deferred version
 add_filter( 'script_loader_tag', function( $tag, $handle ) {
-    if ( ! is_front_page() ) return $tag;
+    if ( !is_front_page() ) return $tag;
     if ( is_user_logged_in() ) return $tag;
     $defer = [ 'jquery-core', 'jquery-migrate', 'trp-language-switcher-js-v2','eeb-js-frontend' ];
     // eeb-js-frontend is the email/phone encoder plugin
@@ -350,7 +374,7 @@ add_filter( 'script_loader_tag', function( $tag, $handle ) {
 
 // preloads fonts used above the fold on the front page
 add_action( 'wp_head', function() {
-    if ( ! is_front_page() ) return;
+    if ( !is_front_page() ) return;
  // Font Library auto-generates font URLs without www at upload time.
 // Better Search Replace found no stored URLs to fix — they're generated
 // dynamically at render time, so the preload must match the output instead.
@@ -501,7 +525,7 @@ add_action('wp_footer', 'submenu_hover_logic');
 // Looks for a .show-more-button wrapper and a .show-more-content target,
 // and toggles the is-visible class on click to show/hide the content.
 function show_more_button_about_page() {
-        if ( ! is_front_page()) return;
+        if ( !is_front_page()) return;
     ?>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
