@@ -62,7 +62,7 @@ add_action( 'wp_enqueue_scripts', 'twentytwentyfive_child_enqueue_styles' );
 
 /* load hero image immediately on front page */
 add_action( 'wp_head', function() {
-   if ( has_block( 'your-namespace/qr-experience' ) ) {
+    if ( ! is_front_page() ) return;
 
     global $post;
     $blocks = parse_blocks( $post->post_content );
@@ -82,7 +82,6 @@ add_action( 'wp_head', function() {
 
         break;
     }
-   }
 }, 1 );
 
 add_action('wp_head', function() {
