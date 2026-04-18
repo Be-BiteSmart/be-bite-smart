@@ -56,20 +56,6 @@ function hero_register_block() {
 }
 add_action( 'init', 'hero_register_block' );
 
-// ---------------- QR code Block -------------
-
-require_once __DIR__ . '/src/qr-experience/render.php';
-
-
-function qr_page_register_block() {
-      require_once plugin_dir_path( __FILE__ ) . 'src/qr-experience/partials.php';
-
-    register_block_type( __DIR__ . '/build/qr-experience', [
-        'render_callback' => 'render_qr_experience_block',
-    ] );
-}
-add_action( 'init', 'qr_page_register_block' );
-
 // ----------- video quote -------------------//
 
 // why it was turned into a dynamic block:
@@ -181,7 +167,6 @@ function custom_blocks_scripts() {
         wp_enqueue_style( 'pdf-toggle-style', plugins_url( 'build/pdf-toggle/style-index.css', __FILE__ ), array(), $asset['version'] );
 
     }
-
 }
 add_action( 'wp_enqueue_scripts', 'custom_blocks_scripts' );
 
