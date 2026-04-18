@@ -34,88 +34,89 @@ const hint_style = {
   fontStyle: "italic",
 };
 
+// Defined outside `edit` so its function reference stays stable across re-renders.
+
+const AudioUpload = ({ urlAttr, idAttr, label, attributes, setAttributes }) =>
+  wp.element.createElement(
+    "div",
+    { style: { marginBottom: "16px" } },
+    wp.element.createElement("label", { style: label_style }, label),
+    wp.element.createElement(
+      MediaUploadCheck,
+      null,
+      wp.element.createElement(MediaUpload, {
+        onSelect: (media) =>
+          setAttributes({ [urlAttr]: media.url, [idAttr]: media.id }),
+        allowedTypes: ["audio"],
+        value: attributes[idAttr],
+        render: ({ open }) =>
+          wp.element.createElement(
+            "div",
+            {
+              style: {
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                flexWrap: "wrap",
+              },
+            },
+            attributes[urlAttr]
+              ? wp.element.createElement(
+                  "span",
+                  {
+                    style: {
+                      fontSize: "13px",
+                      color: "#c4bdb0",
+                      wordBreak: "break-all",
+                      flex: 1,
+                    },
+                  },
+                  attributes[urlAttr].split("/").pop(),
+                )
+              : wp.element.createElement(
+                  "span",
+                  {
+                    style: {
+                      fontSize: "13px",
+                      color: "#6b7280",
+                      fontStyle: "italic",
+                    },
+                  },
+                  __("No audio selected", "custom-blocks"),
+                ),
+            wp.element.createElement(
+              Button,
+              {
+                onClick: open,
+                variant: "secondary",
+                style: { fontSize: "13px" },
+              },
+              attributes[urlAttr]
+                ? __("Replace", "custom-blocks")
+                : __("Upload Audio", "custom-blocks"),
+            ),
+            attributes[urlAttr] &&
+              wp.element.createElement(
+                Button,
+                {
+                  onClick: () => setAttributes({ [urlAttr]: "", [idAttr]: 0 }),
+                  variant: "tertiary",
+                  isDestructive: true,
+                  style: { fontSize: "13px" },
+                },
+                __("Remove", "custom-blocks"),
+              ),
+          ),
+      }),
+    ),
+  );
+
 registerBlockType("custom/qr-experience", {
   title: __("QR Experience", "custom-blocks"),
   category: "widgets",
 
   edit: ({ attributes, setAttributes }) => {
     const blockProps = useBlockProps();
-
-    const AudioUpload = ({ urlAttr, idAttr, label }) =>
-      wp.element.createElement(
-        "div",
-        { style: { marginBottom: "16px" } },
-        wp.element.createElement("label", { style: label_style }, label),
-        wp.element.createElement(
-          MediaUploadCheck,
-          null,
-          wp.element.createElement(MediaUpload, {
-            onSelect: (media) =>
-              setAttributes({ [urlAttr]: media.url, [idAttr]: media.id }),
-            allowedTypes: ["audio"],
-            value: attributes[idAttr],
-            render: ({ open }) =>
-              wp.element.createElement(
-                "div",
-                {
-                  style: {
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    flexWrap: "wrap",
-                  },
-                },
-                attributes[urlAttr]
-                  ? wp.element.createElement(
-                      "span",
-                      {
-                        style: {
-                          fontSize: "13px",
-                          color: "#c4bdb0",
-                          wordBreak: "break-all",
-                          flex: 1,
-                        },
-                      },
-                      attributes[urlAttr].split("/").pop(),
-                    )
-                  : wp.element.createElement(
-                      "span",
-                      {
-                        style: {
-                          fontSize: "13px",
-                          color: "#6b7280",
-                          fontStyle: "italic",
-                        },
-                      },
-                      __("No audio selected", "custom-blocks"),
-                    ),
-                wp.element.createElement(
-                  Button,
-                  {
-                    onClick: open,
-                    variant: "secondary",
-                    style: { fontSize: "13px" },
-                  },
-                  attributes[urlAttr]
-                    ? __("Replace", "custom-blocks")
-                    : __("Upload Audio", "custom-blocks"),
-                ),
-                attributes[urlAttr] &&
-                  wp.element.createElement(
-                    Button,
-                    {
-                      onClick: () =>
-                        setAttributes({ [urlAttr]: "", [idAttr]: 0 }),
-                      variant: "tertiary",
-                      isDestructive: true,
-                      style: { fontSize: "13px" },
-                    },
-                    __("Remove", "custom-blocks"),
-                  ),
-              ),
-          }),
-        ),
-      );
 
     return wp.element.createElement(
       "div",
@@ -202,6 +203,8 @@ registerBlockType("custom/qr-experience", {
             urlAttr: "openingAudioUrl",
             idAttr: "openingAudioId",
             label: "Opening Audio (Step 1)",
+            attributes,
+            setAttributes,
           }),
           wp.element.createElement(
             "label",
@@ -260,6 +263,8 @@ registerBlockType("custom/qr-experience", {
             urlAttr: "closingAudioUrl",
             idAttr: "closingAudioId",
             label: "Closing Audio (Step 3)",
+            attributes,
+            setAttributes,
           }),
           wp.element.createElement(
             "label",
