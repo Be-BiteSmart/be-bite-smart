@@ -22,6 +22,7 @@ module.exports = {
     "toggle-system": "./src/toggle-system.js",
     "video-toggle": "./src/video-toggle.js",
     "qr-experience/index": "./src/qr-experience/index.js",
+    "qr-experience/frontend": "./src/qr-experience/frontend.js",
   },
   output: {
     path: path.resolve(__dirname, "build"),

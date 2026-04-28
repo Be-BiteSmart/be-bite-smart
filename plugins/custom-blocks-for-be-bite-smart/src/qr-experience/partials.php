@@ -1,4 +1,3 @@
-
 <?php
 
 function qr_render_audio_row( $audio_id, $icon_html, $aria_label, $btn_id = '' ) {

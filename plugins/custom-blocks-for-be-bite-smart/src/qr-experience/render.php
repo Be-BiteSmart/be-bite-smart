@@ -18,18 +18,21 @@ $pause_icon = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns
 //
 // WHY plugins_url() + dirname( dirname( __FILE__ ) ) INSTEAD OF plugin_dir_url( __FILE__ ):
 // __FILE__ resolves to src/qr-experience/render.php, so plugin_dir_url( __FILE__ )
-// would point to src/qr-experience/ — but frontend.js is a compiled file that
-// lives in build/qr-experience/ after `npm run build`.
+// would point to src/qr-experience/ — but frontend.js is compiled by webpack
+// into build/qr-experience/ after `npm run build`.
 // dirname( dirname( __FILE__ ) ) walks up two levels to the plugin root,
 // giving plugins_url() the correct base to build from.
-// Using the wrong path caused a white screen in wp-admin because WordPress
-// couldn't resolve the asset.
-
- wp_enqueue_script(
+//
+// WHY asset.php FOR VERSIONING:
+// webpack generates a build/qr-experience/frontend.asset.php with a content
+// hash — this busts the browser cache automatically whenever the file changes,
+// without needing to manually increment a version number.
+$qr_asset = include plugin_dir_path( dirname( dirname( __FILE__ ) ) ) . 'build/qr-experience/frontend.asset.php';
+wp_enqueue_script(
     'qr-experience-js',
     plugins_url( 'build/qr-experience/frontend.js', dirname( dirname( __FILE__ ) ) ),
-    [],
-    '1.0.0',
+    $qr_asset['dependencies'],
+    $qr_asset['version'],
     true
 );
 
