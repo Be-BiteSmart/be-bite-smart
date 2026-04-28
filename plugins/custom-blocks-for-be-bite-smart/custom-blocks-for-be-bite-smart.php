@@ -35,6 +35,12 @@
 require_once __DIR__ . '/src/bio-card/bio-card.php';
 // require_once is at the top level — it runs when the plugin loads, so render_bio_card_block is defined before init fires and register_block_type tries to reference it.
 
+// For debugging error
+add_action( 'init', function() {
+    $registry = WP_Block_Type_Registry::get_instance();
+    error_log( print_r( array_keys( $registry->get_all_registered() ), true ) );
+}, 999 );
+
 function bio_card_register_block() {
     register_block_type( __DIR__ . '/build/bio-card', [
         'render_callback' => 'render_bio_card_block',
