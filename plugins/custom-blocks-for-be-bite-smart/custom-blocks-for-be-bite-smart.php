@@ -60,10 +60,10 @@ add_action( 'init', 'hero_register_block' );
 // ---------------- QR code Block -------------
 
 // require_once __DIR__ . '/src/qr-experience/render.php';
+// require_once plugin_dir_path( __FILE__ ) . 'src/qr-experience/partials.php';
 
 
-// function qr_page_register_block() {
-//       require_once plugin_dir_path( __FILE__ ) . 'src/qr-experience/partials.php';
+// function qr_page_register_block() {          
 
 //     register_block_type( __DIR__ . '/build/qr-experience', [
 //         'render_callback' => 'render_qr_experience_block',

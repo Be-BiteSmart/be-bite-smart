@@ -9,14 +9,29 @@ function render_qr_experience_block( $attributes ) {
 
 $pause_icon = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="2" y="1" width="3.5" height="12" rx="1" fill="currentColor"/><rect x="8.5" y="1" width="3.5" height="12" rx="1" fill="currentColor"/></svg>';
 
+// Enqueue the front-end JS for this block.
+//
+// WHY THIS IS IN render.php:
+// wp_enqueue_script() is safe to call inside a render callback — WordPress
+// deduplicates enqueues by handle, so even if this block appears multiple
+// times on a page, the script is only loaded once.
+//
+// WHY plugins_url() + dirname( dirname( __FILE__ ) ) INSTEAD OF plugin_dir_url( __FILE__ ):
+// __FILE__ resolves to src/qr-experience/render.php, so plugin_dir_url( __FILE__ )
+// would point to src/qr-experience/ — but frontend.js is a compiled file that
+// lives in build/qr-experience/ after `npm run build`.
+// dirname( dirname( __FILE__ ) ) walks up two levels to the plugin root,
+// giving plugins_url() the correct base to build from.
+// Using the wrong path caused a white screen in wp-admin because WordPress
+// couldn't resolve the asset.
 
-   wp_enqueue_script(
-        'qr-experience-js',
-        plugin_dir_url( __FILE__ ) . 'frontend.js',
-        [],
-        '1.0.0',
-        true
-    );
+ wp_enqueue_script(
+    'qr-experience-js',
+    plugins_url( 'build/qr-experience/frontend.js', dirname( dirname( __FILE__ ) ) ),
+    [],
+    '1.0.0',
+    true
+);
 
 
     wp_localize_script( 'qr-experience-js', 'qrExperience', [
