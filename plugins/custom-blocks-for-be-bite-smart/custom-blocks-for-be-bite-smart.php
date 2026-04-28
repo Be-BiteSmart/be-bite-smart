@@ -35,14 +35,6 @@
 require_once __DIR__ . '/src/bio-card/bio-card.php';
 // require_once is at the top level — it runs when the plugin loads, so render_bio_card_block is defined before init fires and register_block_type tries to reference it.
 
-// For debugging error
-set_error_handler(function($errno, $errstr, $errfile, $errline) {
-    if (strpos($errstr, 'Block type names must contain a namespace prefix') !== false) {
-        error_log('=== BAD BLOCK NAME BACKTRACE ===');
-        error_log(print_r(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS), true));
-    }
-    return false;
-});
 
 function bio_card_register_block() {
     register_block_type( __DIR__ . '/build/bio-card', [
@@ -67,17 +59,17 @@ add_action( 'init', 'hero_register_block' );
 
 // ---------------- QR code Block -------------
 
-require_once __DIR__ . '/src/qr-experience/render.php';
+// require_once __DIR__ . '/src/qr-experience/render.php';
 
 
-function qr_page_register_block() {
-      require_once plugin_dir_path( __FILE__ ) . 'src/qr-experience/partials.php';
+// function qr_page_register_block() {
+//       require_once plugin_dir_path( __FILE__ ) . 'src/qr-experience/partials.php';
 
-    register_block_type( __DIR__ . '/build/qr-experience', [
-        'render_callback' => 'render_qr_experience_block',
-    ] );
-}
-add_action( 'init', 'qr_page_register_block' );
+//     register_block_type( __DIR__ . '/build/qr-experience', [
+//         'render_callback' => 'render_qr_experience_block',
+//     ] );
+// }
+// add_action( 'init', 'qr_page_register_block' );
 
 // ----------- video quote -------------------//
 
