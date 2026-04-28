@@ -22,6 +22,8 @@ function get_asset( $path ) {
     return file_exists( $full ) ? include $full : [ 'version' => '1.0.0', 'dependencies' => [] ];
 }
 
+
+
 function twentytwentyfive_child_enqueue_styles() {
 
 //  the asset.php files only contain a version hash — WordPress never actually loads the compiled JS files from build/. The CSS files themselves still live at their original paths (style.css, css/navbar.css etc.) — the build step just generates the hash fingerprint we use for versioning to avoid css caching issues.
@@ -88,6 +90,29 @@ add_action('wp_head', function() {
     echo '<link rel="preconnect" href="https://www.googletagmanager.com">' . "\n";
 }, 0); // priority 0 = very early, want that DNS connection starting before anything else
 
+// allow utms to survive to get to plausible, stops WordPress from executing any canonical redirect if UTMS would be lost in the destination URL
+add_filter('redirect_canonical', function($redirect_url, $requested_url) {
+    if (empty($_GET) || !$redirect_url) {
+        return $redirect_url;
+    }
+
+    $utm_keys = array_filter(array_keys($_GET), function($key) {
+        return strpos($key, 'utm_') === 0 || $key === 'qr';
+    });
+
+    if (empty($utm_keys)) {
+        return $redirect_url;
+    }
+
+    // Re-append UTMs to the redirect target instead of cancelling
+    $utm_params = array_intersect_key($_GET, array_flip($utm_keys));
+    $redirect_url = add_query_arg(
+        array_map('sanitize_text_field', $utm_params),
+        $redirect_url
+    );
+
+    return $redirect_url;
+}, 10, 2);
 // went with optional rather than swap to avoid CLS
 // Optional: the browser gets a very short window (roughly 100ms) to load the font. If it loads in time, great. If not, it uses the fallback for that entire page load and doesn't swap at all. Zero layout shift, and on the next visit the font is cached so it loads instantly.
 add_filter( 'wp_font_face_resolver_style_properties', function( $properties ) {
