@@ -263,16 +263,20 @@ $track_pdf_clicks = "
             var lang = rawLang === 'es' ? 'spanish' : rawLang === 'en' ? 'english' : getLang(btn);
 
             // Get the PDF filename from the iframe data-src in the target viewer
-            
+
             var targetId = btn.getAttribute('data-target');
             var viewer   = document.getElementById(targetId);
             var iframe   = viewer?.querySelector('iframe[data-src], iframe[src]');
             var pdfUrl   = iframe?.getAttribute('data-src') || iframe?.getAttribute('src') || '';
 
             // decode URI and strip path, leaving just the filename without extension
+
             var fileName = '';
-            try { fileName = decodeURIComponent(pdfUrl.split('/').pop().replace(/\\.pdf$/i, '')); }
-            catch(e) { fileName = pdfUrl.split('/').pop().replace(/\\.pdf$/i, ''); }
+
+            //  .replace(/-+$/, '') strips one or more trailing hyphens from the filename before it gets passed to toContentName, so children-can-learn-safety- becomes children-can-learn-safety.
+            
+         try { fileName = decodeURIComponent(pdfUrl.split('/').pop().replace(/\.pdf$/i, '').replace(/-+$/, '')); }
+catch(e) { fileName = pdfUrl.split('/').pop().replace(/\.pdf$/i, '').replace(/-+$/, ''); }
 
             plausible('pdf_viewed', { props: buildProps(
                 toContentName('pdf', fileName || 'unknown', lang),
