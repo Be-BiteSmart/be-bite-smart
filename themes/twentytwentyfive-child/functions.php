@@ -255,21 +255,24 @@ function track_user_interactions() {
  
     // PDF inline viewer opens via pdf-toggle block — has EN/ES variants, fires only on open
     $track_pdf_clicks = "
-        document.querySelectorAll('.pdf-toggle').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                if (!window.plausible) return;
-                if (btn.getAttribute('data-expanded') === 'true') return;
-                var card  = btn.closest('.custom-block-card');
-                var title = card?.querySelector('h3, h4')?.textContent?.trim() || 'unknown';
-                var lang  = getLang(btn);
-                plausible('pdf_viewed', { props: buildProps(
-                    toContentName('pdf', title, lang),
-                    'pdf',
-                    lang
-                )});
-            });
+ $track_pdf_clicks = "
+    document.querySelectorAll('.pdf-toggle').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            if (!window.plausible) return;
+            if (btn.getAttribute('data-expanded') === 'true') return;
+            var card  = btn.closest('.custom-block-card');
+            var title = card?.querySelector('h3, h4')?.textContent?.trim() || 'unknown';
+            var rawLang = btn.getAttribute('data-lang');
+            var lang  = rawLang === 'es' ? 'spanish' : rawLang === 'en' ? 'english' : getLang(btn);
+            // getLang for older buttons that don't have data-lang, getLang reads the button label text for en, es and return it with regex
+            plausible('pdf_viewed', { props: buildProps(
+                toContentName('pdf', title, lang),
+                'pdf',
+                lang
+            )});
         });
-    ";
+    });
+";
  
     ?>
     <script>
@@ -345,7 +348,7 @@ function track_user_interactions() {
             });
         });
  
-        <?php echo $track_pdf_clicks; ?>
+    
         <?php echo str_replace('__PAGE_CONTEXT__', 'education-page', $track_documentary); ?>
 
  
@@ -354,7 +357,6 @@ function track_user_interactions() {
         // ── News / Legal pages ─────────────────────────────────────────
  
         <?php echo $track_article_clicks; ?>
-        <?php echo $track_pdf_clicks; ?>
  
         // "Read More" expands on press releases and text articles — no language variant
         document.querySelectorAll('.read-more-toggle').forEach(function(btn) {
@@ -385,6 +387,8 @@ function track_user_interactions() {
 
  
     <?php endif; ?>
+   // runs on every page, covers any pdf-toggle block
+        <?php echo $track_pdf_clicks; ?>
     </script>
     <?php
 }
