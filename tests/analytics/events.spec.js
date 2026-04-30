@@ -269,7 +269,7 @@ test("Home Page Documentary play fires video_watched", async ({
 test("Partnership PDF toggle block fires pdf_viewed for all available languages", async ({
   page,
 }, testInfo) => {
-  await page.goto("/partnership");
+  await page.goto("/partnerships");
 
   const blocks = page.locator(".pdf-toggle-block");
   const blockCount = await blocks.count();
