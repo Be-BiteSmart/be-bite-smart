@@ -266,10 +266,10 @@ test("Home Page Documentary play fires video_watched", async ({
 
 // ********************** PDF TOGGLE BLOCK *********************
 
-test("PDF toggle block fires pdf_viewed for all available languages", async ({
+test("Partnership PDF toggle block fires pdf_viewed for all available languages", async ({
   page,
 }, testInfo) => {
-  await page.goto("/education");
+  await page.goto("/partnership");
 
   const blocks = page.locator(".pdf-toggle-block");
   const blockCount = await blocks.count();
