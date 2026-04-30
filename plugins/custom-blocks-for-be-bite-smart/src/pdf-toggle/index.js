@@ -205,6 +205,8 @@ registerBlockType("custom/pdf-toggle", {
             groupId,
             "View PDF (ENG)",
             "Hide PDF (ENG)",
+            "en",
+            { "data-testid": `pdf-btn-en-${attributes.blockId}` },
           ),
         attributes.pdfUrlEs &&
           renderPdfButton(
@@ -214,6 +216,8 @@ registerBlockType("custom/pdf-toggle", {
             groupId,
             "View PDF (ES)",
             "Hide PDF (ES)",
+            "es",
+            { "data-testid": `pdf-btn-es-${attributes.blockId}` },
           ),
       ),
 
@@ -224,6 +228,7 @@ registerBlockType("custom/pdf-toggle", {
           {
             id: enId,
             className: "pdf-viewer-container",
+            "data-testid": `pdf-viewer-en-${attributes.blockId}`,
           },
           wp.element.createElement("iframe", {
             "data-src": attributes.pdfUrl,
@@ -241,6 +246,7 @@ registerBlockType("custom/pdf-toggle", {
           {
             id: esId,
             className: "pdf-viewer-container",
+            "data-testid": `pdf-viewer-es-${attributes.blockId}`,
           },
           wp.element.createElement("iframe", {
             "data-src": attributes.pdfUrlEs,

@@ -263,3 +263,95 @@ test("Home Page Documentary play fires video_watched", async ({
 }, testInfo) => {
   await testMiniDocPlay(page, testInfo, "/");
 });
+
+// ********************** PDF TOGGLE BLOCK *********************
+
+test("PDF toggle block fires pdf_viewed for all available languages", async ({
+  page,
+}, testInfo) => {
+  await page.goto("/education");
+
+  const blocks = page.locator(".pdf-toggle-block");
+  const blockCount = await blocks.count();
+  const allCalls = [];
+
+  for (let i = 0; i < blockCount; i++) {
+    const block = blocks.nth(i);
+
+    // Grab EN and ES buttons by testid prefix within this block
+    const buttons = [
+      { testidPrefix: "pdf-btn-en-", lang: "english" },
+      { testidPrefix: "pdf-btn-es-", lang: "spanish" },
+    ];
+
+    for (const { testidPrefix, lang } of buttons) {
+      const btn = block.locator(`[data-testid^="${testidPrefix}"]`);
+
+      // Skip if this language's PDF wasn't uploaded for this block
+      if ((await btn.count()) === 0) {
+        await testInfo.attach(`block ${i + 1} ${lang} status`, {
+          body: "skipped — no PDF uploaded",
+          contentType: "text/plain",
+        });
+        continue;
+      }
+
+      const testId = await btn.getAttribute("data-testid");
+
+      await spyOnPlausible(page);
+      await btn.click();
+      await page.waitForTimeout(500);
+
+      const calls = await getPlausibleCalls(page);
+      await testInfo.attach(`${testId} plausible event`, {
+        body: JSON.stringify(calls, null, 2),
+        contentType: "application/json",
+      });
+
+      expect(calls).toHaveLength(1);
+      expect(calls[0].event).toBe("pdf_viewed");
+      expect(calls[0].options.props.content_type).toBe("pdf");
+      expect(calls[0].options.props.content_language).toBe(lang);
+      expect(calls[0].options.props.content_name).toMatch(/^pdf - /);
+
+      allCalls.push({ block: i + 1, testId, lang, ...calls[0] });
+
+      // Close before moving to next button
+      await btn.click();
+      await page.waitForTimeout(300);
+    }
+  }
+
+  await testInfo.attach("all pdf toggle events", {
+    body: JSON.stringify(allCalls, null, 2),
+    contentType: "application/json",
+  });
+});
+
+// ************ PDF TOGGLE BLOCK DOES NOT RE-FIRE ON CLOSE ************
+
+test("PDF toggle block does not fire pdf_viewed when closing", async ({
+  page,
+}, testInfo) => {
+  await page.goto("/education");
+
+  // Grab the first available toggle button across any block
+  const btn = page.locator("[data-testid^='pdf-btn-en-']").first();
+
+  // Open it (we don't care about this event)
+  await btn.click();
+  await page.waitForTimeout(500);
+
+  // Now spy AFTER it's open, then close
+  await spyOnPlausible(page);
+  await btn.click();
+  await page.waitForTimeout(500);
+
+  const calls = await getPlausibleCalls(page);
+  await testInfo.attach("plausible events on close", {
+    body: JSON.stringify(calls, null, 2),
+    contentType: "application/json",
+  });
+
+  expect(calls).toHaveLength(0);
+});

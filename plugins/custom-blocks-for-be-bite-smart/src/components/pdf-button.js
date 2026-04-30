@@ -6,6 +6,7 @@ export function renderPdfButton(
   labelView,
   labelHide,
   lang,
+  extraProps = {},
 ) {
   return wp.element.createElement(
     "button",
@@ -15,6 +16,7 @@ export function renderPdfButton(
       "data-group": groupId,
       "data-expanded": "false",
       "data-lang": lang,
+      ...extraProps,
     },
     wp.element.createElement(
       "span",
