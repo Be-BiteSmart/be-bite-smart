@@ -151,6 +151,7 @@ function custom_blocks_scripts() {
     $on_education  = is_page( 'education' );
     $on_news       = is_page( 'news-media' );
     $on_legal       = is_page( 'legal' );
+    $on_partnerships     = is_page( 'partnerships' );
     $on_front      = is_front_page();
 
 
@@ -174,7 +175,7 @@ function custom_blocks_scripts() {
     // detect it on the page and load it automatically.
 
         // pdf-toggle only loads on pages that actually use it
-    if ( $on_education || $on_news) {
+    if ( $on_education || $on_news || $on_partnerships) {
   $asset = include plugin_dir_path( __FILE__ ) . 'build/toggle-system.asset.php';
         wp_enqueue_script( 'toggle-system', plugins_url( 'build/toggle-system.js', __FILE__ ), array(), $asset['version'], true );
 
