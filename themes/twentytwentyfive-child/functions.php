@@ -90,7 +90,15 @@ add_action('wp_head', function() {
     echo '<link rel="preconnect" href="https://www.googletagmanager.com">' . "\n";
 }, 0); // priority 0 = very early, want that DNS connection starting before anything else
 
-// allow utms to survive to get to plausible, stops WordPress from executing any canonical redirect if UTMS would be lost in the destination URL
+// Preserve UTM params and the ?qr flag through WordPress's canonical redirects.
+//
+// WordPress sometimes redirects URLs for SEO reasons (e.g. adding a trailing slash).
+// By default those redirects drop all query params, which means UTMs sent to Plausible
+// and the ?qr flag used to detect QR code visitors would be lost before the page loads.
+//
+// This filter intercepts canonical redirects and re-appends any UTM params + ?qr
+// to the destination URL instead of cancelling the redirect entirely.
+// The redirect still happens — the params just come along for the ride.
 add_filter('redirect_canonical', function($redirect_url, $requested_url) {
     if (empty($_GET) || !$redirect_url) {
         return $redirect_url;
@@ -113,6 +121,7 @@ add_filter('redirect_canonical', function($redirect_url, $requested_url) {
 
     return $redirect_url;
 }, 10, 2);
+
 // went with optional rather than swap to avoid CLS
 // Optional: the browser gets a very short window (roughly 100ms) to load the font. If it loads in time, great. If not, it uses the fallback for that entire page load and doesn't swap at all. Zero layout shift, and on the next visit the font is cached so it loads instantly.
 add_filter( 'wp_font_face_resolver_style_properties', function( $properties ) {
