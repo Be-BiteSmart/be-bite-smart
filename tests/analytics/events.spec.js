@@ -271,6 +271,10 @@ test("Partnership PDF toggle block fires pdf_viewed for all available languages"
 }, testInfo) => {
   await page.goto("/partnerships");
 
+  // Quick sanity check — how many matching buttons exist?
+  const count = await page.locator("[data-testid^='pdf-btn-en-']").count();
+  console.log("pdf-btn-en count:", count); // if 0, wrong page or stale HTML
+
   const blocks = page.locator(".pdf-toggle-block");
   const blockCount = await blocks.count();
   const allCalls = [];
