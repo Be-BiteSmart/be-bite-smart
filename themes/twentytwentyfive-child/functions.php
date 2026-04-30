@@ -254,18 +254,28 @@ function track_user_interactions() {
     ";
  
     // PDF inline viewer opens via pdf-toggle block — has EN/ES variants, fires only on open
- $track_pdf_clicks = "
+$track_pdf_clicks = "
     document.querySelectorAll('.pdf-toggle').forEach(function(btn) {
         btn.addEventListener('click', function() {
             if (!window.plausible) return;
             if (btn.getAttribute('data-expanded') === 'true') return;
-            var card  = btn.closest('.custom-block-card');
-            var title = card?.querySelector('h3, h4')?.textContent?.trim() || 'unknown';
             var rawLang = btn.getAttribute('data-lang');
-            var lang  = rawLang === 'es' ? 'spanish' : rawLang === 'en' ? 'english' : getLang(btn);
-            // getLang for older buttons that don't have data-lang, getLang reads the button label text for en, es and return it with regex
+            var lang = rawLang === 'es' ? 'spanish' : rawLang === 'en' ? 'english' : getLang(btn);
+
+            // Get the PDF filename from the iframe data-src in the target viewer
+            
+            var targetId = btn.getAttribute('data-target');
+            var viewer   = document.getElementById(targetId);
+            var iframe   = viewer?.querySelector('iframe[data-src], iframe[src]');
+            var pdfUrl   = iframe?.getAttribute('data-src') || iframe?.getAttribute('src') || '';
+
+            // decode URI and strip path, leaving just the filename without extension
+            var fileName = '';
+            try { fileName = decodeURIComponent(pdfUrl.split('/').pop().replace(/\\.pdf$/i, '')); }
+            catch(e) { fileName = pdfUrl.split('/').pop().replace(/\\.pdf$/i, ''); }
+
             plausible('pdf_viewed', { props: buildProps(
-                toContentName('pdf', title, lang),
+                toContentName('pdf', fileName || 'unknown', lang),
                 'pdf',
                 lang
             )});
