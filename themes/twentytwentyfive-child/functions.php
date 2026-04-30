@@ -254,7 +254,6 @@ function track_user_interactions() {
     ";
  
     // PDF inline viewer opens via pdf-toggle block — has EN/ES variants, fires only on open
-    $track_pdf_clicks = "
  $track_pdf_clicks = "
     document.querySelectorAll('.pdf-toggle').forEach(function(btn) {
         btn.addEventListener('click', function() {
