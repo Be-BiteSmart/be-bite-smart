@@ -337,10 +337,11 @@ test("Partnership PDF toggle block fires pdf_viewed for all available languages"
 test("PDF toggle block does not fire pdf_viewed when closing", async ({
   page,
 }, testInfo) => {
-  await page.goto("/education");
+  await page.goto("/partnerships/");
 
   // Grab the first available toggle button across any block
   const btn = page.locator("[data-testid^='pdf-btn-en-']").first();
+  await btn.scrollIntoViewIfNeeded(); //add in case it's below the fold
 
   // Open it (we don't care about this event)
   await btn.click();
