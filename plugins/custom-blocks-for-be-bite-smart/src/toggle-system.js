@@ -41,13 +41,38 @@
           // explicit "inline" not "" — "" lets CSS take over which would re-hide the span
           btn.querySelector(".btn-label--view").style.display = "none";
           btn.querySelector(".btn-label--hide").style.display = "inline";
+
+          // Fire the callback if provided (only on open)
+          if (onOpen) onOpen(btn);
         }
       });
     });
   }
 
   function init() {
-    initToggles(".pdf-toggle", ".pdf-viewer-container", "pdf-group-");
+    initToggles(
+      ".pdf-toggle",
+      ".pdf-viewer-container",
+      "pdf-group-",
+      function (btn) {
+        const lang = btn.getAttribute("data-lang"); // "en" or "es"
+        const contentLang = lang === "es" ? "spanish" : "english";
+        const testId = btn.getAttribute("data-testid") ?? "";
+        const blockId = testId.replace("pdf-btn-" + lang + "-", "");
+
+        if (typeof plausible !== "undefined") {
+          //  guard prevents errors in local/staging environments where Plausible isn't loaded
+          plausible("pdf_viewed", {
+            props: {
+              content_type: "pdf",
+              content_language: contentLang,
+              content_name: "pdf - " + blockId + " - " + contentLang,
+            },
+          });
+        }
+      },
+    );
+
     initToggles(".ecd-toggle", ".ecd-viewer", "ecd-grp-");
   }
 
