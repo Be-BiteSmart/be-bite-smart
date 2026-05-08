@@ -4,7 +4,7 @@
 
 > **Scope:** This repo contains non-sensitive theme, plugin, analytic and test logic only.
 > Sensitive server configuration files such as `wp-config.php` are not tracked
-> here — to edit those, log into DreamHost and use the file manager directly.
+> here. To edit those, log into DreamHost and use the file manager directly.
 
 ### How to use the DreamHost File Manager to Change Sensitive Information
 
@@ -25,11 +25,11 @@ Step 3: Select the bebitesmart.org folder, then click the sensitive file you nee
 This repo tracks the full `wp-content` directory. Two subdirectories have a
 build step required when changing CSS:
 
-- `themes/twentytwentyfive-child` — run `npm run build` from inside this folder
-- `plugins/custom-blocks-for-be-bite-smart` — run `npm run build` from inside this folder
+- `themes/twentytwentyfive-child` run `npm run build` from inside this folder
+- `plugins/custom-blocks-for-be-bite-smart` run `npm run build` from inside this folder
 
 Each folder has its own `package.json` and `webpack.config.js`, so the build
-must be run from inside the relevant folder — running it from the `wp-content`
+must be run from inside the relevant folder, running it from the `wp-content`
 root won't work.
 
 Playwright tests and GitHub Actions live in `.github/workflows` and `tests/analytics`. These folders contain no CSS and do not require a build step
@@ -68,7 +68,7 @@ Workflow configuration for automated CI runs. Currently runs the Playwright anal
 
 `.github/workflows`
 
-## Quick Start — Setting Up Locally
+## Quick Start: Setting Up Locally
 
 ### Step 1: Log into WordPress
 
@@ -104,7 +104,7 @@ You must use the matching installer for that backup, each installer.php is speci
 
 In LocalWP, right-click your site and select **Open Site Folder** (or the
 equivalent option to reveal it in your file manager). Open that folder in
-VS Code — any edits made there will be reflected on your local site
+VS Code. any edits made there will be reflected on your local site
 immediately.
 
 ### Step 5: Install dependencies
@@ -123,12 +123,12 @@ backup, so there is no need to run `git init` or clone the repo again.
 
 #### Setting up SSH access
 
-You will need two SSH keys — one for GitHub and one for DreamHost. Both need
+You will need two SSH keys. one for GitHub and one for DreamHost. Both need
 to be set up once before you can push and deploy.
 
-- **GitHub SSH key** — follow [GitHub's guide to generating an SSH key and adding it to your account](https://docs.github.com/en/authentication/connecting-to-github-with-ssh)
+- **GitHub SSH key** follow [GitHub's guide to generating an SSH key and adding it to your account](https://docs.github.com/en/authentication/connecting-to-github-with-ssh)
 
-- **DreamHost SSH key** — follow [DreamHost's guide to enabling SSH and adding your key](https://help.dreamhost.com/hc/en-us/articles/216499537)
+- **DreamHost SSH key** follow [DreamHost's guide to enabling SSH and adding your key](https://help.dreamhost.com/hc/en-us/articles/216499537)
 
 #### Deploying to the server
 
@@ -157,16 +157,16 @@ visitors immediately see the updated site.
 
 This repo has 3 separate git locations, two of which use a build step.
 After editing CSS in either location below, run `npm run build` before
-committing — otherwise browsers will serve the stale cached stylesheet.
+committing. otherwise browsers will serve the stale cached stylesheet.
 
-**Child theme** — `app/public/wp-content/themes/twentytwentyfive-child`
+**Child theme** `app/public/wp-content/themes/twentytwentyfive-child`
 
 ```bash
 cd app/public/wp-content/themes/twentytwentyfive-child
 npm run build
 ```
 
-**Custom blocks plugin** — `app/public/wp-content/plugins/custom-blocks-for-be-bite-smart`
+**Custom blocks plugin** `app/public/wp-content/plugins/custom-blocks-for-be-bite-smart`
 
 ```bash
 cd app/public/wp-content/plugins/custom-blocks-for-be-bite-smart
@@ -202,14 +202,15 @@ with `Ctrl+Shift+R` / `Cmd+Shift+R` to force a fresh fetch.
 
 **How to diagnose if its a browser quirk or a bug:** Open the page in an incognito window (logged out).
 
-- **Correct styles do NOT appear in incognito** — you likely forgot to run
+- **Correct styles do NOT appear in incognito** You likely forgot to run
   `npm run build` before pushing. Confirm by checking the relevant
   `build/*.asset.php` file on GitHub or on the DreamHost server to see if the file updated.
 
 - **Correct styles DO appear in incognito but not in your logged-in session**
-  — the build and server are fine. WordPress doesn't cache pages for logged-in
+
+  The build and server are fine. WordPress doesn't cache pages for logged-in
   users, so they should always receive a fresh page with the updated stylesheet URL.
 
   Occasionally a browser will still serve the old stylesheet from its own
-  cache despite the URL changing — this is the browser misbehaving, not a
+  cache despite the URL changing. This is the browser misbehaving, not a
   build or server issue. A hard refresh (`Ctrl+Shift+R` / `Cmd+Shift+R`) forces the browser to bypass its cache and fetch the latest version.
