@@ -238,6 +238,18 @@ know where to look when making changes.
 | Discord embed                             | Strips author name and URL from oEmbed responses to avoid exposing account information in Discord link previews                                                                         |
 | QR experience template                    | Swaps in a header/footer-free template for pages using the `custom/qr-experience` block                                                                                                 |
 
+## Child Theme Webpack entries
+
+The child theme has four build entries, each generating its own
+`build/*.asset.php` hash for cache busting:
+
+| Entry           | Purpose                                                                                              |
+| --------------- | ---------------------------------------------------------------------------------------------------- |
+| `style`         | Main child theme stylesheet (`style.css`)                                                            |
+| `navbar`        | Navbar styles (`css/navbar.css`)                                                                     |
+| `forminator`    | Contact form styles, only loaded on the contact page (`css/forminator.css`)                          |
+| `shared-blocks` | Styles shared across blocks, loaded in both the editor and front end (`css/shared-block-styles.css`) |
+
 ## Custom Blocks Plugin `custom-blocks-for-be-bite-smart.php` Overview
 
 ### Dynamic blocks (PHP rendered)
