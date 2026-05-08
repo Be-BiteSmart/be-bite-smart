@@ -37,7 +37,7 @@ strong {
 /* Remove wordpress's default spacing --wp--preset--spacing--60 between the header and each page, was creating a weirdly large gap */
 
 .wp-block-group.alignfull.has-global-padding:first-child {
-  padding-top: 20px !important;
+  padding-top: 0 !important;
 }
 
 /* hide the "homepage" title visually, but keep it for accessibility 
