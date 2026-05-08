@@ -15,8 +15,8 @@ Template: twentytwentyfive
   --accent-1: var(--wp--preset--color--contrast);
 }
 
-h1 {
-  margin-top: 20px;
+main h1 {
+  margin-top: 15px !important;
 }
 
 h1,
