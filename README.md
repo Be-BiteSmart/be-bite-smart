@@ -153,11 +153,11 @@ visitors immediately see the updated site.
 
 ---
 
-## Making CSS changes
+## Making Changes to the Child Theme Or Plugin
 
-This repo has 3 separate git locations, two of which use a build step.
-After editing CSS in either location below, run `npm run build` before
-committing. otherwise browsers will serve the stale cached stylesheet.
+After editing CSS or any logic that goes through the build process in either
+location below, run `npm run build` before committing. Otherwise browsers will
+serve stale cached stylesheets or logic.
 
 **Child theme** `app/public/wp-content/themes/twentytwentyfive-child`
 
