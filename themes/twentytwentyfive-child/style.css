@@ -15,6 +15,10 @@ Template: twentytwentyfive
   --accent-1: var(--wp--preset--color--contrast);
 }
 
+h1 {
+  margin-top: 20px;
+}
+
 h1,
 h2 {
   color: var(--wp--preset--color--accent-1);
