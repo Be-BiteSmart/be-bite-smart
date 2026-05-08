@@ -214,3 +214,81 @@ with `Ctrl+Shift+R` / `Cmd+Shift+R` to force a fresh fetch.
   Occasionally a browser will still serve the old stylesheet from its own
   cache despite the URL changing. This is the browser misbehaving, not a
   build or server issue. A hard refresh (`Ctrl+Shift+R` / `Cmd+Shift+R`) forces the browser to bypass its cache and fetch the latest version.
+
+## Child Theme `functions.php` Overview
+
+A quick reference for what each section of `functions.php` handles, so you
+know where to look when making changes.
+
+| Section                                   | What it does                                                                                                                                                                            |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `get_asset()`                             | Reads the content hash from `build/*.asset.php` for cache busting. Falls back to version `1.0.0` if the file is missing so the site stays up                                            |
+| `twentytwentyfive_child_enqueue_styles()` | Loads the parent theme CSS, then the child theme stylesheets with their content hashes as version strings. The Forminator stylesheet is only loaded on the contact page                 |
+| Hero image preload                        | On the front page only, preloads the hero background image at the correct breakpoint size to improve LCP                                                                                |
+| Font preload                              | Preloads the three above-the-fold fonts (Urbanist 400, Urbanist 600, Omnes 500) on the front page only                                                                                  |
+| UTM + QR param preservation               | Prevents WordPress's canonical redirects from stripping UTM params and the `?qr` flag used to detect QR code visitors                                                                   |
+| Font display                              | Sets `font-display: optional` to prevent layout shift when fonts load slowly                                                                                                            |
+| Shared block styles                       | Loads `shared-block-styles.css` via `enqueue_block_assets` so styles apply in both the editor and the front end                                                                         |
+| jQuery defer                              | Defers jQuery on the front page for logged-out visitors to improve load speed. Logged-in users and the contact page are excluded                                                        |
+| Autosave cleanup                          | Deletes autosave revisions on post save to keep the database tidy                                                                                                                       |
+| Submenu hover logic                       | Handles desktop submenu open/close via CSS hover, with JS only handling click-to-close and `aria-expanded` syncing. Bypasses WP's Interactivity API using capture phase event listeners |
+| Show more button                          | Toggles hidden content sections on the front page with an `is-visible` class                                                                                                            |
+| LCP lazy load fix                         | Forces `loading="lazy"` and `fetchpriority="low"` on images marked with `no-lcp` that WordPress would otherwise eagerly load                                                            |
+| Scroll to top accessibility               | Sends keyboard focus to `<main>` when the scroll-to-top button is clicked, using capture phase to beat jQuery's `stopPropagation`                                                       |
+| Discord embed                             | Strips author name and URL from oEmbed responses to avoid exposing account information in Discord link previews                                                                         |
+| QR experience template                    | Swaps in a header/footer-free template for pages using the `custom/qr-experience` block                                                                                                 |
+
+## Custom Blocks Plugin `custom-blocks-for-be-bite-smart.php` Overview
+
+### Dynamic blocks (PHP rendered)
+
+These blocks use a `render_callback` instead of a static `save()` function,
+meaning PHP generates the HTML on each page load rather than storing it in
+the database.
+
+| Block         | Why dynamic                                                                                                                                 |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Bio Card      | Uses `wp_get_attachment_image()` to generate correct `srcset`/`sizes` for photos. Template changes update all bio cards site-wide instantly |
+| Hero          | WordPress's content sanitizer was mangling `<picture>` and `<source>` tags on static save, so PHP renders them instead                      |
+| QR Experience | Swaps in a header/footer-free template for QR code landing pages                                                                            |
+| Video Quote   | Appears on high-traffic pages — dynamic rendering allows `srcset` to serve correctly sized thumbnails per device                            |
+
+### Static blocks
+
+These blocks use a standard static `save()` function:
+Research Article, Episode Card, Article or Commentary, PDF Toggle,
+Unfunded Episode, Educational Content Download, Sponsorship Contact,
+News and Coverage, Press Release.
+
+### Shared scripts (manual enqueues)
+
+These JS files are shared across multiple blocks so they can't be owned by
+a single block's `viewScript` — they're enqueued manually and only on the
+pages that need them:
+
+| Script                                   | Loaded on                             |
+| ---------------------------------------- | ------------------------------------- |
+| `video-toggle.js`                        | Front page, Education                 |
+| `read-more.js`                           | News & Media, Legal                   |
+| `toggle-system.js` + `pdf-toggle` styles | Education, News & Media, Partnerships |
+
+### Other
+
+- **Application Passwords** — disabled site-wide for security
+- **`wp_kses` allowlist** — adds `<picture>`, `<source>`, and `<iframe>` to
+  WordPress's allowed HTML in post content, since WordPress strips these by default
+
+---
+
+## Webpack entry points
+
+Each block compiles its own `index.js` (editor + frontend logic). A few blocks
+or shared scripts have additional entries:
+
+| Entry                    | Purpose                                                                  |
+| ------------------------ | ------------------------------------------------------------------------ |
+| `bio-card/bio-toggle`    | Read more toggle logic specific to bio cards                             |
+| `qr-experience/frontend` | Frontend-only JS for the QR experience block, separate from editor logic |
+| `read-more`              | Shared read more logic for news and legal pages                          |
+| `toggle-system`          | Shared toggle logic used across PDF toggles and related blocks           |
+| `video-toggle`           | Shared video toggle logic for front page and education page              |
