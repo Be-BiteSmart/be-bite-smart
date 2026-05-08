@@ -10,15 +10,15 @@
 
 Step 1. Click SFTP Users & Files under Websites
 
-![in the menu to the left find the website button, click it, then click the SFTP Users and files submenu item](dreamhost-file-manager-step-1.png)
+![in the menu to the left find the website button, click it, then click the SFTP Users and files submenu item](readme-images/dreamhost-file-manager-step-1.png)
 
 Step 2: Look for the username that has the domain name "bebitesmart.org" attached to i. Click File manager
 
-![the items are placed in a single row, so once the domain bebitesmart.org is found you can click the file manager](dreamhost-file-manager-step-2.png)
+![the items are placed in a single row, so once the domain bebitesmart.org is found you can click the file manager](readme-images/dreamhost-file-manager-step-2.png)
 
 Step 3: Select the bebitesmart.org folder, then click the sensitive file you need to edit and select edit
 
-![Show wp-config.php highlighted with a dropdown with edit as the first selectable element](dreamhost-file-manager-step-3.png)
+![Show wp-config.php highlighted with a dropdown with edit as the first selectable element](readme-images/dreamhost-file-manager-step-3.png)
 
 ## Repository structure
 
@@ -80,7 +80,7 @@ In the WordPress dashboard, go to **Duplicator > Packages** and click
 **Create New**. Once complete, click **Download Installer** and
 **Download Archive** to save both files locally.
 
-![](back-up-site-duplicator.png)
+![](readme-images/back-up-site-duplicator.png)
 
 **If the download button shows "problem loading web page":**
 Log into DreamHost and open the file manager. Navigate to
@@ -93,8 +93,6 @@ You must use the matching installer for that backup, each installer.php is speci
 ### Step 3: Set up a local WordPress site with LocalWP
 
 1. Open [LocalWP](https://localwp.com/), click the + button to start a new site.
-
-![alt text](image.png)
 
 2. Drag the zip into the "select an existing ZIP or drag your file into the window to import a site' area.
 
