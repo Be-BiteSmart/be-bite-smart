@@ -175,7 +175,7 @@ function custom_blocks_scripts() {
     // detect it on the page and load it automatically.
 
         // pdf-toggle only loads on pages that actually use it
- if ( has_block( 'custom-blocks/pdf-toggle' ) || has_block( 'custom-blocks/article-or-commentary' ) ) {
+ if ( has_block( 'custom/pdf-toggle' ) || has_block( 'custom/article-or-commentary' ) ) {
 // pdf-toggle assets are enqueued here rather than owned by the block because
 // it appears in two contexts: as a standalone block, and as an InnerBlock
 // inside article-or-commentary. WordPress's has_block() only checks top-level
