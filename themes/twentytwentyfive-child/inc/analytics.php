@@ -29,19 +29,19 @@ function track_user_interactions() {
  
     $shared_helpers = "
         function toContentName(type, text, lang) {
-            var name = (text || 'unknown').toLowerCase().replace(/\s+/g, '-');
+            const name = (text || 'unknown').toLowerCase().replace(/\s+/g, '-');
             return lang ? type + ' - ' + name + ' - ' + lang : type + ' - ' + name;
         }
  
         function getLang(btn) {
             // Check button label text for language markers like (EN), (ENG), (ES)
-            var label = (btn.querySelector('.btn-label')?.textContent || btn.textContent || '').toUpperCase();
+            const label = (btn.querySelector('.btn-label')?.textContent || btn.textContent || '').toUpperCase();
             if (/\(EN\b|\(ENG\b/.test(label)) return 'english';
             if (/\(ES\b/.test(label)) return 'spanish';
             // Fall back to active language toggle (for Watch Now / play buttons on episode cards)
-            var card = btn.closest('.video-episode-block');
+            const card = btn.closest('.video-episode-block');
             if (card) {
-                var active = card.querySelector('.toggle-label.active');
+                const active = card.querySelector('.toggle-label.active');
                 if (active?.dataset.lang === 'en') return 'english';
                 if (active?.dataset.lang === 'es') return 'spanish';
             }
@@ -49,7 +49,7 @@ function track_user_interactions() {
         }
  
         function buildProps(contentName, contentType, lang) {
-            var props = { content_name: contentName, content_type: contentType };
+            const props = { content_name: contentName, content_type: contentType };
             if (lang) props.content_language = lang;
             return props;
         }
@@ -63,7 +63,7 @@ function track_user_interactions() {
     //   content_language — "english" | "spanish"  (omitted entirely when content has no language variant)
     //
     // Articles and the documentary have no language variants, so they omit content_language.
- 
+
     // Mini-documentary play buttons (home + education pages) — no language variant
     // PAGE_CONTEXT will be replaced with the actually page when echo'ed
    $track_documentary = "
@@ -84,8 +84,8 @@ function track_user_interactions() {
         document.querySelectorAll('.custom-block-card a[target=\"_blank\"]').forEach(function(link) {
             link.addEventListener('click', function() {
                 if (!window.plausible) return;
-                var card  = link.closest('.custom-block-card');
-                var title = card?.querySelector('h3, h4')?.textContent?.trim()
+                const card  = link.closest('.custom-block-card');
+                const title = card?.querySelector('h3, h4')?.textContent?.trim()
                          || link.querySelector('h3, h4')?.textContent?.trim()
                          || link.textContent?.trim()
                          || 'unknown';
@@ -103,20 +103,25 @@ $track_pdf_clicks = "
     document.querySelectorAll('.pdf-toggle').forEach(function(btn) {
         btn.addEventListener('click', function() {
             if (!window.plausible) return;
-            if (btn.getAttribute('data-expanded') === 'true') return;
-            var rawLang = btn.getAttribute('data-lang');
-            var lang = rawLang === 'es' ? 'spanish' : rawLang === 'en' ? 'english' : getLang(btn);
+              // Same fix — check viewer state instead of data-expanded
+        const targetId = btn.getAttribute('data-target');
+
+        const viewer = document.getElementById(targetId);
+
+        const isAlreadyOpen = viewer?.classList.contains('expanded');
+
+        if (isAlreadyOpen) return;
+            const rawLang = btn.getAttribute('data-lang');
+            const lang = rawLang === 'es' ? 'spanish' : rawLang === 'en' ? 'english' : getLang(btn);
 
             // Get the PDF filename from the iframe data-src in the target viewer
 
-            var targetId = btn.getAttribute('data-target');
-            var viewer   = document.getElementById(targetId);
-            var iframe   = viewer?.querySelector('iframe[data-src], iframe[src]');
-            var pdfUrl   = iframe?.getAttribute('data-src') || iframe?.getAttribute('src') || '';
+            const iframe   = viewer?.querySelector('iframe[data-src], iframe[src]');
+            const pdfUrl   = iframe?.getAttribute('data-src') || iframe?.getAttribute('src') || '';
 
             // decode URI and strip path, leaving just the filename without extension
 
-            var fileName = '';
+            let fileName = '';
 
             //  .replace(/-+$/, '') strips one or more trailing hyphens from the filename before it gets passed to toContentName, so children-can-learn-safety- becomes children-can-learn-safety.
             
@@ -142,7 +147,7 @@ catch(e) { fileName = pdfUrl.split('/').pop().replace(/\.pdf$/i, '').replace(/-+
     document.querySelectorAll('.trp-switcher-dropdown-list .trp-language-item').forEach(function(link) {
         link.addEventListener('click', function() {
             if (!window.plausible) return;
-            var lang = link.querySelector('.trp-language-item-name')?.textContent?.trim().toLowerCase() || 'unknown';
+            const lang = link.querySelector('.trp-language-item-name')?.textContent?.trim().toLowerCase() || 'unknown';
             plausible('language_switched', { props: {
                 content_name: 'language-switcher - ' + lang,
                 content_type: 'language_switcher',
@@ -158,11 +163,11 @@ catch(e) { fileName = pdfUrl.split('/').pop().replace(/\.pdf$/i, '').replace(/-+
         document.querySelectorAll('.ecd-toggle--download').forEach(function(btn) {
             btn.addEventListener('click', function() {
                 if (!window.plausible) return;
-                var raw = btn.getAttribute('href').split('/').pop();
-                var fileName;
+                const raw = btn.getAttribute('href').split('/').pop();
+                let fileName;
                 try   { fileName = decodeURIComponent(raw); }
                 catch (e) { fileName = raw; }
-                var lang = getLang(btn);
+                const lang = getLang(btn);
                 plausible('video_downloaded', { props: buildProps(
                     toContentName('video', fileName, lang),
                     'download',
@@ -175,9 +180,9 @@ catch(e) { fileName = pdfUrl.split('/').pop().replace(/\.pdf$/i, '').replace(/-+
         document.querySelectorAll('.watch-now-button, .video-episode-block .play-button').forEach(function(btn) {
             btn.addEventListener('click', function() {
                 if (!window.plausible) return;
-                var card  = btn.closest('.video-episode-block');
-                var title = card?.querySelector('.episode-title')?.textContent?.trim() || 'unknown';
-                var lang  = getLang(btn);
+                const card  = btn.closest('.video-episode-block');
+                const title = card?.querySelector('.episode-title')?.textContent?.trim() || 'unknown';
+                const lang  = getLang(btn);
                 plausible('video_watched', { props: buildProps(
                     toContentName('video', title, lang),
                     'video',
@@ -191,13 +196,21 @@ catch(e) { fileName = pdfUrl.split('/').pop().replace(/\.pdf$/i, '').replace(/-+
         document.querySelectorAll('.ecd-toggle:not(.ecd-toggle--download):not(.ecd-toggle--coming-soon)').forEach(function(btn) {
             btn.addEventListener('click', function() {
                 if (!window.plausible) return;
-                if (btn.getAttribute('data-expanded') === 'true') return;
-                var block   = btn.closest('.educational-content-download-block');
-                var span    = block?.querySelector('.capitalized-and-colored')?.textContent?.trim() || '';
-                var title   = block?.querySelector('.ecd-title')?.textContent?.trim() || 'unknown';
+
+        // Check the viewer visibility instead of data-expanded,
+        // since toggle.js resets data-expanded before this handler reads it
+
+        const targetId = btn.getAttribute('data-target');
+        const viewer = document.getElementById(targetId);
+        const isAlreadyOpen = viewer?.classList.contains('expanded');
+        if (isAlreadyOpen) return; // closing, don't fire
+
+                const block   = btn.closest('.educational-content-download-block');
+                const span    = block?.querySelector('.capitalized-and-colored')?.textContent?.trim() || '';
+                const title   = block?.querySelector('.ecd-title')?.textContent?.trim() || 'unknown';
                 // e.g. "Episode 1 · Coloring book - Respect the Bubble"
-                var label   = span ? span + ' - ' + title : title;
-                var lang    = getLang(btn);
+                const label   = span ? span + ' - ' + title : title;
+                const lang    = getLang(btn);
                 plausible('pdf_viewed', { props: buildProps(
                     toContentName('pdf', label, lang),
                     'pdf',
@@ -221,8 +234,8 @@ catch(e) { fileName = pdfUrl.split('/').pop().replace(/\.pdf$/i, '').replace(/-+
             btn.addEventListener('click', function() {
                 if (!window.plausible) return;
                 if (btn.getAttribute('data-expanded') === 'true') return;
-                var card  = btn.closest('.custom-block-card');
-                var title = card?.querySelector('h3')?.textContent?.trim() || 'unknown';
+                const card  = btn.closest('.custom-block-card');
+                const title = card?.querySelector('h3')?.textContent?.trim() || 'unknown';
                 plausible('article_viewed', { props: buildProps(
                     toContentName('article', title),
                     'article',
