@@ -31,6 +31,8 @@ function render_hero_block( $attributes ) {
     $btn1url   = esc_url(  $attributes['btn1Url']    ?? '#' );
     $btn2text  = esc_html( $attributes['btn2Text']   ?? '' );
     $btn2url   = esc_url(  $attributes['btn2Url']    ?? '#' );
+    $btn1 = $btn1text ? '<a href="' . $btn1url . '" class="block-toggle-btn">' . $btn1text . '</a>' : '';
+$btn2 = $btn2text ? '<a href="' . $btn2url . '" class="block-toggle-btn is-style-outline">' . $btn2text . '</a>' : '';
 
     ob_start(); ?>
     <section class="wp-block-custom-hero alignfull dbp-section">
@@ -63,10 +65,12 @@ function render_hero_block( $attributes ) {
                 <span class="dbp-stat__label"><?php echo $stat2lab; ?></span>
               </div>
             </div>
-            <div class="dbp-buttons">
-              <a href="<?php echo $btn1url; ?>" class="block-toggle-btn"><?php echo $btn1text; ?></a>
-              <a href="<?php echo $btn2url; ?>" class="block-toggle-btn is-style-outline"><?php echo $btn2text; ?></a>
-            </div>
+           <?php if ( $btn1 || $btn2 ) : ?>
+              <div class="dbp-buttons">
+              <?php echo $btn1; ?>
+              <?php echo $btn2; ?>
+               </div>
+           <?php endif; ?>
           </div>
         </div>
       </div>
