@@ -170,16 +170,13 @@ function custom_blocks_scripts() {
         // they're different enough to keep seperate
     }
 
-    // pdf-toggle stylesheet — enqueued globally because the block is used
-    // as an InnerBlock inside article-or-commentary, so WordPress won't
-    // detect it on the page and load it automatically.
+  // toggle-system.js and pdf-toggle stylesheet are enqueued globally because:
+// 1. pdf-toggle appears as an InnerBlock inside article-or-commentary, so
+//    WordPress's has_block() would miss it in the nested case.
+// 2. The toggle system is now used on enough pages that per-page conditions
+//    add complexity without meaningful performance benefit.
 
-        // pdf-toggle only loads on pages that actually use it
- if ( has_block( 'custom/pdf-toggle' ) || has_block( 'custom/article-or-commentary' ) ) {
-// pdf-toggle assets are enqueued here rather than owned by the block because
-// it appears in two contexts: as a standalone block, and as an InnerBlock
-// inside article-or-commentary. WordPress's has_block() only checks top-level
-// blocks, so it would miss the nested case on its own — hence both checks.
+
     $asset = include plugin_dir_path( __FILE__ ) . 'build/toggle-system.asset.php';
     wp_enqueue_script( 'toggle-system', plugins_url( 'build/toggle-system.js', __FILE__ ), array(), $asset['version'], true );
 
@@ -187,7 +184,7 @@ function custom_blocks_scripts() {
     wp_enqueue_style( 'pdf-toggle-style', plugins_url( 'build/pdf-toggle/style-index.css', __FILE__ ), array(), $asset['version'] );
 }
 
-}
+
 add_action( 'wp_enqueue_scripts', 'custom_blocks_scripts' );
 
 // -----------------------------
