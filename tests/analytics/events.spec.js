@@ -185,6 +185,12 @@ test("Education page PDF toggle does not fire again when closing", async ({
 }, testInfo) => {
   await page.goto("/education");
 
+  // Check script load order before anything else
+  const scripts = await page.evaluate(() =>
+    Array.from(document.querySelectorAll("script[src]")).map((s) => s.src),
+  );
+  console.log("scripts:", JSON.stringify(scripts, null, 2));
+
   const btn = page
     .locator(
       ".ecd-toggle:not(.ecd-toggle--download):not(.ecd-toggle--coming-soon)",
