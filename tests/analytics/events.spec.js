@@ -193,6 +193,9 @@ test("PDF toggle does not fire again when closing", async ({
   await btn.click();
   await page.waitForTimeout(500);
 
+  const expanded = await btn.getAttribute("data-expanded");
+  console.log("data-expanded after open:", expanded); // expecting "true"
+
   await spyOnPlausible(page);
   await btn.click();
   await page.waitForTimeout(500);
