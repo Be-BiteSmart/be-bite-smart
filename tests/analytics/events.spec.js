@@ -180,7 +180,7 @@ test("Coloring Book PDF toggle fires pdf_viewed for all available episodes", asy
 
 // *************** PDF NOT FIRING AGAIN ON CLOSE **************
 
-test("PDF toggle does not fire again when closing", async ({
+test("Education page PDF toggle does not fire again when closing", async ({
   page,
 }, testInfo) => {
   await page.goto("/education");
@@ -337,7 +337,7 @@ test("Partnership PDF toggle block fires pdf_viewed for all available languages"
 
 // ************ PDF TOGGLE BLOCK DOES NOT RE-FIRE ON CLOSE ************
 
-test("PDF toggle block does not fire pdf_viewed when closing", async ({
+test("Partnerships PDF toggle block does not fire pdf_viewed when closing", async ({
   page,
 }, testInfo) => {
   await page.goto("/partnerships/");

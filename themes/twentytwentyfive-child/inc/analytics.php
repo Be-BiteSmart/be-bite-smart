@@ -194,9 +194,10 @@ function track_user_interactions() {
         document.querySelectorAll('.ecd-toggle:not(.ecd-toggle--download):not(.ecd-toggle--coming-soon)').forEach(function(btn) {
             btn.addEventListener('click', function() {
                 if (!window.plausible) return;
-                // Read data-expanded on the button before toggle.js resets it (capture phase)
-                const isAlreadyOpen = btn.getAttribute('data-expanded') === 'true';
-                if (isAlreadyOpen) return;
+                //  reads live computed style before toggle.js touches anything              
+const targetId = btn.getAttribute('data-target');
+const viewer = document.getElementById(targetId);
+if (viewer && getComputedStyle(viewer).display !== 'none') return;
 
                 const block   = btn.closest('.educational-content-download-block');
                 const span    = block?.querySelector('.capitalized-and-colored')?.textContent?.trim() || '';
