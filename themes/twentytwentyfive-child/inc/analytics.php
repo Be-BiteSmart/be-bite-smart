@@ -98,42 +98,38 @@ function track_user_interactions() {
         });
     ";
  
-    // PDF inline viewer opens via pdf-toggle block — has EN/ES variants, fires only on open
-$track_pdf_clicks = "
+    // PDF inline viewer opens via pdf-toggle block — has EN/ES variants, fires only on open.
+    // Uses capture:true so this handler reads data-expanded before toggle.js resets it.
+    // toggle.js clears data-expanded on all group buttons before we'd see it in bubble phase.
+    $track_pdf_clicks = "
     document.querySelectorAll('.pdf-toggle').forEach(function(btn) {
         btn.addEventListener('click', function() {
             if (!window.plausible) return;
-              // Same fix — check viewer state instead of data-expanded
-        const targetId = btn.getAttribute('data-target');
+            // Read data-expanded on the button before toggle.js resets it (capture phase)
+            const isAlreadyOpen = btn.getAttribute('data-expanded') === 'true';
+            if (isAlreadyOpen) return;
 
-        const viewer = document.getElementById(targetId);
-
-        const isAlreadyOpen = viewer?.classList.contains('expanded');
-
-        if (isAlreadyOpen) return;
             const rawLang = btn.getAttribute('data-lang');
             const lang = rawLang === 'es' ? 'spanish' : rawLang === 'en' ? 'english' : getLang(btn);
 
             // Get the PDF filename from the iframe data-src in the target viewer
-
+            const targetId = btn.getAttribute('data-target');
+            const viewer   = document.getElementById(targetId);
             const iframe   = viewer?.querySelector('iframe[data-src], iframe[src]');
             const pdfUrl   = iframe?.getAttribute('data-src') || iframe?.getAttribute('src') || '';
 
             // decode URI and strip path, leaving just the filename without extension
-
-            let fileName = '';
-
             //  .replace(/-+$/, '') strips one or more trailing hyphens from the filename before it gets passed to toContentName, so children-can-learn-safety- becomes children-can-learn-safety.
-            
-         try { fileName = decodeURIComponent(pdfUrl.split('/').pop().replace(/\.pdf$/i, '').replace(/-+$/, '')); }
-catch(e) { fileName = pdfUrl.split('/').pop().replace(/\.pdf$/i, '').replace(/-+$/, ''); }
+            let fileName = '';
+            try { fileName = decodeURIComponent(pdfUrl.split('/').pop().replace(/\.pdf$/i, '').replace(/-+$/, '')); }
+            catch(e) { fileName = pdfUrl.split('/').pop().replace(/\.pdf$/i, '').replace(/-+$/, ''); }
 
             plausible('pdf_viewed', { props: buildProps(
                 toContentName('pdf', fileName || 'unknown', lang),
                 'pdf',
                 lang
             )});
-        });
+        }, { capture: true }); // capture:true — runs before toggle.js which resets data-expanded on click
     });
 ";
  
@@ -192,18 +188,15 @@ catch(e) { fileName = pdfUrl.split('/').pop().replace(/\.pdf$/i, '').replace(/-+
         });
  
         // PDF viewer opens on education page (ecd buttons, excluding download + coming-soon)
-        // getLang reads (EN)/(ES) from button label text
+        // getLang reads (EN)/(ES) from button label text.
+        // Uses capture:true so this handler reads data-expanded before toggle.js resets it.
+        // toggle.js clears data-expanded on all group buttons before we'd see it in bubble phase.
         document.querySelectorAll('.ecd-toggle:not(.ecd-toggle--download):not(.ecd-toggle--coming-soon)').forEach(function(btn) {
             btn.addEventListener('click', function() {
                 if (!window.plausible) return;
-
-        // Check the viewer visibility instead of data-expanded,
-        // since toggle.js resets data-expanded before this handler reads it
-
-        const targetId = btn.getAttribute('data-target');
-        const viewer = document.getElementById(targetId);
-        const isAlreadyOpen = viewer?.classList.contains('expanded');
-        if (isAlreadyOpen) return; // closing, don't fire
+                // Read data-expanded on the button before toggle.js resets it (capture phase)
+                const isAlreadyOpen = btn.getAttribute('data-expanded') === 'true';
+                if (isAlreadyOpen) return;
 
                 const block   = btn.closest('.educational-content-download-block');
                 const span    = block?.querySelector('.capitalized-and-colored')?.textContent?.trim() || '';
@@ -216,7 +209,7 @@ catch(e) { fileName = pdfUrl.split('/').pop().replace(/\.pdf$/i, '').replace(/-+
                     'pdf',
                     lang
                 )});
-            });
+          }, { capture: true }); // capture:true — runs before toggle.js which resets data-expanded on click
         });
  
     
@@ -258,7 +251,7 @@ catch(e) { fileName = pdfUrl.split('/').pop().replace(/\.pdf$/i, '').replace(/-+
 
  
     <?php endif; ?>
-   // runs on every page, covers any pdf-toggle block
+    // runs on every page, covers any pdf-toggle block
         <?php echo $track_pdf_clicks; ?>
     </script>
     <?php
