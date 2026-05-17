@@ -200,12 +200,11 @@ test("Education page PDF toggle does not fire again when closing", async ({
     const targetId = btn?.getAttribute("data-target");
     const viewer = document.getElementById(targetId);
     return {
-      dataExpanded: btn?.getAttribute("data-expanded"),
-      viewerDisplay: viewer
-        ? getComputedStyle(viewer).display
-        : "no viewer found",
-      viewerHasExpanded: viewer?.classList.contains("expanded"),
-      targetId,
+      buttonCount: allEcdToggles.length,
+      firstButtonClasses: allEcdToggles[0]?.className,
+      firstButtonDataTarget: allEcdToggles[0]?.getAttribute("data-target"),
+      firstButtonDataGroup: allEcdToggles[0]?.getAttribute("data-group"),
+      toggleJsLoaded: typeof initToggles !== "undefined",
     };
   });
   console.log("debug after open:", JSON.stringify(debugInfo));
