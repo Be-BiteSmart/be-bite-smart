@@ -43,6 +43,15 @@ function bio_card_register_block() {
 }
 add_action( 'init', 'bio_card_register_block' );
 
+// -------------- Read More Block ------------------------ //
+ 
+function read_more_register_block() {
+    register_block_type( __DIR__ . '/build/read-more' );
+}
+add_action( 'init', 'read_more_register_block' );
+ 
+
+
 // -------------- Hero Block  ------------------------ //
 
 // Hero block is a dynamic block — save() returns null in JS and PHP renders
