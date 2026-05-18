@@ -32,3 +32,11 @@ body:not(.block-editor-page)
     font-size: var(--wp--preset--font-size--large);
   }
 }
+
+/* ── Read Full Article button ── */
+body:not(.block-editor-page) article.media-mention-block .block-toggle-btn {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  width: fit-content;
+}
