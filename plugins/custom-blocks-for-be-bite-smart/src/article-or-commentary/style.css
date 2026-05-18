@@ -57,3 +57,13 @@ body:not(.block-editor-page)
   .expandable-content.expanded {
   display: block;
 }
+
+/* ── Read More button ── */
+body:not(.block-editor-page)
+  article.expandable-article-block
+  .read-more-toggle {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  width: fit-content;
+}
