@@ -24,25 +24,15 @@ body:not(.block-editor-page) .pdf-toggle-block .pdf-toggle.block-toggle-btn {
   min-height: 44px; /* holds the height during TranslatePress's text swap */
 }
 
-/* When open, button 1 flips from filled → outlined */
+/* When open, any view button flips from filled → outlined.
+   Uses data-expanded instead of nth-child since the download <a> is now
+   a sibling inside each row, making nth-child unreliable. */
 html
   body:not(.block-editor-page)
   .pdf-toggle-block
-  .pdf-toggle-language-row
-  .pdf-toggle:nth-child(1)[data-expanded="true"] {
+  .pdf-toggle[data-expanded="true"] {
   background-color: white;
   color: var(--wp--preset--color--accent-2);
-  border: 2px solid var(--wp--preset--color--accent-2);
-}
-
-/* When open, button 2 flips from outlined → filled */
-html
-  body:not(.block-editor-page)
-  .pdf-toggle-block
-  .pdf-toggle-language-row:nth-child(2)
-  .pdf-toggle[data-expanded="true"] {
-  background-color: var(--wp--preset--color--accent-2) !important;
-  color: var(--wp--preset--color--base);
   border: 2px solid var(--wp--preset--color--accent-2);
 }
 
