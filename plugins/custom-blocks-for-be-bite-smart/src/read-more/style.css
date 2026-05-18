@@ -1,1 +1,15 @@
-/* uses global styles */
+/* ── Expandable Content ── */
+body:not(.block-editor-page)
+  article.expandable-article-block
+  .expandable-content {
+  display: none;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+body:not(.block-editor-page)
+  article.expandable-article-block
+  .expandable-content.expanded {
+  display: block;
+}
