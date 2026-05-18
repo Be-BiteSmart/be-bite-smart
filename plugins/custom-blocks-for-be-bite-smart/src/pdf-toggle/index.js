@@ -191,33 +191,64 @@ registerBlockType("custom/pdf-toggle", {
           "pdf-toggle-block",
       },
 
-      // Side-by-side buttons
+      // ── Buttons row ──────────────────────────────────────────────────
+      // Each language gets a view+download pair wrapped in a Fragment so
+      // they stay grouped together in the row, while the iframes sit
+      // outside at full width below.
       wp.element.createElement(
         "div",
         { className: "pdf-toggle-buttons" },
 
+        // English row
         attributes.pdfUrl &&
-          //called as immediate child arguement, so doesn't need a return
-          renderPdfButton(
-            wp,
-            "pdf-toggle block-toggle-btn",
-            enId,
-            groupId,
-            "View PDF (ENG)",
-            "Hide PDF (ENG)",
-            "en",
-            { "data-testid": `pdf-btn-en-${attributes.blockId}` },
+          wp.element.createElement(
+            "div",
+            { className: "pdf-toggle-language-row" },
+            renderPdfButton(
+              wp,
+              "pdf-toggle block-toggle-btn",
+              enId,
+              groupId,
+              "View PDF (ENG)",
+              "Hide PDF (ENG)",
+              "en",
+              { "data-testid": `pdf-btn-en-${attributes.blockId}` },
+            ),
+            wp.element.createElement(
+              "a",
+              {
+                href: attributes.pdfUrl,
+                download: true,
+                className: "block-toggle-btn is-style-outline",
+              },
+              "Download (ENG)",
+            ),
           ),
+
+        // Spanish row
         attributes.pdfUrlEs &&
-          renderPdfButton(
-            wp,
-            "pdf-toggle block-toggle-btn is-style-outline",
-            esId,
-            groupId,
-            "View PDF (ES)",
-            "Hide PDF (ES)",
-            "es",
-            { "data-testid": `pdf-btn-es-${attributes.blockId}` },
+          wp.element.createElement(
+            "div",
+            { className: "pdf-toggle-language-row" },
+            renderPdfButton(
+              wp,
+              "pdf-toggle block-toggle-btn",
+              esId,
+              groupId,
+              "View PDF (ES)",
+              "Hide PDF (ES)",
+              "es",
+              { "data-testid": `pdf-btn-es-${attributes.blockId}` },
+            ),
+            wp.element.createElement(
+              "a",
+              {
+                href: attributes.pdfUrlEs,
+                download: true,
+                className: "block-toggle-btn is-style-outline",
+              },
+              "Download (ES)",
+            ),
           ),
       ),
 

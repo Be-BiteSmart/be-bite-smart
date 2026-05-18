@@ -2,26 +2,33 @@
    Mirrors .block-toggle-btn base + fill/outline variants.
    JS reads .pdf-toggle, data-target, data-group, data-expanded — untouched.
 ───────────────────────────────────────────────────────────────────────────── */
-
 body:not(.block-editor-page) .pdf-toggle-block .pdf-toggle-buttons {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column; /* rows stack vertically */
+  align-items: center; /* centers the rows horizontally */
   gap: 10px;
   margin-top: 10px;
+}
+
+/* Each language gets its own row */
+body:not(.block-editor-page) .pdf-toggle-block .pdf-toggle-language-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 /* Global adds margin-top: 1rem — not wanted here */
 body:not(.block-editor-page) .pdf-toggle-block .pdf-toggle.block-toggle-btn {
   margin-top: 0;
-  min-width: 160px; /* holds the width during Translates press's text swap */
-  min-height: 44px; /* holds the height during Translates press's text swap */
+  min-width: 160px; /* holds the width during TranslatePress's text swap */
+  min-height: 44px; /* holds the height during TranslatePress's text swap */
 }
 
 /* When open, button 1 flips from filled → outlined */
 html
   body:not(.block-editor-page)
   .pdf-toggle-block
-  .pdf-toggle-buttons
+  .pdf-toggle-language-row
   .pdf-toggle:nth-child(1)[data-expanded="true"] {
   background-color: white;
   color: var(--wp--preset--color--accent-2);
@@ -32,8 +39,8 @@ html
 html
   body:not(.block-editor-page)
   .pdf-toggle-block
-  .pdf-toggle-buttons
-  .pdf-toggle:nth-child(2)[data-expanded="true"] {
+  .pdf-toggle-language-row:nth-child(2)
+  .pdf-toggle[data-expanded="true"] {
   background-color: var(--wp--preset--color--accent-2) !important;
   color: var(--wp--preset--color--base);
   border: 2px solid var(--wp--preset--color--accent-2);
@@ -46,13 +53,19 @@ body:not(.block-editor-page) .pdf-toggle-block .pdf-viewer-container {
   padding-top: 1.5rem;
   border-top: 1px solid #e5e7eb;
 }
-
 body:not(.block-editor-page) .pdf-toggle-block .pdf-viewer-container.expanded,
 body:not(.block-editor-page) .pdf-toggle-block .pdf-viewer-container.show {
   display: block;
 }
-
 body:not(.block-editor-page) .pdf-toggle-block .pdf-viewer-container iframe {
   border-radius: 0.375rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Normalize buttons so they're the same height */
+body:not(.block-editor-page) .pdf-toggle-buttons .block-toggle-btn {
+  margin-top: 0 !important;
+  align-items: center;
+  height: auto;
+  box-sizing: border-box !important;
 }
