@@ -170,14 +170,14 @@ function custom_blocks_scripts() {
     }
  
  
-    if ( $on_news || $on_legal ) {
+
         $asset = include plugin_dir_path( __FILE__ ) . 'build/read-more.asset.php';
         wp_enqueue_script( 'read-more', plugins_url( 'build/read-more.js', __FILE__ ), array(), $asset['version'], true );
 
         // the front page's read more logic is handled by logic in functions.php
         // bio read more has its own logic in its bio-toggle.js within the block
         // they're different enough to keep seperate
-    }
+    
 
   // toggle-system.js and pdf-toggle stylesheet are enqueued globally because:
 // 1. pdf-toggle appears as an InnerBlock inside article-or-commentary, so
