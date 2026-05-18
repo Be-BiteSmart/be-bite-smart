@@ -83,7 +83,7 @@ registerBlockType("custom/read-more", {
     const blockProps = useBlockProps.save();
 
     return wp.element.createElement(
-      "div",
+      "article",
       {
         ...blockProps,
         className: "expandable-article-block",
