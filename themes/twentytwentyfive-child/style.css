@@ -560,6 +560,7 @@ html
 }
 
 /* responsive emotional impact image on homepage */
-#emotional-impact-image {
+#emotional-impact-image img {
   max-height: 250px;
+  width: auto;
 }
