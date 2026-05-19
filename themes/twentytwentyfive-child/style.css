@@ -17,6 +17,7 @@ Template: twentytwentyfive
 
 main h1 {
   margin-top: 15px !important;
+  text-align: center;
 }
 
 h1,
