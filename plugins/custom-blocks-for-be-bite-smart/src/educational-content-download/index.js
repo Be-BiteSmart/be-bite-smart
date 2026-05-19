@@ -96,6 +96,7 @@ registerBlockType("custom/educational-content-download", {
     downloadUrlEs: { type: "string", default: "" },
     // Unique ID so EN/ES viewers don't bleed across episodes on the same page
     blockId: { type: "string", default: "" },
+    trackingId: { type: "string", default: "" },
   },
 
   edit: ({ attributes, setAttributes, clientId }) => {
@@ -119,6 +120,25 @@ registerBlockType("custom/educational-content-download", {
         wp.element.createElement(
           PanelBody,
           { title: "About this block", initialOpen: true },
+          wp.element.createElement(
+            "label",
+            {
+              style: {
+                fontSize: "13px",
+                fontWeight: "600",
+                display: "block",
+                marginBottom: "4px",
+              },
+            },
+            "Tracking ID",
+          ),
+          wp.element.createElement("input", {
+            type: "text",
+            value: attributes.trackingId,
+            onChange: (e) => setAttributes({ trackingId: e.target.value }),
+            placeholder: "e.g. coloring-book, parents-guide",
+            style: { width: "100%", marginBottom: "12px" },
+          }),
           wp.element.createElement(
             "p",
             {
@@ -453,6 +473,10 @@ registerBlockType("custom/educational-content-download", {
       "section",
       {
         ...blockProps,
+        // Only output data-track when a trackingId is set — avoids a blank data-track="" attribute
+        ...(attributes.trackingId
+          ? { "data-track": attributes.trackingId }
+          : {}),
         className:
           (blockProps.className ? blockProps.className + " " : "") +
           "educational-content-download-block",

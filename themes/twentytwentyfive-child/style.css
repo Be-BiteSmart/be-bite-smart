@@ -558,3 +558,8 @@ html
     /* add more space (gap) between the 2 menu lists, so it looks cleaner on tablet and mobile. Otherwise it looks weirdly bunched together on tablet view. Do not use on mobile or it adds a giant space between the two menus */
   }
 }
+
+/* responsive emotional impact image on homepage */
+#emotional-impact-image {
+  max-height: 250px;
+}
