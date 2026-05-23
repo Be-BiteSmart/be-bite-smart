@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import {
   spyOnPlausible,
   getPlausibleCalls,
+  langToEventSuffix,
   testEpisodeLanguage,
   testOutboundArticleClick,
   testMiniDocPlay,
@@ -11,7 +12,7 @@ import {
 
 // ************ EPISODES WATCHED ********************
 
-test("Watch Now fires video_watched for all episodes in both languages", async ({
+test("Watch Now fires episodes-watched for all episodes in both languages", async ({
   page,
 }, testInfo) => {
   test.setTimeout(120000);
@@ -48,7 +49,7 @@ test("Watch Now fires video_watched for all episodes in both languages", async (
 
 // ********************** EPISODE DOWNLOADS *********************
 
-test("Download video fires video_downloaded for all episodes in both languages", async ({
+test("Download video fires category-downloaded for all episodes in both languages", async ({
   page,
 }, testInfo) => {
   test.setTimeout(60000);
@@ -62,14 +63,12 @@ test("Download video fires video_downloaded for all episodes in both languages",
 
   for (let i = 0; i < sectionCount; i++) {
     const section = sections.nth(i);
-    const title = await section.locator(".ecd-title").textContent();
     const episodeLabel = await section
       .locator(".capitalized-and-colored")
       .textContent();
 
     const downloads = [
-      // the ecd-toggle--download elements do not have data-attributes to say what language they are
-      // so instead the only way we can figure out if they're english or spanish is with the text
+      // the ecd-toggle--download elements use data-lang for language (en/es)
       { selector: ".ecd-toggle--download[data-lang='en']", lang: "english" },
       { selector: ".ecd-toggle--download[data-lang='es']", lang: "spanish" },
     ];
@@ -91,12 +90,7 @@ test("Download video fires video_downloaded for all episodes in both languages",
       });
 
       expect(calls).toHaveLength(1);
-      expect(calls[0].event).toBe("video_downloaded");
-      expect(calls[0].options.props.content_type).toBe("download");
-      expect(calls[0].options.props.content_language).toBe(lang);
-      expect(calls[0].options.props.content_name).toMatch(
-        new RegExp(`^video - .+ - ${lang}$`),
-      );
+      expect(calls[0].event).toBe(`episode-videos-downloaded-${lang}`);
 
       allCalls.push({ episode: episodeLabel.trim(), lang, ...calls[0] });
     }
@@ -111,7 +105,8 @@ test("Download video fires video_downloaded for all episodes in both languages",
 });
 
 // ********************** COLORING BOOK ********************
-test("Coloring Book PDF toggle fires pdf_viewed for all available episodes", async ({
+
+test("Coloring Book PDF toggle fires pdf-viewed for all available episodes", async ({
   page,
 }, testInfo) => {
   await page.goto("/education");
@@ -145,27 +140,23 @@ test("Coloring Book PDF toggle fires pdf_viewed for all available episodes", asy
         continue;
       }
 
-      const lang = await btn.getAttribute("data-lang");
+      const dataLang = await btn.getAttribute("data-lang");
+      const lang = langToEventSuffix(dataLang);
 
       await spyOnPlausible(page);
       await btn.click();
       await page.waitForTimeout(500);
 
       const calls = await getPlausibleCalls(page);
-      await testInfo.attach(`${label} ${lang} plausible event`, {
+      await testInfo.attach(`${label} ${dataLang} plausible event`, {
         body: JSON.stringify(calls, null, 2),
         contentType: "application/json",
       });
 
       expect(calls).toHaveLength(1);
-      expect(calls[0].event).toBe("pdf_viewed");
-      expect(calls[0].options.props.content_type).toBe("pdf");
-      expect(calls[0].options.props.content_language).toMatch(
-        /english|spanish/,
-      );
-      expect(calls[0].options.props.content_name).toMatch(/^pdf - /);
+      expect(calls[0].event).toBe(`pdf-viewed-${lang}`);
 
-      allCalls.push({ episode: label, lang, ...calls[0] });
+      allCalls.push({ episode: label, lang: dataLang, ...calls[0] });
 
       await btn.click();
       await page.waitForTimeout(300);
@@ -185,12 +176,6 @@ test("Education page PDF toggle does not fire again when closing", async ({
 }, testInfo) => {
   await page.goto("/education");
 
-  // Check script load order before anything else
-  const scripts = await page.evaluate(() =>
-    Array.from(document.querySelectorAll("script[src]")).map((s) => s.src),
-  );
-  console.log("scripts:", JSON.stringify(scripts, null, 2));
-
   const btn = page
     .locator(
       ".ecd-toggle:not(.ecd-toggle--download):not(.ecd-toggle--coming-soon)",
@@ -198,25 +183,6 @@ test("Education page PDF toggle does not fire again when closing", async ({
     .first();
   await btn.click();
   await page.waitForTimeout(500);
-
-  const debugInfo = await page.evaluate(() => {
-    const btn = document.querySelector(
-      ".ecd-toggle:not(.ecd-toggle--download):not(.ecd-toggle--coming-soon)",
-    );
-    const targetId = btn?.getAttribute("data-target");
-    const viewer = document.getElementById(targetId);
-    return {
-      buttonCount: allEcdToggles.length,
-      firstButtonClasses: allEcdToggles[0]?.className,
-      firstButtonDataTarget: allEcdToggles[0]?.getAttribute("data-target"),
-      firstButtonDataGroup: allEcdToggles[0]?.getAttribute("data-group"),
-      toggleJsLoaded: typeof initToggles !== "undefined",
-    };
-  });
-  console.log("debug after open:", JSON.stringify(debugInfo));
-
-  const expanded = await btn.getAttribute("data-expanded");
-  console.log("data-expanded after open:", expanded); // expecting "true"
 
   await spyOnPlausible(page);
   await btn.click();
@@ -233,7 +199,7 @@ test("Education page PDF toggle does not fire again when closing", async ({
 
 // *********** DOCUMENTARY ON EDUCATION PAGE WORKS ************
 
-test("Documentary on Education page play fires video_watched without content_language", async ({
+test("Documentary on Education page play fires documentary-watched", async ({
   page,
 }, testInfo) => {
   await testMiniDocPlay(page, testInfo, "/education");
@@ -243,7 +209,7 @@ test("Documentary on Education page play fires video_watched without content_lan
 
 // ***************** ARTICLE OUTBOUND LINK CLICK WORKS ************
 
-test("News Page Outbound Article link click fires article_viewed", async ({
+test("News Page Outbound Article link click fires article-viewed", async ({
   page,
 }, testInfo) => {
   await testOutboundArticleClick(page, testInfo, "/news-media");
@@ -251,7 +217,7 @@ test("News Page Outbound Article link click fires article_viewed", async ({
 
 // ****************  READ MORE WORKS **********************
 
-test("News Page Read More fires article_viewed", async ({ page }, testInfo) => {
+test("News Page Read More fires article-viewed", async ({ page }, testInfo) => {
   await page.goto("/news-media");
   await spyOnPlausible(page);
 
@@ -265,15 +231,14 @@ test("News Page Read More fires article_viewed", async ({ page }, testInfo) => {
   });
 
   expect(calls).toHaveLength(1);
-  expect(calls[0].event).toBe("article_viewed");
-  expect(calls[0].options.props.content_type).toBe("article");
+  expect(calls[0].event).toBe("article-viewed");
 });
 
 // ── Library page ───────────────────────────────────────────────
 
 // ***************** ARTICLE OUTBOUND CLICK ****************
 
-test("Library Page Article link click fires article_viewed", async ({
+test("Library Page Article link click fires article-viewed", async ({
   page,
 }, testInfo) => {
   await testOutboundArticleClick(page, testInfo, "/library");
@@ -283,7 +248,7 @@ test("Library Page Article link click fires article_viewed", async ({
 
 // ************ MINI DOC HOME PAGE **************************
 
-test("Home Page Documentary play fires video_watched", async ({
+test("Home Page Documentary play fires documentary-watched", async ({
   page,
 }, testInfo) => {
   await testMiniDocPlay(page, testInfo, "/");
@@ -291,7 +256,7 @@ test("Home Page Documentary play fires video_watched", async ({
 
 // ********************** PDF TOGGLE BLOCK *********************
 
-test("Partnership PDF toggle block fires pdf_viewed for all available languages", async ({
+test("Partnership PDF toggle block fires pdf-viewed for all available languages", async ({
   page,
 }, testInfo) => {
   await page.goto("/partnerships");
@@ -338,10 +303,7 @@ test("Partnership PDF toggle block fires pdf_viewed for all available languages"
       });
 
       expect(calls).toHaveLength(1);
-      expect(calls[0].event).toBe("pdf_viewed");
-      expect(calls[0].options.props.content_type).toBe("pdf");
-      expect(calls[0].options.props.content_language).toBe(lang);
-      expect(calls[0].options.props.content_name).toMatch(/^pdf - /);
+      expect(calls[0].event).toBe(`pdf-viewed-${lang}`);
 
       allCalls.push({ block: i + 1, testId, lang, ...calls[0] });
 
@@ -359,7 +321,7 @@ test("Partnership PDF toggle block fires pdf_viewed for all available languages"
 
 // ************ PDF TOGGLE BLOCK DOES NOT RE-FIRE ON CLOSE ************
 
-test("Partnerships PDF toggle block does not fire pdf_viewed when closing", async ({
+test("Partnerships PDF toggle block does not fire when closing", async ({
   page,
 }, testInfo) => {
   await page.goto("/partnerships/");

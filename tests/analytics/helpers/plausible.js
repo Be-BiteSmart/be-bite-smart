@@ -14,6 +14,13 @@ export async function getPlausibleCalls(page) {
   return page.evaluate(() => window._plausibleCalls);
 }
 
+/** Map ECD button data-lang or test lang string to event suffix. */
+export function langToEventSuffix(lang) {
+  if (lang === "en" || lang === "english") return "english";
+  if (lang === "es" || lang === "spanish") return "spanish";
+  return lang;
+}
+
 export async function testEpisodeLanguage(page, testInfo, episode, lang) {
   const episodeNumber = await episode.locator(".episode-number").textContent();
   const toggle = episode.locator(
@@ -57,12 +64,7 @@ export async function testEpisodeLanguage(page, testInfo, episode, lang) {
   });
 
   expect(calls).toHaveLength(1);
-  expect(calls[0].event).toBe("video_watched");
-  expect(calls[0].options.props.content_type).toBe("video");
-  expect(calls[0].options.props.content_language).toBe(lang);
-  expect(calls[0].options.props.content_name).toMatch(
-    new RegExp(`^video - .+ - ${lang}$`),
-  );
+  expect(calls[0].event).toBe(`episodes-watched-${lang}`);
 
   return { episode: `${episodeNumber}`.trim(), lang, ...calls[0] };
 }
@@ -110,9 +112,7 @@ export async function testOutboundArticleClick(page, testInfo, url) {
     });
 
     expect(calls).toHaveLength(1);
-    expect(calls[0].event).toBe("article_viewed");
-    expect(calls[0].options.props.content_type).toBe("article");
-    expect(calls[0].options.props.content_name).toMatch(/^article - /);
+    expect(calls[0].event).toBe("article-viewed");
 
     allCalls.push(calls[0]);
   }
@@ -124,6 +124,7 @@ export async function testOutboundArticleClick(page, testInfo, url) {
 
   return allCalls;
 }
+
 export async function testMiniDocPlay(page, testInfo, url) {
   await page.goto(url);
   await spyOnPlausible(page);
@@ -141,9 +142,7 @@ export async function testMiniDocPlay(page, testInfo, url) {
   });
 
   expect(calls).toHaveLength(1);
-  expect(calls[0].event).toBe("video_watched");
-  expect(calls[0].options.props.content_type).toBe("video");
-  expect(calls[0].options.props.content_language).toBeUndefined();
+  expect(calls[0].event).toBe("documentary-watched");
 
   return calls[0];
 }

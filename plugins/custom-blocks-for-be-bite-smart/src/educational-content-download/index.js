@@ -130,15 +130,27 @@ registerBlockType("custom/educational-content-download", {
                 marginBottom: "4px",
               },
             },
-            "Tracking ID",
+            "PDF tracking slug (optional)",
           ),
           wp.element.createElement("input", {
             type: "text",
             value: attributes.trackingId,
             onChange: (e) => setAttributes({ trackingId: e.target.value }),
-            placeholder: "e.g. coloring-book, parents-guide",
+            placeholder: "e.g. partnership-pdf — overrides pdf-viewed",
             style: { width: "100%", marginBottom: "12px" },
           }),
+          wp.element.createElement(
+            "p",
+            {
+              style: {
+                fontSize: "12px",
+                color: "#50575e",
+                marginTop: "0",
+                marginBottom: "12px",
+              },
+            },
+            "Leave blank for default pdf-viewed events. Set only when this block's PDF needs its own Plausible goal.",
+          ),
           wp.element.createElement(
             "p",
             {
@@ -473,7 +485,7 @@ registerBlockType("custom/educational-content-download", {
       "section",
       {
         ...blockProps,
-        // Only output data-track when a trackingId is set — avoids a blank data-track="" attribute
+        // data-track overrides default pdf-viewed-* for this block's inline PDF only
         ...(attributes.trackingId
           ? { "data-track": attributes.trackingId }
           : {}),

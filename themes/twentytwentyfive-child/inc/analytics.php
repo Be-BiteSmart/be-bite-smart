@@ -5,15 +5,25 @@
 // WordPress plugin — no manual script tag needed here.
 // Custom Events are enabled by default in the plugin, so window.plausible
 // is available on every page.
- 
+//
+// Events use kebab-case names with no custom props (free-tier friendly):
+//   {category}-{action}-{language}  e.g. episode-videos-downloaded-english
+//   {category}-{action}             e.g. documentary-watched, article-viewed
+//
+// ECD video downloads: category from hardcoded parent section id (see ECD_DOWNLOAD_SECTIONS).
+// Inline PDF opens (ECD + pdf-toggle): default pdf-viewed-{lang}; optional data-track on the
+// block wrapper overrides for one-off PDFs (set in block editor).
+
 function track_user_interactions() {
- 
+
     // ── Shared helpers ─────────────────────────────────────────────────────────
     //
-    // toContentName(type, text, lang)
-    //   Format (with language):    "video - my-title - english"
-    //   Format (without language): "video - my-title"
-    //   Pass null for lang on content with no language variant (articles, documentary).
+    // track(eventName)
+    //   Fires a Plausible custom event with no props.
+    //
+    // eventName(category, action, lang)
+    //   Builds kebab-case event names, e.g. coloring-books-viewed-english.
+    //   Pass null for lang when the content has no language variant.
     //
     // getLang(btn)
     //   Detects language from two sources:
@@ -23,21 +33,28 @@ function track_user_interactions() {
     //      Used by Watch Now / play buttons which have no label text to read.
     //   Returns 'english', 'spanish', or null (for content with no language variant).
     //
-    // buildProps(contentName, contentType, lang)
-    //   Builds the Plausible props object, omitting content_language entirely
-    //   when lang is null rather than sending a null value.
- 
+    // ecdDownloadCategory(btn)
+    //   Maps parent section#id to a download category (education page, hardcoded).
+    //
+    // trackPdfView(btn)
+    //   Fires {slug}-viewed-{lang} when data-track is set on the ECD or pdf-toggle wrapper,
+    //   otherwise pdf-viewed-{lang}.
+
     $shared_helpers = "
-        function toContentName(type, text, lang) {
-            const name = (text || 'unknown').toLowerCase().replace(/\s+/g, '-');
-            return lang ? type + ' - ' + name + ' - ' + lang : type + ' - ' + name;
+        function track(eventName) {
+            if (!window.plausible) return;
+            plausible(eventName);
         }
- 
+
+        function eventName(category, action, lang) {
+            return lang ? category + '-' + action + '-' + lang : category + '-' + action;
+        }
+
         function getLang(btn) {
             // Check button label text for language markers like (EN), (ENG), (ES)
             const label = (btn.querySelector('.btn-label')?.textContent || btn.textContent || '').toUpperCase();
-            if (/\(EN\b|\(ENG\b/.test(label)) return 'english';
-            if (/\(ES\b/.test(label)) return 'spanish';
+            if (/\\(EN\\b|\\(ENG\\b/.test(label)) return 'english';
+            if (/\\(ES\\b/.test(label)) return 'spanish';
             // Fall back to active language toggle (for Watch Now / play buttons on episode cards)
             const card = btn.closest('.video-episode-block');
             if (card) {
@@ -47,215 +64,172 @@ function track_user_interactions() {
             }
             return null;
         }
- 
-        function buildProps(contentName, contentType, lang) {
-            const props = { content_name: contentName, content_type: contentType };
-            if (lang) props.content_language = lang;
-            return props;
+
+        function langFromDataAttr(btn) {
+            const raw = btn.getAttribute('data-lang');
+            if (raw === 'en') return 'english';
+            if (raw === 'es') return 'spanish';
+            return getLang(btn);
+        }
+
+        // Education page: parent section id → download event category
+        var ECD_DOWNLOAD_SECTIONS = {
+            'download-videos': 'episode-videos'
+        };
+
+        function ecdDownloadCategory(btn) {
+            const block = btn.closest('.educational-content-download-block');
+            if (!block) return null;
+            let el = block.parentElement;
+            while (el) {
+                if (el.id && ECD_DOWNLOAD_SECTIONS[el.id]) {
+                    return ECD_DOWNLOAD_SECTIONS[el.id];
+                }
+                el = el.parentElement;
+            }
+            return null;
+        }
+
+        function pdfTrackingSlug(btn) {
+            const container = btn.closest('.educational-content-download-block, .pdf-toggle-block');
+            return container?.dataset?.track || null;
+        }
+
+        function trackPdfView(btn) {
+            const lang = langFromDataAttr(btn);
+            if (!lang) return;
+            const slug = pdfTrackingSlug(btn);
+            if (slug) {
+                track(eventName(slug, 'viewed', lang));
+            } else {
+                track(eventName('pdf', 'viewed', lang));
+            }
         }
     ";
- 
+
     // ── Reusable event blocks ──────────────────────────────────────────────────
     //
-    // Each block fires one Plausible custom event and sends:
-    //   content_name     — "pdf - my-title - english"
-    //   content_type     — "pdf" | "article" | "video" | "download" | "language_switcher"
-    //   content_language — "english" | "spanish"  (omitted entirely when content has no language variant)
-    //
-    // Articles and the documentary have no language variants, so they omit content_language.
+    // Each block fires one Plausible custom event (kebab-case, no props).
+    // Language variants append -english or -spanish; articles and the documentary omit language.
 
     // Mini-documentary play buttons (home + education pages) — no language variant
-    // PAGE_CONTEXT will be replaced with the actually page when echo'ed
-   $track_documentary = "
-    document.querySelectorAll('.video-quote-watch-button, .video-quote-block .play-button').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            if (!window.plausible) return;
-            plausible('video_watched', { props: buildProps(
-                toContentName('video', 'mini-documentary - __PAGE_CONTEXT__'),
-                'video',
-                null
-            )});
+    $track_documentary = "
+        document.querySelectorAll('.video-quote-watch-button, .video-quote-block .play-button').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                track('documentary-watched');
+            });
         });
-    });
-";
- 
+    ";
+
     // External article link clicks (news + library pages) — no language variant
     $track_article_clicks = "
         document.querySelectorAll('.custom-block-card a[target=\"_blank\"]').forEach(function(link) {
             link.addEventListener('click', function() {
-                if (!window.plausible) return;
-                const card  = link.closest('.custom-block-card');
-                const title = card?.querySelector('h3, h4')?.textContent?.trim()
-                         || link.querySelector('h3, h4')?.textContent?.trim()
-                         || link.textContent?.trim()
-                         || 'unknown';
-                plausible('article_viewed', { props: buildProps(
-                    toContentName('article', title),
-                    'article',
-                    null
-                )});
+                track('article-viewed');
             });
         });
     ";
- 
+
     // PDF inline viewer opens via pdf-toggle block — has EN/ES variants, fires only on open.
     // Uses capture:true so this handler reads data-expanded before toggle.js resets it.
     // toggle.js clears data-expanded on all group buttons before we'd see it in bubble phase.
     $track_pdf_clicks = "
-    document.querySelectorAll('.pdf-toggle').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            if (!window.plausible) return;
-            // Read data-expanded on the button before toggle.js resets it (capture phase)
-            const isAlreadyOpen = btn.getAttribute('data-expanded') === 'true';
-            if (isAlreadyOpen) return;
+        document.querySelectorAll('.pdf-toggle').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                // Read data-expanded on the button before toggle.js resets it (capture phase)
+                const isAlreadyOpen = btn.getAttribute('data-expanded') === 'true';
+                if (isAlreadyOpen) return;
 
-            const rawLang = btn.getAttribute('data-lang');
-            const lang = rawLang === 'es' ? 'spanish' : rawLang === 'en' ? 'english' : getLang(btn);
+                trackPdfView(btn);
+            }, { capture: true }); // capture:true — runs before toggle.js which resets data-expanded on click
+        });
+    ";
 
-            // Get the PDF filename from the iframe data-src in the target viewer
-            const targetId = btn.getAttribute('data-target');
-            const viewer   = document.getElementById(targetId);
-            const iframe   = viewer?.querySelector('iframe[data-src], iframe[src]');
-            const pdfUrl   = iframe?.getAttribute('data-src') || iframe?.getAttribute('src') || '';
-
-            // decode URI and strip path, leaving just the filename without extension
-            //  .replace(/-+$/, '') strips one or more trailing hyphens from the filename before it gets passed to toContentName, so children-can-learn-safety- becomes children-can-learn-safety.
-            let fileName = '';
-            try { fileName = decodeURIComponent(pdfUrl.split('/').pop().replace(/\.pdf$/i, '').replace(/-+$/, '')); }
-            catch(e) { fileName = pdfUrl.split('/').pop().replace(/\.pdf$/i, '').replace(/-+$/, ''); }
-
-            plausible('pdf_viewed', { props: buildProps(
-                toContentName('pdf', fileName || 'unknown', lang),
-                'pdf',
-                lang
-            )});
-        }, { capture: true }); // capture:true — runs before toggle.js which resets data-expanded on click
-    });
-";
- 
     ?>
     <script>
     <?php echo $shared_helpers; ?>
- 
+
     // ── Global — fires on every page ───────────────────────────────────────────
     // Track TranslatePress language switcher clicks.
     // Reads the language name from .trp-language-item-name (e.g. "spanish").
     document.querySelectorAll('.trp-switcher-dropdown-list .trp-language-item').forEach(function(link) {
         link.addEventListener('click', function() {
-            if (!window.plausible) return;
             const lang = link.querySelector('.trp-language-item-name')?.textContent?.trim().toLowerCase() || 'unknown';
-            plausible('language_switched', { props: {
-                content_name: 'language-switcher - ' + lang,
-                content_type: 'language_switcher',
-                content_language: lang
-            }});
+            track(eventName('language', 'switched', lang));
         });
     });
- 
+
     <?php if ( is_page( 'education' ) ) : ?>
         // ── Education page ─────────────────────────────────────────────
- 
+
         // Video file downloads — getLang reads (EN)/(ES) from button label text
         document.querySelectorAll('.ecd-toggle--download').forEach(function(btn) {
             btn.addEventListener('click', function() {
-                if (!window.plausible) return;
-                const raw = btn.getAttribute('href').split('/').pop();
-                let fileName;
-                try   { fileName = decodeURIComponent(raw); }
-                catch (e) { fileName = raw; }
+                const category = ecdDownloadCategory(btn);
+                if (!category) return;
                 const lang = getLang(btn);
-                plausible('video_downloaded', { props: buildProps(
-                    toContentName('video', fileName, lang),
-                    'download',
-                    lang
-                )});
+                if (!lang) return;
+                track(eventName(category, 'downloaded', lang));
             });
         });
- 
+
         // Episode video plays — getLang reads the active EN/ES toggle on the card
         document.querySelectorAll('.watch-now-button, .video-episode-block .play-button').forEach(function(btn) {
             btn.addEventListener('click', function() {
-                if (!window.plausible) return;
-                const card  = btn.closest('.video-episode-block');
-                const title = card?.querySelector('.episode-title')?.textContent?.trim() || 'unknown';
-                const lang  = getLang(btn);
-                plausible('video_watched', { props: buildProps(
-                    toContentName('video', title, lang),
-                    'video',
-                    lang
-                )});
+                const lang = getLang(btn);
+                if (!lang) return;
+                track(eventName('episodes', 'watched', lang));
             });
         });
- 
+
         // PDF viewer opens on education page (ecd buttons, excluding download + coming-soon)
         // getLang reads (EN)/(ES) from button label text.
-        // Uses capture:true so this handler reads data-expanded before toggle.js resets it.
+        // Uses capture:true so this handler reads display state before toggle.js touches anything.
         // toggle.js clears data-expanded on all group buttons before we'd see it in bubble phase.
         document.querySelectorAll('.ecd-toggle:not(.ecd-toggle--download):not(.ecd-toggle--coming-soon)').forEach(function(btn) {
             btn.addEventListener('click', function() {
-                if (!window.plausible) return;
-                //  reads live computed style before toggle.js touches anything              
-const targetId = btn.getAttribute('data-target');
-const viewer = document.getElementById(targetId);
-if (viewer && getComputedStyle(viewer).display !== 'none') return;
+                // reads live computed style before toggle.js touches anything
+                const targetId = btn.getAttribute('data-target');
+                const viewer = document.getElementById(targetId);
+                if (viewer && getComputedStyle(viewer).display !== 'none') return;
 
-                const block   = btn.closest('.educational-content-download-block');
-                const span    = block?.querySelector('.capitalized-and-colored')?.textContent?.trim() || '';
-                const title   = block?.querySelector('.ecd-title')?.textContent?.trim() || 'unknown';
-                // e.g. "Episode 1 · Coloring book - Respect the Bubble"
-                const label   = span ? span + ' - ' + title : title;
-                const lang    = getLang(btn);
-                plausible('pdf_viewed', { props: buildProps(
-                    toContentName('pdf', label, lang),
-                    'pdf',
-                    lang
-                )});
-          }, { capture: true }); // capture:true — runs before toggle.js which resets data-expanded on click
+                trackPdfView(btn);
+            }, { capture: true }); // capture:true — runs before toggle.js which resets data-expanded on click
         });
- 
-    
-        <?php echo str_replace('__PAGE_CONTEXT__', 'education-page', $track_documentary); ?>
 
- 
- 
+        <?php echo $track_documentary; ?>
+
+
     <?php elseif ( is_page( ['news-media', 'legal'] ) ) : ?>
         // ── News / Legal pages ─────────────────────────────────────────
- 
+
         <?php echo $track_article_clicks; ?>
- 
+
         // "Read More" expands on press releases and text articles — no language variant
         document.querySelectorAll('.read-more-toggle').forEach(function(btn) {
             btn.addEventListener('click', function() {
-                if (!window.plausible) return;
                 if (btn.getAttribute('data-expanded') === 'true') return;
-                const card  = btn.closest('.custom-block-card');
-                const title = card?.querySelector('h3')?.textContent?.trim() || 'unknown';
-                plausible('article_viewed', { props: buildProps(
-                    toContentName('article', title),
-                    'article',
-                    null
-                )});
+                track('article-viewed');
             });
         });
- 
- 
+
+
     <?php elseif ( is_page( 'library' ) ) : ?>
         // ── Library page ───────────────────────────────────────────────
- 
+
         <?php echo $track_article_clicks; ?>
- 
- 
+
+
     <?php elseif ( is_front_page() ) : ?>
         // ── Home page ──────────────────────────────────────────────────
- 
-          <?php echo str_replace('__PAGE_CONTEXT__', 'home-page', $track_documentary); ?>
 
- 
+        <?php echo $track_documentary; ?>
+
     <?php endif; ?>
     // runs on every page, covers any pdf-toggle block
         <?php echo $track_pdf_clicks; ?>
     </script>
     <?php
 }
- 
+
 add_action('wp_footer', 'track_user_interactions', 10);

@@ -24,6 +24,7 @@ registerBlockType("custom/pdf-toggle", {
     blockId: { type: "string", default: "" },
     pdfUrl: { type: "string", default: "" },
     pdfUrlEs: { type: "string", default: "" },
+    trackingId: { type: "string", default: "" },
   },
 
   edit: ({ attributes, setAttributes, clientId }) => {
@@ -52,6 +53,16 @@ registerBlockType("custom/pdf-toggle", {
             value: attributes.blockId,
             onChange: (val) => setAttributes({ blockId: val }),
             placeholder: "e.g. my-pdf-block",
+          }),
+          wp.element.createElement(TextControl, {
+            label: __("PDF tracking slug (optional)", "custom-blocks"),
+            value: attributes.trackingId,
+            onChange: (val) => setAttributes({ trackingId: val }),
+            placeholder: "e.g. partnership-pdf — overrides pdf-viewed",
+            help: __(
+              "Leave blank for default pdf-viewed events. Set only when this PDF needs its own Plausible goal.",
+              "custom-blocks",
+            ),
           }),
         ),
       ),
@@ -186,6 +197,9 @@ registerBlockType("custom/pdf-toggle", {
       "div",
       {
         ...blockProps,
+        ...(attributes.trackingId
+          ? { "data-track": attributes.trackingId }
+          : {}),
         className:
           (blockProps.className ? blockProps.className + " " : "") +
           "pdf-toggle-block",

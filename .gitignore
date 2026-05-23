@@ -1,0 +1,36 @@
+# Ignore everything
+*
+
+# Except our stuff
+!themes/
+!themes/twentytwentyfive-child/
+!themes/twentytwentyfive-child/**
+
+!plugins/
+!plugins/custom-blocks-for-be-bite-smart/
+!plugins/custom-blocks-for-be-bite-smart/**
+
+!.github/
+!.github/workflows/
+!.github/workflows/**
+
+!package.json
+!package-lock.json
+!pnpm-lock.yaml
+
+!playwright.config.js
+
+!tests/
+!tests/**
+
+!README.md
+
+!.gitignore
+
+!readme-images/
+!readme-images/**
+
+# Common noise
+.DS_Store
+*.log
+node_modules/

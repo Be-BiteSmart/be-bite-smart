@@ -25,8 +25,8 @@ Step 3: Select the bebitesmart.org folder, then click the sensitive file you nee
 This repo tracks the full `wp-content` directory. Two subdirectories have a
 build step required when changing CSS:
 
-- `themes/twentytwentyfive-child` run `npm run build` from inside this folder
-- `plugins/custom-blocks-for-be-bite-smart` run `npm run build` from inside this folder
+- `themes/twentytwentyfive-child` run `pnpm run build` from inside this folder
+- `plugins/custom-blocks-for-be-bite-smart` run `pnpm run build` from inside this folder
 
 Each folder has its own `package.json` and `webpack.config.js`, so the build
 must be run from inside the relevant folder, running it from the `wp-content`
@@ -52,9 +52,37 @@ updates to the parent Twenty Twenty-Five theme don't wipe our customisations.
 
 ### Custom Plausible Events
 
-Logic for Plausible to track custom events, such as clicking on a download button.
+Logic for Plausible custom events (kebab-case event names, no custom props).
 
 `themes/twentytwentyfive-child/inc/analytics.php`
+
+#### Event naming
+
+| Pattern | Example |
+|--------|---------|
+| `{category}-{action}-{language}` | `coloring-books-viewed-english` |
+| `{category}-{action}` (no language) | `documentary-watched`, `article-viewed` |
+
+Actions: `viewed` (inline PDF), `downloaded`, `watched` (video), `switched` (site language).
+
+#### Analytics / tracking (hardcoded + PDF overrides)
+
+Most categories are defined in `analytics.php` (no editor setup). **Inline PDF opens** default to `pdf-viewed-english` / `pdf-viewed-spanish`. To track one PDF separately, set **PDF tracking slug (optional)** on that ECD or PDF Toggle block → `data-track` → e.g. `partnership-pdf-viewed-english`.
+
+| Behavior | How it’s determined | Event name(s) |
+|----------|---------------------|----------------|
+| Episode “Watch Now” / play | Hardcoded | `episodes-watched-english`, `episodes-watched-spanish` |
+| ECD video downloads in `#download-videos` | Hardcoded section map | `episode-videos-downloaded-english`, … |
+| ECD inline PDF / `pdf-toggle` open | Default, or block slug if set | `pdf-viewed-{lang}` or `{slug}-viewed-{lang}` |
+| Mini-documentary | Hardcoded | `documentary-watched` |
+| Article links, Read more | Hardcoded | `article-viewed` |
+| TranslatePress switcher | Hardcoded | `language-switched-{lang}` |
+
+To add another **download** section on Education, extend `ECD_DOWNLOAD_SECTIONS` in `analytics.php` (parent `section` `id` → category slug).
+
+Optional PDF slugs live in **page content** (block editor), not in git.
+
+**Plausible dashboard:** add goals for `pdf-viewed-*`, `episode-videos-downloaded-*`, etc. Retire old `pdf_viewed` / `video_watched` goals.
 
 ### Playwright Tests
 
@@ -109,11 +137,11 @@ immediately.
 
 ### Step 5: Install dependencies
 
-Run `npm install` in each subdirectory that has a build step:
+Run `pnpm install` in each subdirectory that has a build step:
 
 ```bash
-cd themes/twentytwentyfive-child && npm install
-cd ../../plugins/custom-blocks-for-be-bite-smart && npm install
+cd themes/twentytwentyfive-child && pnpm install
+cd ../../plugins/custom-blocks-for-be-bite-smart && pnpm install
 ```
 
 The `.git` folder is already present since Duplicator included it in the
@@ -156,28 +184,28 @@ visitors immediately see the updated site.
 ## Making Changes to the Child Theme Or Plugin
 
 After editing CSS or any logic that goes through the build process in either
-location below, run `npm run build` before committing. Otherwise browsers will
+location below, run `pnpm run build` before committing. Otherwise browsers will
 serve stale cached stylesheets or logic.
 
 **Child theme** `app/public/wp-content/themes/twentytwentyfive-child`
 
 ```bash
 cd app/public/wp-content/themes/twentytwentyfive-child
-npm run build
+pnpm run build
 ```
 
 **Custom blocks plugin** `app/public/wp-content/plugins/custom-blocks-for-be-bite-smart`
 
 ```bash
 cd app/public/wp-content/plugins/custom-blocks-for-be-bite-smart
-npm run build
+pnpm run build
 ```
 
 Then do the normal `git add`, `git commit`, `git push` flow.
 
 ### How the cache busting works
 
-Each `src/` entry (e.g. `src/style.js`) imports its CSS file. When `npm run build` runs, webpack generates a `build/*.asset.php` file containing a content hash.
+Each `src/` entry (e.g. `src/style.js`) imports its CSS file. When `pnpm run build` runs, webpack generates a `build/*.asset.php` file containing a content hash.
 
 `functions.php` reads this hash via `get_asset()` and passes it as the version
 parameter to `wp_enqueue_style()`, appending it as a query string
@@ -203,7 +231,7 @@ with `Ctrl+Shift+R` / `Cmd+Shift+R` to force a fresh fetch.
 **How to diagnose if its a browser quirk or a bug:** Open the page in an incognito window (logged out).
 
 - **Correct styles do NOT appear in incognito** You likely forgot to run
-  `npm run build` before pushing. Confirm by checking the relevant
+  `pnpm run build` before pushing. Confirm by checking the relevant
   `build/*.asset.php` file on GitHub or on the DreamHost server to see if the file updated.
 
 - **Correct styles DO appear in incognito but not in your logged-in session**
