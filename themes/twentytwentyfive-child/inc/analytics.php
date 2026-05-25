@@ -10,9 +10,9 @@
 //   {category}-{action}-{language}  e.g. episode-videos-downloaded-english
 //   {category}-{action}             e.g. documentary-watched, article-viewed
 //
-// ECD video downloads: category from hardcoded parent section id (see ECD_DOWNLOAD_SECTIONS).
-// Inline PDF opens (ECD + pdf-toggle): default pdf-viewed-{lang}; optional data-track on the
-// block wrapper overrides for one-off PDFs (set in block editor).
+// Episode video downloads: custom/educational-video-download block only.
+// Coloring book + flexible educational PDFs: coloring-book-download and educational-content-download.
+// Inline PDF opens: default pdf-viewed-{lang}; optional data-track on educational-content-download.
 
 function track_user_interactions() {
 
@@ -33,9 +33,6 @@ function track_user_interactions() {
     //      Used by Watch Now / play buttons which have no label text to read.
     //   Returns 'english', 'spanish', or null (for content with no language variant).
     //
-    // ecdDownloadCategory(btn)
-    //   Maps parent section#id to a download category (education page, hardcoded).
-    //
     // trackPdfView(btn)
     //   Fires {slug}-viewed-{lang} when data-track is set on the ECD or pdf-toggle wrapper,
     //   otherwise pdf-viewed-{lang}.
@@ -53,8 +50,8 @@ function track_user_interactions() {
         function getLang(btn) {
             // Check button label text for language markers like (EN), (ENG), (ES)
             const label = (btn.querySelector('.btn-label')?.textContent || btn.textContent || '').toUpperCase();
-            if (/\\(EN\\b|\\(ENG\\b/.test(label)) return 'english';
-            if (/\\(ES\\b/.test(label)) return 'spanish';
+            if (/\\(ENG\\)|\\(EN\\)/i.test(label)) return 'english';
+            if (/\\(ESP\\)|\\(ES\\)/i.test(label)) return 'spanish';
             // Fall back to active language toggle (for Watch Now / play buttons on episode cards)
             const card = btn.closest('.video-episode-block');
             if (card) {
@@ -72,26 +69,8 @@ function track_user_interactions() {
             return getLang(btn);
         }
 
-        // Education page: parent section id → download event category
-        var ECD_DOWNLOAD_SECTIONS = {
-            'download-videos': 'episode-videos'
-        };
-
-        function ecdDownloadCategory(btn) {
-            const block = btn.closest('.educational-content-download-block');
-            if (!block) return null;
-            let el = block.parentElement;
-            while (el) {
-                if (el.id && ECD_DOWNLOAD_SECTIONS[el.id]) {
-                    return ECD_DOWNLOAD_SECTIONS[el.id];
-                }
-                el = el.parentElement;
-            }
-            return null;
-        }
-
         function pdfTrackingSlug(btn) {
-            const container = btn.closest('.educational-content-download-block, .pdf-toggle-block');
+            const container = btn.closest('.educational-content-download-block, .educational-coloring-book-download-block, .pdf-toggle-block');
             return container?.dataset?.track || null;
         }
 
@@ -162,14 +141,21 @@ function track_user_interactions() {
     <?php if ( is_page( 'education' ) ) : ?>
         // ── Education page ─────────────────────────────────────────────
 
-        // Video file downloads — getLang reads (EN)/(ES) from button label text
-        document.querySelectorAll('.ecd-toggle--download').forEach(function(btn) {
+        // Episode video file downloads (educational-video-download block only)
+        document.querySelectorAll('.educational-video-download-block .ecd-toggle--download').forEach(function(btn) {
             btn.addEventListener('click', function() {
-                const category = ecdDownloadCategory(btn);
-                if (!category) return;
                 const lang = getLang(btn);
                 if (!lang) return;
-                track(eventName(category, 'downloaded', lang));
+                track(eventName('episode-videos', 'downloaded', lang));
+            });
+        });
+
+        // Other educational download links (PDF block type with link fields filled in)
+        document.querySelectorAll('.educational-content-download-block .ecd-toggle--download').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                const lang = getLang(btn);
+                if (!lang) return;
+                track(eventName('educational-content', 'downloaded', lang));
             });
         });
 
@@ -182,11 +168,12 @@ function track_user_interactions() {
             });
         });
 
-        // PDF viewer opens on education page (ecd buttons, excluding download + coming-soon)
-        // getLang reads (EN)/(ES) from button label text.
+        // PDF viewer opens (coloring-book + educational-content blocks; not video download rows)
         // Uses capture:true so this handler reads display state before toggle.js touches anything.
-        // toggle.js clears data-expanded on all group buttons before we'd see it in bubble phase.
-        document.querySelectorAll('.ecd-toggle:not(.ecd-toggle--download):not(.ecd-toggle--coming-soon)').forEach(function(btn) {
+        document.querySelectorAll(
+            '.educational-coloring-book-download-block .ecd-toggle:not(.ecd-toggle--download):not(.ecd-toggle--coming-soon), ' +
+            '.educational-content-download-block .ecd-toggle:not(.ecd-toggle--download):not(.ecd-toggle--coming-soon)'
+        ).forEach(function(btn) {
             btn.addEventListener('click', function() {
                 // reads live computed style before toggle.js touches anything
                 const targetId = btn.getAttribute('data-target');

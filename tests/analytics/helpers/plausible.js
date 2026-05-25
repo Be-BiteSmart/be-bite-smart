@@ -14,12 +14,50 @@ export async function getPlausibleCalls(page) {
   return page.evaluate(() => window._plausibleCalls);
 }
 
-/** Map ECD button data-lang or test lang string to event suffix. */
+/** Map download-card button data-lang or test lang string to event suffix. */
 export function langToEventSuffix(lang) {
   if (lang === "en" || lang === "english") return "english";
   if (lang === "es" || lang === "spanish") return "spanish";
   return lang;
 }
+
+/** Selectors and expected Plausible events per download-card block type. */
+export const downloadCardBlocks = {
+  video: {
+    section: "#download-videos",
+    block: ".educational-video-download-block",
+    downloadSelector: ".ecd-toggle--download",
+    downloadEvent: (lang) => `episode-videos-downloaded-${lang}`,
+  },
+  coloring: {
+    section: "#download-coloring-books",
+    block: ".educational-coloring-book-download-block",
+    pdfToggleSelector:
+      ".ecd-toggle:not(.ecd-toggle--download):not(.ecd-toggle--coming-soon)",
+    pdfEvent: (lang) => `pdf-viewed-${lang}`,
+  },
+  educationalContent: {
+    block: ".educational-content-download-block",
+    downloadSelector: ".ecd-toggle--download",
+    downloadEvent: (lang) => `educational-content-downloaded-${lang}`,
+    pdfToggleSelector:
+      ".ecd-toggle:not(.ecd-toggle--download):not(.ecd-toggle--coming-soon)",
+    pdfEvent: (lang) => `pdf-viewed-${lang}`,
+  },
+};
+
+/**
+ * All download-card rows inside a page section (e.g. #download-videos).
+ */
+export function downloadCardSections(page, { section, block }) {
+  return page.locator(`${section} ${block}`);
+}
+
+/** EN/ES download button selectors for a download-card row. */
+export const languageDownloadButtons = [
+  { selector: ".ecd-toggle--download[data-lang='en']", lang: "english" },
+  { selector: ".ecd-toggle--download[data-lang='es']", lang: "spanish" },
+];
 
 export async function testEpisodeLanguage(page, testInfo, episode, lang) {
   const episodeNumber = await episode.locator(".episode-number").textContent();

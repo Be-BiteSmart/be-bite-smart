@@ -2,7 +2,7 @@
   "$schema": "https://schemas.wp.org/trunk/block.json",
   "apiVersion": 2,
   "name": "custom/educational-content-download",
-  "title": "Educational Content Download Card",
+  "title": "Educational Content Download",
   "category": "widgets",
   "editorScript": "file:./index.js",
   "style": "file:./style-index.css"

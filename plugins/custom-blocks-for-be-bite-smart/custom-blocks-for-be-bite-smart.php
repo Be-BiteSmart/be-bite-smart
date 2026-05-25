@@ -131,6 +131,16 @@ function education_content_download_register_block() {
 }
 add_action( 'init', 'education_content_download_register_block' );
 
+function educational_video_download_register_block() {
+    register_block_type( __DIR__ . '/build/educational-video-download' );
+}
+add_action( 'init', 'educational_video_download_register_block' );
+
+function educational_coloring_book_download_register_block() {
+    register_block_type( __DIR__ . '/build/educational-coloring-book-download' );
+}
+add_action( 'init', 'educational_coloring_book_download_register_block' );
+
 function sponsorship_contact_register_block() {
     register_block_type( __DIR__ . '/build/sponsorship-contact' );
 }

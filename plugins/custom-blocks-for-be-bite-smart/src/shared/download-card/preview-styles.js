@@ -1,0 +1,55 @@
+export const previewStyles = {
+  wrapper: {
+    border: "1px solid #d0e4eb",
+    borderRadius: "12px",
+    overflow: "hidden",
+    fontFamily: "Urbanist, sans-serif",
+  },
+  header: {
+    padding: "14px 20px",
+    background: "#f0f6f9",
+    borderBottom: "1px solid #d0e4eb",
+    display: "flex",
+    alignItems: "center",
+    gap: "16px",
+  },
+  meta: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "2px",
+  },
+  title: {
+    fontSize: "17px",
+    fontWeight: "800",
+    color: "#1a2e35",
+  },
+  uploadArea: {
+    padding: "16px 20px",
+    display: "flex",
+    gap: "24px",
+    flexWrap: "wrap",
+  },
+  uploadGroup: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "6px",
+  },
+  uploadLabel: {
+    fontSize: "12px",
+    fontWeight: "700",
+    color: "#6b7c84",
+    textTransform: "uppercase",
+    letterSpacing: "1px",
+  },
+  fileChip: {
+    fontSize: "12px",
+    color: "#1a6e8a",
+    background: "#e8f4f8",
+    borderRadius: "6px",
+    padding: "4px 10px",
+    maxWidth: "200px",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+};

@@ -9,6 +9,10 @@ module.exports = {
     "bio-card/bio-toggle": "./src/bio-card/bio-toggle.js",
     "educational-content-download/index":
       "./src/educational-content-download/index.js",
+    "educational-video-download/index":
+      "./src/educational-video-download/index.js",
+    "educational-coloring-book-download/index":
+      "./src/educational-coloring-book-download/index.js",
     "episode-card/index": "./src/episode-card/index.js",
     "hero/index": "./src/hero/index.js",
     "news-and-coverage/index": "./src/news-and-coverage/index.js",

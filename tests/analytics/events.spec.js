@@ -6,6 +6,9 @@ import {
   testEpisodeLanguage,
   testOutboundArticleClick,
   testMiniDocPlay,
+  downloadCardBlocks,
+  downloadCardSections,
+  languageDownloadButtons,
 } from "./helpers/plausible";
 
 // ── Education page ─────────────────────────────────────────────
@@ -55,31 +58,23 @@ test("Download video fires category-downloaded for all episodes in both language
   test.setTimeout(60000);
   await page.goto("/education");
 
-  const sections = page.locator(
-    "#download-videos .educational-content-download-block",
-  );
+  const { section, block, downloadEvent } = downloadCardBlocks.video;
+  const sections = downloadCardSections(page, { section, block });
   const sectionCount = await sections.count();
   const allCalls = [];
 
   for (let i = 0; i < sectionCount; i++) {
-    const section = sections.nth(i);
-    const episodeLabel = await section
+    const row = sections.nth(i);
+    const episodeLabel = await row
       .locator(".capitalized-and-colored")
       .textContent();
 
-    const downloads = [
-      // the ecd-toggle--download elements use data-lang for language (en/es)
-      { selector: ".ecd-toggle--download[data-lang='en']", lang: "english" },
-      { selector: ".ecd-toggle--download[data-lang='es']", lang: "spanish" },
-    ];
-
-    for (const { selector, lang } of downloads) {
+    for (const { selector, lang } of languageDownloadButtons) {
       await spyOnPlausible(page);
 
-      // Intercept the download so the browser doesn't try to save a file
       const [download] = await Promise.all([
         page.waitForEvent("download"),
-        section.locator(selector).click(),
+        row.locator(selector).click(),
       ]);
       await download.cancel();
 
@@ -90,7 +85,7 @@ test("Download video fires category-downloaded for all episodes in both language
       });
 
       expect(calls).toHaveLength(1);
-      expect(calls[0].event).toBe(`episode-videos-downloaded-${lang}`);
+      expect(calls[0].event).toBe(downloadEvent(lang));
 
       allCalls.push({ episode: episodeLabel.trim(), lang, ...calls[0] });
     }
@@ -111,9 +106,8 @@ test("Coloring Book PDF toggle fires pdf-viewed for all available episodes", asy
 }, testInfo) => {
   await page.goto("/education");
 
-  const sections = page.locator(
-    "#download-coloring-books .educational-content-download-block",
-  );
+  const { section, block } = downloadCardBlocks.coloring;
+  const sections = downloadCardSections(page, { section, block });
   const sectionCount = await sections.count();
   const allCalls = [];
 

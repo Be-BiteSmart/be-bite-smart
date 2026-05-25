@@ -72,15 +72,17 @@ Most categories are defined in `analytics.php` (no editor setup). **Inline PDF o
 | Behavior | How it’s determined | Event name(s) |
 |----------|---------------------|----------------|
 | Episode “Watch Now” / play | Hardcoded | `episodes-watched-english`, `episodes-watched-spanish` |
-| ECD video downloads in `#download-videos` | Hardcoded section map | `episode-videos-downloaded-english`, … |
-| ECD inline PDF / `pdf-toggle` open | Default, or block slug if set | `pdf-viewed-{lang}` or `{slug}-viewed-{lang}` |
+| Episode video downloads (`educational-video-download` block) | Block class on Education page | `episode-videos-downloaded-english`, … |
+| Coloring book PDFs (`educational-coloring-book-download` block) | Block class | `pdf-viewed-{lang}` |
+| Other educational PDFs / links (`educational-content-download` block) | Default PDF, or block slug if set | `pdf-viewed-{lang}`, `educational-content-downloaded-{lang}`, or `{slug}-viewed-{lang}` |
+| `pdf-toggle` open | Default, or block slug if set | `pdf-viewed-{lang}` or `{slug}-viewed-{lang}` |
 | Mini-documentary | Hardcoded | `documentary-watched` |
 | Article links, Read more | Hardcoded | `article-viewed` |
 | TranslatePress switcher | Hardcoded | `language-switched-{lang}` |
 
-To add another **download** section on Education, extend `ECD_DOWNLOAD_SECTIONS` in `analytics.php` (parent `section` `id` → category slug).
+Download-card block types live in `plugins/custom-blocks-for-be-bite-smart/src/shared/download-card/` (shared edit/save). Use **Episode Video Download** for `#download-videos`, **Educational Coloring Book Download** for coloring rows (View PDF + Download per language, like PDF Toggle), **Educational Content Download** for other worksheets/guides.
 
-Optional PDF slugs live in **page content** (block editor), not in git.
+Optional PDF slugs live in **page content** (block editor), not in git. After deploying, replace old `educational-content-download` rows on Education with the matching new block type in the editor.
 
 **Plausible dashboard:** add goals for `pdf-viewed-*`, `episode-videos-downloaded-*`, etc. Retire old `pdf_viewed` / `video_watched` goals.
 
