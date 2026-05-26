@@ -94,7 +94,9 @@ If the Plausible plugin also logs a generic **file download** goal for PDF click
 
 ### Playwright Tests
 
-Tests that Plausible custom events are firing correctly and returning expected values. They run against production (`https://bebitesmart.org`) in GitHub Actions. Failures mean the live page is missing expected blocks or analytics handlers are broken — they are not skipped when content is absent.
+Tests that Plausible custom events are firing correctly and returning expected values. They run against production (`https://www.bebitesmart.org` by default) in GitHub Actions.
+
+Failures usually mean: (1) the page returned HTTP 500 / WordPress error, (2) a block was removed from the page (e.g. Documentary Video, pdf-toggle), or (3) WP Super Cache is serving stale footer HTML without the latest `analytics.php`. Override the target with `PLAYWRIGHT_BASE_URL` for local runs.
 
 `tests`
 

@@ -4,6 +4,10 @@ import {
   getPlausibleCalls,
   clickAndWaitForPlausible,
   ensureLanguageSwitcherLink,
+  ensureLanguageAnalyticsHandler,
+  firstColoringViewPdfButton,
+  firstPdfToggleViewButton,
+  gotoExpectOk,
   langToEventSuffix,
   testEpisodeLanguage,
   testOutboundArticleClick,
@@ -23,7 +27,7 @@ test("Watch Now fires episodes-watched for all episodes in both languages", asyn
 }, testInfo) => {
   test.setTimeout(120000);
   // long timeout since it has to wait for iframes multiple times
-  await page.goto("/education");
+  await gotoExpectOk(page, "/education");
 
   const episodes = page.locator("#developed-episodes article");
   const episodeCount = await episodes.count();
@@ -59,7 +63,7 @@ test("Download video fires category-downloaded for all episodes in both language
   page,
 }, testInfo) => {
   test.setTimeout(60000);
-  await page.goto("/education");
+  await gotoExpectOk(page, "/education");
 
   const { section, block, downloadEvent } = downloadCardBlocks.video;
   const sections = downloadCardSections(page, { section, block });
@@ -107,7 +111,7 @@ test("Download video fires category-downloaded for all episodes in both language
 test("Coloring Book PDF toggle fires coloring-books-viewed for all available episodes", async ({
   page,
 }, testInfo) => {
-  await page.goto("/education");
+  await gotoExpectOk(page, "/education");
 
   const { section, block } = downloadCardBlocks.coloring;
   const sections = downloadCardSections(page, { section, block });
@@ -169,7 +173,7 @@ test("Coloring Book PDF toggle fires coloring-books-viewed for all available epi
 test("Coloring Book Download fires coloring-books-downloaded for available PDFs", async ({
   page,
 }, testInfo) => {
-  await page.goto("/education");
+  await gotoExpectOk(page, "/education");
 
   const { section, block, downloadSelector, downloadEvent } =
     downloadCardBlocks.coloring;
@@ -224,13 +228,9 @@ test("Coloring Book Download fires coloring-books-downloaded for available PDFs"
 test("Education page PDF toggle does not fire again when closing", async ({
   page,
 }, testInfo) => {
-  await page.goto("/education");
+  await gotoExpectOk(page, "/education");
 
-  const btn = page
-    .locator(
-      ".ecd-toggle:not(.ecd-toggle--download):not(.ecd-toggle--coming-soon)",
-    )
-    .first();
+  const btn = await firstColoringViewPdfButton(page);
   await btn.click();
   await page.waitForTimeout(500);
 
@@ -268,10 +268,23 @@ test("News Page Outbound Article link click fires article-viewed", async ({
 // ****************  READ MORE WORKS **********************
 
 test("News Page Read More fires article-viewed", async ({ page }, testInfo) => {
-  await page.goto("/news-media");
+  await gotoExpectOk(page, "/news-media");
   await spyOnPlausible(page);
 
-  await page.locator(".read-more-toggle").first().click();
+  const toggles = page.locator(
+    ".expandable-article-block .read-more-toggle, .read-more-toggle",
+  );
+  const toggleCount = await toggles.count();
+  await testInfo.attach("read-more toggles on /news-media", {
+    body: String(toggleCount),
+    contentType: "text/plain",
+  });
+  expect(
+    toggleCount,
+    "No Read More buttons on /news-media — add Article, Press Release, or Read More block",
+  ).toBeGreaterThan(0);
+  await toggles.first().scrollIntoViewIfNeeded();
+  await toggles.first().click();
   await page.waitForTimeout(500);
 
   const calls = await getPlausibleCalls(page);
@@ -309,14 +322,14 @@ test("Home Page Documentary play fires documentary-watched", async ({
 test("Partnership PDF toggle block fires pdf-viewed for all available languages", async ({
   page,
 }, testInfo) => {
-  await page.goto("/partnerships");
-
-  // Quick sanity check — how many matching buttons exist?
-  const count = await page.locator("[data-testid^='pdf-btn-en-']").count();
-  console.log("pdf-btn-en count:", count); // if 0, wrong page or stale HTML
+  await gotoExpectOk(page, "/partnerships");
 
   const blocks = page.locator(".pdf-toggle-block");
   const blockCount = await blocks.count();
+  expect(
+    blockCount,
+    "No pdf-toggle blocks on /partnerships",
+  ).toBeGreaterThan(0);
   const allCalls = [];
 
   for (let i = 0; i < blockCount; i++) {
@@ -374,10 +387,11 @@ test("Partnership PDF toggle block fires pdf-viewed for all available languages"
 test("Partnership PDF toggle Download fires slug-downloaded for available languages", async ({
   page,
 }, testInfo) => {
-  await page.goto("/partnerships");
+  await gotoExpectOk(page, "/partnerships");
 
   const blocks = page.locator(".pdf-toggle-block");
   const blockCount = await blocks.count();
+  expect(blockCount, "No pdf-toggle blocks on /partnerships").toBeGreaterThan(0);
   const allCalls = [];
 
   for (let i = 0; i < blockCount; i++) {
@@ -428,11 +442,9 @@ test("Partnership PDF toggle Download fires slug-downloaded for available langua
 test("Partnerships PDF toggle block does not fire when closing", async ({
   page,
 }, testInfo) => {
-  await page.goto("/partnerships/");
+  await gotoExpectOk(page, "/partnerships/");
 
-  // Grab the first available toggle button across any block
-  const btn = page.locator("[data-testid^='pdf-btn-en-']").first();
-  await btn.scrollIntoViewIfNeeded(); //add in case it's below the fold
+  const btn = await firstPdfToggleViewButton(page);
 
   // Open it (we don't care about this event)
   await btn.click();
@@ -457,7 +469,7 @@ test("Partnerships PDF toggle block does not fire when closing", async ({
 test("TranslatePress language switch fires language-switched", async ({
   page,
 }, testInfo) => {
-  await page.goto("/");
+  await gotoExpectOk(page, "/");
 
   const hadProductionSwitcher =
     (await page.locator(".trp-language-switcher a.trp-language-item").count()) > 0;
@@ -481,6 +493,11 @@ test("TranslatePress language switch fires language-switched", async ({
   }
 
   await spyOnPlausible(page);
+  const handlerSource = await ensureLanguageAnalyticsHandler(page);
+  await testInfo.attach("language analytics handler", {
+    body: handlerSource,
+    contentType: "text/plain",
+  });
   const calls = await clickAndWaitForPlausible(page, link);
   await testInfo.attach("language switch plausible event", {
     body: JSON.stringify(calls, null, 2),

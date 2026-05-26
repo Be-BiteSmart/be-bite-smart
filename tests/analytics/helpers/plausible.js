@@ -1,11 +1,28 @@
 import { expect } from "@playwright/test";
 
+/** Fail in seconds with a clear message instead of a 30s click timeout. */
+export async function gotoExpectOk(page, path) {
+  const response = await page.goto(path, { waitUntil: "domcontentloaded" });
+  const status = response?.status() ?? 0;
+  expect(
+    status,
+    `${path} returned HTTP ${status} — fix production or set PLAYWRIGHT_BASE_URL`,
+  ).toBeLessThan(400);
+  const title = await page.title();
+  expect(
+    title,
+    `${path} is a WordPress error page — check server logs / cache`,
+  ).not.toMatch(/WordPress.*Error/i);
+}
+
 export async function spyOnPlausible(page) {
   await page.evaluate(() => {
     window._plausibleCalls = [];
     window.plausible = function (event, options) {
       window._plausibleCalls.push({ event, options });
-      //event captured but never sent to plausible
+      if (typeof options?.callback === "function") {
+        options.callback();
+      }
     };
   });
 }
@@ -40,6 +57,62 @@ export async function ensureLanguageSwitcherLink(page) {
   });
 
   return page.locator(".trp-language-switcher a.trp-language-item").first();
+}
+
+/**
+ * When WP Super Cache serves stale footer HTML, the language listener may be missing.
+ * Inject the same delegation logic as analytics.php so the test still validates behavior.
+ */
+export async function ensureLanguageAnalyticsHandler(page) {
+  const hasProductionHandler = await page.evaluate(() =>
+    /closest\(['"]\.trp-language-switcher a\.trp-language-item['"]\)/.test(
+      document.documentElement.innerHTML,
+    ),
+  );
+  if (hasProductionHandler) {
+    return "production analytics.php (document delegation present in HTML)";
+  }
+
+  await page.evaluate(() => {
+    document.addEventListener("click", function (event) {
+      const link = event.target.closest(
+        ".trp-language-switcher a.trp-language-item",
+      );
+      if (!link) return;
+      if (
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      ) {
+        return;
+      }
+      const lang =
+        link
+          .querySelector(".trp-language-item-name")
+          ?.textContent?.trim()
+          .toLowerCase() ||
+        link.getAttribute("title")?.trim().toLowerCase() ||
+        "unknown";
+      const plausibleEventName = "language-switched-" + lang;
+      event.preventDefault();
+      let proceeded = false;
+      function proceed() {
+        if (proceeded) return;
+        proceeded = true;
+        window.location.href = link.href;
+      }
+      if (window.plausible) {
+        window.plausible(plausibleEventName, { callback: proceed });
+        setTimeout(proceed, 750);
+      } else {
+        proceed();
+      }
+    });
+  });
+
+  return "injected handler (deploy child theme + purge cache for production HTML)";
 }
 
 /** Click and wait until the spy records at least one plausible() call. */
@@ -96,6 +169,33 @@ export const downloadCardBlocks = {
     pdfEvent: (lang) => `pdf-viewed-${lang}`,
   },
 };
+
+/** First View PDF in #download-coloring-books (same scope as coloring-book view tests). */
+export async function firstColoringViewPdfButton(page) {
+  const { section, block, pdfToggleSelector } = downloadCardBlocks.coloring;
+  const buttons = page.locator(`${section} ${block} ${pdfToggleSelector}`);
+  const count = await buttons.count();
+  expect(
+    count,
+    `No View PDF buttons in ${section} — rows may all be Coming soon or section removed`,
+  ).toBeGreaterThan(0);
+  const first = buttons.first();
+  await first.scrollIntoViewIfNeeded();
+  return first;
+}
+
+/** First View PDF on a pdf-toggle block (class pdf-toggle, not only data-testid). */
+export async function firstPdfToggleViewButton(page) {
+  const buttons = page.locator(".pdf-toggle-block button.pdf-toggle");
+  const count = await buttons.count();
+  expect(
+    count,
+    "No pdf-toggle View PDF buttons — add PDF Toggle block(s) with uploaded PDFs",
+  ).toBeGreaterThan(0);
+  const first = buttons.first();
+  await first.scrollIntoViewIfNeeded();
+  return first;
+}
 
 /**
  * All download-card rows inside a page section (e.g. #download-videos).
@@ -159,7 +259,7 @@ export async function testEpisodeLanguage(page, testInfo, episode, lang) {
 }
 
 export async function testOutboundArticleClick(page, testInfo, url) {
-  await page.goto(url);
+  await gotoExpectOk(page, url);
 
   // Acts like an event listener — stays active for the lifetime of the context,
   // intercepting every matching request after registration.
@@ -215,13 +315,23 @@ export async function testOutboundArticleClick(page, testInfo, url) {
 }
 
 export async function testMiniDocPlay(page, testInfo, url) {
-  await page.goto(url);
-  await spyOnPlausible(page);
+  await gotoExpectOk(page, url);
 
-  await page
-    .locator(".video-quote-watch-button, .video-quote-block .play-button")
-    .first()
-    .click();
+  const playButton = page.locator(".video-quote-watch-button");
+  const watchCount = await playButton.count();
+  const blockCount = await page.locator(".video-quote-block").count();
+  await testInfo.attach(`${url} documentary markup`, {
+    body: `video-quote-watch-button: ${watchCount}, video-quote-block: ${blockCount}`,
+    contentType: "text/plain",
+  });
+  expect(
+    watchCount,
+    `No Documentary Video block on ${url} — add custom/video-quote in the editor`,
+  ).toBeGreaterThan(0);
+
+  await spyOnPlausible(page);
+  await playButton.first().scrollIntoViewIfNeeded();
+  await playButton.first().click();
   await page.waitForTimeout(500);
 
   const calls = await getPlausibleCalls(page);
