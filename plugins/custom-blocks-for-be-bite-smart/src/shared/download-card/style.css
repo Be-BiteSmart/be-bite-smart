@@ -72,7 +72,7 @@ body:not(.block-editor-page) .download-card-block .download-card-language-row {
 
 @media (min-width: 950px) {
   body:not(.block-editor-page) .download-card-block .download-card-buttons {
-    width: auto;
+    width: 400px;
     flex-shrink: 0;
   }
 
@@ -94,7 +94,9 @@ body:not(.block-editor-page) .download-card-block .download-card-language-row {
   }
 }
 
-body:not(.block-editor-page) .download-card-language-row .ecd-toggle.block-toggle-btn {
+body:not(.block-editor-page)
+  .download-card-language-row
+  .ecd-toggle.block-toggle-btn {
   font-weight: 700;
   white-space: nowrap;
   min-width: 160px;
