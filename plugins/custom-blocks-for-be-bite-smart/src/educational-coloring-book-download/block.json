@@ -5,5 +5,5 @@
   "title": "Educational Coloring Book Download",
   "category": "widgets",
   "editorScript": "file:./index.js",
-  "style": "file:./style-index.css"
+  "style": "file:../educational-content-download/style-index.css"
 }

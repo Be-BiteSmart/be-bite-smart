@@ -201,6 +201,20 @@ function custom_blocks_scripts() {
 
     $asset = include plugin_dir_path( __FILE__ ) . 'build/pdf-toggle/index.asset.php';
     wp_enqueue_style( 'pdf-toggle-style', plugins_url( 'build/pdf-toggle/style-index.css', __FILE__ ), array(), $asset['version'] );
+
+    // Shared by educational-*-download blocks. Webpack only emits one style chunk per
+    // shared import path, so video/coloring block.json style files are not generated.
+    // Shared download-card CSS (webpack emits one chunk from the first block entry).
+    $download_card_css = plugin_dir_path( __FILE__ ) . 'build/educational-content-download/style-index.css';
+    if ( file_exists( $download_card_css ) ) {
+        $download_card_asset = include plugin_dir_path( __FILE__ ) . 'build/educational-content-download/index.asset.php';
+        wp_enqueue_style(
+            'download-card-style',
+            plugins_url( 'build/educational-content-download/style-index.css', __FILE__ ),
+            array(),
+            $download_card_asset['version']
+        );
+    }
 }
 
 

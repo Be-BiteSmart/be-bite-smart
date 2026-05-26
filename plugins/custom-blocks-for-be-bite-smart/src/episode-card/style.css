@@ -355,19 +355,19 @@
   margin-top: 0;
   flex-shrink: 0; /* prevents button from squishing on mid-size screens */
 }
-/* ── Mobile: stack PDF toggle buttons ── */
-.ecd-buttons {
+/* ── Episode card only (do not affect download-card blocks on Education) ── */
+.video-episode-block .ecd-buttons {
   width: 100%;
 }
 
-.ecd-toggle {
+.video-episode-block .ecd-toggle {
   width: 100%;
   justify-content: center;
 }
 
 @media (min-width: 601px) {
-  .ecd-buttons,
-  .ecd-toggle {
+  .video-episode-block .ecd-buttons,
+  .video-episode-block .ecd-toggle {
     width: auto;
     justify-content: flex-start;
   }
