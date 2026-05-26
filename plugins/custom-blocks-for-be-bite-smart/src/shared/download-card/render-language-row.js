@@ -25,6 +25,28 @@ export function renderLanguageRow(
   const externalUrl = features.downloadLinks ? downloadUrl : null;
 
   if (!hasPdf && !externalUrl) {
+    if (features.comingSoonWhenEmpty && features.pdf) {
+      const isOutline = lang === "es";
+      return wp.element.createElement(
+        "div",
+        { className: "download-card-language-row" },
+        wp.element.createElement(
+          "button",
+          {
+            className:
+              "ecd-toggle block-toggle-btn ecd-toggle--coming-soon" +
+              (isOutline ? " is-style-outline ecd-toggle--outline" : ""),
+            disabled: true,
+            "aria-disabled": "true",
+          },
+          wp.element.createElement(
+            "span",
+            { className: "btn-label" },
+            "Coming Soon (" + (lang === "es" ? "ES" : "ENG") + ")",
+          ),
+        ),
+      );
+    }
     return null;
   }
 

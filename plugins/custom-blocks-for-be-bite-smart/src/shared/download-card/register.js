@@ -13,7 +13,7 @@ import { DownloadCardSave } from "./save";
  * @param {string} options.icon
  * @param {string} options.wrapperClassName - Front-end wrapper class for analytics/CSS
  * @param {string} options.blockIdPrefix - Stable id prefix for toggles/viewers
- * @param {{ pdf: boolean, downloadLinks: boolean, trackingSlug?: boolean }} options.features
+ * @param {{ pdf: boolean, downloadLinks: boolean, trackingSlug?: boolean, comingSoonWhenEmpty?: boolean }} options.features
  * @param {string} [options.editorHelp] - Inspector sidebar help text
  */
 export function registerDownloadCardBlock({
@@ -31,6 +31,7 @@ export function registerDownloadCardBlock({
     blockIdPrefix,
     features: {
       trackingSlug: false,
+      comingSoonWhenEmpty: false,
       ...features,
     },
     editorHelp,

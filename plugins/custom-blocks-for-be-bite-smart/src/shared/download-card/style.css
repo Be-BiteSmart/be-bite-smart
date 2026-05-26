@@ -53,11 +53,11 @@
   margin: 0;
 }
 
-/* Button rows — PDF blocks stack one language row per line (pdf-toggle pattern). */
+/* Button rows — stack one language row per line; center each row (pdf-toggle pattern). */
 body:not(.block-editor-page) .download-card-block .download-card-buttons {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: center;
   gap: 10px;
   width: 100%;
 }
@@ -67,23 +67,24 @@ body:not(.block-editor-page) .download-card-block .download-card-buttons {
     flex-shrink: 0;
   }
 
-  /* Video / download-link-only: EN + ES buttons side by side like the old ECD row. */
+  /* Video / download-link-only: EN + ES rows side by side, centered as a group. */
   body:not(.block-editor-page)
     .download-card-block
     .download-card-buttons--inline {
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: center;
   }
 }
 
 body:not(.block-editor-page) .download-card-block .download-card-language-row {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  width: 100%;
 }
 
 body:not(.block-editor-page) .download-card-language-row .ecd-toggle.block-toggle-btn {
@@ -117,6 +118,25 @@ html
   background-color: white;
   color: var(--wp--preset--color--accent-2);
   border: 2px solid var(--wp--preset--color--accent-2);
+}
+
+html
+  body:not(.block-editor-page)
+  .download-card-block
+  .ecd-toggle--coming-soon.block-toggle-btn {
+  background: #e8edf2;
+  color: #4e6475;
+  border-color: #c8d4dc;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+html
+  body:not(.block-editor-page)
+  .download-card-block
+  .ecd-toggle--outline.ecd-toggle--coming-soon.block-toggle-btn {
+  background: #ffffff;
+  color: #4e6475;
+  border-color: #c8d4dc;
 }
 
 .ecd-viewer {

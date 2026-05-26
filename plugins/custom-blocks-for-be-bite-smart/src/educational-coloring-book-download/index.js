@@ -12,6 +12,7 @@ registerDownloadCardBlock({
   features: {
     pdf: true,
     downloadLinks: false,
+    comingSoonWhenEmpty: true,
   },
   editorHelp:
     "Upload English and/or Spanish PDFs. Each language appears as its own row with View PDF and Download, like the PDF Toggle block.",

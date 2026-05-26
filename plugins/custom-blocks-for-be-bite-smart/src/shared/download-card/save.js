@@ -44,7 +44,8 @@ export function DownloadCardSave({ attributes, config }) {
     features,
   });
 
-  const hasButtons = enRow || esRow;
+  const hasButtons =
+    enRow || esRow || (features.comingSoonWhenEmpty && features.pdf);
   const downloadOnlyButtons = features.downloadLinks && !features.pdf;
   const buttonsClassName =
     "download-card-buttons" +
