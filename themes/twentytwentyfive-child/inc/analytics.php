@@ -51,7 +51,7 @@ function track_user_interactions() {
             // Check button label text for language markers like (EN), (ENG), (ES)
             const label = (btn.querySelector('.btn-label')?.textContent || btn.textContent || '').toUpperCase();
             if (/\\(ENG\\)|\\(EN\\)/i.test(label)) return 'english';
-            if (/\\(ESP\\)|\\(ES\\)/i.test(label)) return 'spanish';
+            if (/\\(ES\\)/i.test(label)) return 'spanish';
             // Fall back to active language toggle (for Watch Now / play buttons on episode cards)
             const card = btn.closest('.video-episode-block');
             if (card) {

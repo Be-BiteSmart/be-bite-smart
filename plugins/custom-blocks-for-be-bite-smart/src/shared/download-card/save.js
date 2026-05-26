@@ -45,6 +45,10 @@ export function DownloadCardSave({ attributes, config }) {
   });
 
   const hasButtons = enRow || esRow;
+  const downloadOnlyButtons = features.downloadLinks && !features.pdf;
+  const buttonsClassName =
+    "download-card-buttons" +
+    (downloadOnlyButtons ? " download-card-buttons--inline" : "");
 
   return wp.element.createElement(
     "section",
@@ -86,7 +90,7 @@ export function DownloadCardSave({ attributes, config }) {
     hasButtons &&
       wp.element.createElement(
         "div",
-        { className: "download-card-buttons" },
+        { className: buttonsClassName },
         enRow,
         esRow,
       ),
@@ -113,7 +117,7 @@ export function DownloadCardSave({ attributes, config }) {
           "data-src": attributes.pdfUrlEs,
           width: "100%",
           height: "600px",
-          title: "PDF Document (ESP)",
+          title: "PDF Document (ES)",
         }),
       ),
   );

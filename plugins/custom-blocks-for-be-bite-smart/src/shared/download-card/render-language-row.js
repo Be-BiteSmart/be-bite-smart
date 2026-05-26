@@ -1,19 +1,15 @@
 import { renderPdfButton } from "../../components/pdf-button";
 
-const LABELS = {
-  en: {
-    viewPdf: "View PDF (ENG)",
-    hidePdf: "Hide PDF (ENG)",
-    download: "Download (ENG)",
-    dataLang: "en",
-  },
-  es: {
-    viewPdf: "Ver PDF (ESP)",
-    hidePdf: "Ocultar PDF (ESP)",
-    download: "Descargar (ESP)",
-    dataLang: "es",
-  },
-};
+/** English UI copy only — TranslatePress handles Spanish on the front end. */
+function labelsForLang(lang) {
+  const tag = lang === "es" ? "ES" : "ENG";
+  return {
+    viewPdf: "View PDF (" + tag + ")",
+    hidePdf: "Hide PDF (" + tag + ")",
+    download: "Download (" + tag + ")",
+    dataLang: lang === "es" ? "es" : "en",
+  };
+}
 
 /**
  * One language row: View PDF + Download when a PDF is uploaded (pdf-toggle pattern),
@@ -24,7 +20,7 @@ export function renderLanguageRow(
   wp,
   { lang, pdfUrl, downloadUrl, targetId, groupId, features },
 ) {
-  const labels = LABELS[lang];
+  const labels = labelsForLang(lang);
   const hasPdf = Boolean(features.pdf && pdfUrl);
   const externalUrl = features.downloadLinks ? downloadUrl : null;
 
@@ -56,12 +52,17 @@ export function renderLanguageRow(
       ),
     );
   } else if (externalUrl) {
+    const downloadClass =
+      lang === "es"
+        ? "ecd-toggle block-toggle-btn is-style-outline ecd-toggle--outline ecd-toggle--download"
+        : "ecd-toggle block-toggle-btn ecd-toggle--download";
+
     rowChildren.push(
       wp.element.createElement(
         "a",
         {
           href: externalUrl,
-          className: "ecd-toggle block-toggle-btn ecd-toggle--download",
+          className: downloadClass,
           download: true,
           "data-lang": labels.dataLang,
         },
