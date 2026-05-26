@@ -68,7 +68,9 @@ export function renderLanguageRow(
         {
           href: pdfUrl,
           download: true,
-          className: "block-toggle-btn is-style-outline",
+          className:
+            "block-toggle-btn is-style-outline download-card-pdf-download",
+          "data-lang": labels.dataLang,
         },
         labels.download,
       ),

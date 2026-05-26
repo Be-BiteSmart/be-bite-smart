@@ -73,7 +73,8 @@ Most categories are defined in `analytics.php` (no editor setup). **Inline PDF o
 |----------|---------------------|----------------|
 | Episode “Watch Now” / play | Hardcoded | `episodes-watched-english`, `episodes-watched-spanish` |
 | Episode video downloads (`educational-video-download` block) | Block class on Education page | `episode-videos-downloaded-english`, … |
-| Coloring book PDFs (`educational-coloring-book-download` block) | Block class | `pdf-viewed-{lang}` |
+| Coloring book inline PDF (`educational-coloring-book-download` block) | View PDF button | `pdf-viewed-{lang}` |
+| Coloring book PDF file download | `.download-card-pdf-download` in coloring block | `coloring-books-downloaded-{lang}` |
 | Other educational PDFs / links (`educational-content-download` block) | Default PDF, or block slug if set | `pdf-viewed-{lang}`, `educational-content-downloaded-{lang}`, or `{slug}-viewed-{lang}` |
 | `pdf-toggle` open | Default, or block slug if set | `pdf-viewed-{lang}` or `{slug}-viewed-{lang}` |
 | Mini-documentary | Hardcoded | `documentary-watched` |
@@ -84,7 +85,9 @@ Download-card block types live in `plugins/custom-blocks-for-be-bite-smart/src/s
 
 Optional PDF slugs live in **page content** (block editor), not in git. After deploying, replace old `educational-content-download` rows on Education with the matching new block type in the editor.
 
-**Plausible dashboard:** add goals for `pdf-viewed-*`, `episode-videos-downloaded-*`, etc. Retire old `pdf_viewed` / `video_watched` goals.
+**Plausible dashboard:** add goals for `pdf-viewed-*`, `coloring-books-downloaded-*`, `episode-videos-downloaded-*`, etc. Retire old `pdf_viewed` / `video_watched` goals.
+
+If the Plausible plugin also logs a generic **file download** goal for PDF clicks, disable automatic file-download tracking in the plugin settings (or ignore that goal) so custom events above are the source of truth.
 
 ### Playwright Tests
 
