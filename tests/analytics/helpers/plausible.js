@@ -1,31 +1,4 @@
-import { expect, test } from "@playwright/test";
-
-/** Skip when production returns an error page (common for bots) or a non-2xx response. */
-export async function gotoOrSkipOnError(page, path) {
-  const response = await page.goto(path);
-  const status = response?.status() ?? 0;
-  if (status >= 500) {
-    test.skip(true, `Skipped: ${path} returned HTTP ${status}`);
-  }
-  const title = await page.title();
-  if (/WordPress.*Error/i.test(title)) {
-    test.skip(true, `Skipped: WordPress error page on ${path}`);
-  }
-}
-
-/**
- * Return the first matching locator, or skip the test when content is not on the page.
- * Prefer scoped selectors (section IDs) over site-wide queries.
- */
-export async function firstMatchingOrSkip(page, selector, reason) {
-  const locator = page.locator(selector);
-  if ((await locator.count()) === 0) {
-    test.skip(true, reason);
-  }
-  const first = locator.first();
-  await first.scrollIntoViewIfNeeded();
-  return first;
-}
+import { expect } from "@playwright/test";
 
 export async function spyOnPlausible(page) {
   await page.evaluate(() => {
@@ -42,13 +15,12 @@ export async function getPlausibleCalls(page) {
 }
 
 /**
- * TranslatePress floater may be disabled in wp-admin; inject a minimal switcher so we can still
- * verify analytics.php document delegation when the real widget is absent from the DOM.
+ * Production may disable the TranslatePress floater; inject minimal markup so we can
+ * verify document-level delegation in analytics.php (footer script runs before the real widget).
  */
 export async function ensureLanguageSwitcherLink(page) {
-  const link = page.locator(".trp-language-switcher a.trp-language-item").first();
   if ((await page.locator(".trp-language-switcher a.trp-language-item").count()) > 0) {
-    return link;
+    return page.locator(".trp-language-switcher a.trp-language-item").first();
   }
 
   await page.evaluate(() => {
@@ -70,10 +42,7 @@ export async function ensureLanguageSwitcherLink(page) {
   return page.locator(".trp-language-switcher a.trp-language-item").first();
 }
 
-/**
- * Click and wait until the spy records at least one plausible() call.
- * Use for actions that call plausible() asynchronously or after preventDefault (e.g. language switch).
- */
+/** Click and wait until the spy records at least one plausible() call. */
 export async function clickAndWaitForPlausible(page, locator) {
   const callsReady = page.waitForFunction(
     () =>
@@ -190,7 +159,7 @@ export async function testEpisodeLanguage(page, testInfo, episode, lang) {
 }
 
 export async function testOutboundArticleClick(page, testInfo, url) {
-  await gotoOrSkipOnError(page, url);
+  await page.goto(url);
 
   // Acts like an event listener — stays active for the lifetime of the context,
   // intercepting every matching request after registration.
@@ -246,16 +215,13 @@ export async function testOutboundArticleClick(page, testInfo, url) {
 }
 
 export async function testMiniDocPlay(page, testInfo, url) {
-  await gotoOrSkipOnError(page, url);
-
-  const playButton = await firstMatchingOrSkip(
-    page,
-    ".video-quote-watch-button, .video-quote-block .play-button",
-    `No documentary play button on ${url} — add the Documentary Video block to run this test`,
-  );
-
+  await page.goto(url);
   await spyOnPlausible(page);
-  await playButton.click();
+
+  await page
+    .locator(".video-quote-watch-button, .video-quote-block .play-button")
+    .first()
+    .click();
   await page.waitForTimeout(500);
 
   const calls = await getPlausibleCalls(page);

@@ -4,8 +4,6 @@ import {
   getPlausibleCalls,
   clickAndWaitForPlausible,
   ensureLanguageSwitcherLink,
-  firstMatchingOrSkip,
-  gotoOrSkipOnError,
   langToEventSuffix,
   testEpisodeLanguage,
   testOutboundArticleClick,
@@ -25,13 +23,10 @@ test("Watch Now fires episodes-watched for all episodes in both languages", asyn
 }, testInfo) => {
   test.setTimeout(120000);
   // long timeout since it has to wait for iframes multiple times
-  await gotoOrSkipOnError(page, "/education");
+  await page.goto("/education");
 
   const episodes = page.locator("#developed-episodes article");
   const episodeCount = await episodes.count();
-  if (episodeCount === 0) {
-    test.skip(true, "No episodes in #developed-episodes on /education");
-  }
   const allCalls = [];
 
   for (let i = 0; i < episodeCount; i++) {
@@ -64,7 +59,7 @@ test("Download video fires category-downloaded for all episodes in both language
   page,
 }, testInfo) => {
   test.setTimeout(60000);
-  await gotoOrSkipOnError(page, "/education");
+  await page.goto("/education");
 
   const { section, block, downloadEvent } = downloadCardBlocks.video;
   const sections = downloadCardSections(page, { section, block });
@@ -112,14 +107,11 @@ test("Download video fires category-downloaded for all episodes in both language
 test("Coloring Book PDF toggle fires coloring-books-viewed for all available episodes", async ({
   page,
 }, testInfo) => {
-  await gotoOrSkipOnError(page, "/education");
+  await page.goto("/education");
 
   const { section, block } = downloadCardBlocks.coloring;
   const sections = downloadCardSections(page, { section, block });
   const sectionCount = await sections.count();
-  if (sectionCount === 0) {
-    test.skip(true, "No coloring-book download rows in #download-coloring-books");
-  }
   const allCalls = [];
 
   for (let i = 0; i < sectionCount; i++) {
@@ -177,15 +169,12 @@ test("Coloring Book PDF toggle fires coloring-books-viewed for all available epi
 test("Coloring Book Download fires coloring-books-downloaded for available PDFs", async ({
   page,
 }, testInfo) => {
-  await gotoOrSkipOnError(page, "/education");
+  await page.goto("/education");
 
   const { section, block, downloadSelector, downloadEvent } =
     downloadCardBlocks.coloring;
   const sections = downloadCardSections(page, { section, block });
   const sectionCount = await sections.count();
-  if (sectionCount === 0) {
-    test.skip(true, "No coloring-book download rows in #download-coloring-books");
-  }
   const allCalls = [];
 
   for (let i = 0; i < sectionCount; i++) {
@@ -235,14 +224,13 @@ test("Coloring Book Download fires coloring-books-downloaded for available PDFs"
 test("Education page PDF toggle does not fire again when closing", async ({
   page,
 }, testInfo) => {
-  await gotoOrSkipOnError(page, "/education");
+  await page.goto("/education");
 
-  const { section, block, pdfToggleSelector } = downloadCardBlocks.coloring;
-  const btn = await firstMatchingOrSkip(
-    page,
-    `${section} ${block} ${pdfToggleSelector}`,
-    "No coloring-book View PDF buttons on /education — cannot test close without re-fire",
-  );
+  const btn = page
+    .locator(
+      ".ecd-toggle:not(.ecd-toggle--download):not(.ecd-toggle--coming-soon)",
+    )
+    .first();
   await btn.click();
   await page.waitForTimeout(500);
 
@@ -280,15 +268,10 @@ test("News Page Outbound Article link click fires article-viewed", async ({
 // ****************  READ MORE WORKS **********************
 
 test("News Page Read More fires article-viewed", async ({ page }, testInfo) => {
-  await gotoOrSkipOnError(page, "/news-media");
+  await page.goto("/news-media");
   await spyOnPlausible(page);
 
-  const toggle = await firstMatchingOrSkip(
-    page,
-    ".expandable-article-block .read-more-toggle, .read-more-toggle",
-    "No Read More toggles on /news-media — add expandable article or press release content",
-  );
-  await toggle.click();
+  await page.locator(".read-more-toggle").first().click();
   await page.waitForTimeout(500);
 
   const calls = await getPlausibleCalls(page);
@@ -326,16 +309,14 @@ test("Home Page Documentary play fires documentary-watched", async ({
 test("Partnership PDF toggle block fires pdf-viewed for all available languages", async ({
   page,
 }, testInfo) => {
-  await gotoOrSkipOnError(page, "/partnerships");
+  await page.goto("/partnerships");
+
+  // Quick sanity check — how many matching buttons exist?
+  const count = await page.locator("[data-testid^='pdf-btn-en-']").count();
+  console.log("pdf-btn-en count:", count); // if 0, wrong page or stale HTML
 
   const blocks = page.locator(".pdf-toggle-block");
   const blockCount = await blocks.count();
-  if (blockCount === 0) {
-    test.skip(
-      true,
-      "No pdf-toggle blocks on /partnerships — add PDF Toggle blocks to run this test",
-    );
-  }
   const allCalls = [];
 
   for (let i = 0; i < blockCount; i++) {
@@ -393,16 +374,10 @@ test("Partnership PDF toggle block fires pdf-viewed for all available languages"
 test("Partnership PDF toggle Download fires slug-downloaded for available languages", async ({
   page,
 }, testInfo) => {
-  await gotoOrSkipOnError(page, "/partnerships");
+  await page.goto("/partnerships");
 
   const blocks = page.locator(".pdf-toggle-block");
   const blockCount = await blocks.count();
-  if (blockCount === 0) {
-    test.skip(
-      true,
-      "No pdf-toggle blocks on /partnerships — add PDF Toggle blocks to run this test",
-    );
-  }
   const allCalls = [];
 
   for (let i = 0; i < blockCount; i++) {
@@ -453,13 +428,11 @@ test("Partnership PDF toggle Download fires slug-downloaded for available langua
 test("Partnerships PDF toggle block does not fire when closing", async ({
   page,
 }, testInfo) => {
-  await gotoOrSkipOnError(page, "/partnerships/");
+  await page.goto("/partnerships/");
 
-  const btn = await firstMatchingOrSkip(
-    page,
-    "[data-testid^='pdf-btn-en-']",
-    "No pdf-toggle View PDF (EN) buttons on /partnerships — cannot test close without re-fire",
-  );
+  // Grab the first available toggle button across any block
+  const btn = page.locator("[data-testid^='pdf-btn-en-']").first();
+  await btn.scrollIntoViewIfNeeded(); //add in case it's below the fold
 
   // Open it (we don't care about this event)
   await btn.click();
@@ -480,22 +453,19 @@ test("Partnerships PDF toggle block does not fire when closing", async ({
 });
 
 // ********************** TRANSLATEPRESS LANGUAGE SWITCH *********************
-// Requires analytics.php document-level delegation (footer script runs before floater HTML).
-// If the TranslatePress floater is disabled in settings, ensureLanguageSwitcherLink injects
-// a minimal <nav> so CI still verifies the click handler. Aborts navigation for the spy.
 
 test("TranslatePress language switch fires language-switched", async ({
   page,
 }, testInfo) => {
-  await gotoOrSkipOnError(page, "/");
+  await page.goto("/");
 
-  const hadSwitcher =
+  const hadProductionSwitcher =
     (await page.locator(".trp-language-switcher a.trp-language-item").count()) > 0;
   const link = await ensureLanguageSwitcherLink(page);
   await testInfo.attach("language switcher source", {
-    body: hadSwitcher
-      ? "production TranslatePress floater"
-      : "injected test fixture (floater not in page HTML)",
+    body: hadProductionSwitcher
+      ? "production TranslatePress widget"
+      : "injected fixture (widget absent; tests analytics.php delegation only)",
     contentType: "text/plain",
   });
   await expect(link).toBeVisible();
