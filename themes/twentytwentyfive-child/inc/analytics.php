@@ -70,7 +70,7 @@ function track_user_interactions() {
             document.body.removeChild(temp);
         }
 
-        // Ignore modified clicks so "open in new tab" still works without our handler blocking them.
+        // Ignore modified clicks so open-in-new-tab still works without our handler blocking them.
         function isPrimaryClick(event) {
             return event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
         }
@@ -147,7 +147,7 @@ function track_user_interactions() {
             return getLang(btn);
         }
 
-        // Optional editor field "PDF tracking slug" → data-track on the block wrapper (save.js / pdf-toggle).
+        // Optional editor field PDF tracking slug → data-track on the block wrapper (save.js / pdf-toggle).
         function pdfTrackingSlug(btn) {
             const container = btn.closest('.educational-content-download-block, .educational-coloring-book-download-block, .pdf-toggle-block');
             return container?.dataset?.track || null;
