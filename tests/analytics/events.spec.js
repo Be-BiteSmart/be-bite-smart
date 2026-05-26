@@ -101,7 +101,7 @@ test("Download video fires category-downloaded for all episodes in both language
 
 // ********************** COLORING BOOK ********************
 
-test("Coloring Book PDF toggle fires pdf-viewed for all available episodes", async ({
+test("Coloring Book PDF toggle fires coloring-books-viewed for all available episodes", async ({
   page,
 }, testInfo) => {
   await page.goto("/education");
@@ -148,7 +148,7 @@ test("Coloring Book PDF toggle fires pdf-viewed for all available episodes", asy
       });
 
       expect(calls).toHaveLength(1);
-      expect(calls[0].event).toBe(`pdf-viewed-${lang}`);
+      expect(calls[0].event).toBe(`coloring-books-viewed-${lang}`);
 
       allCalls.push({ episode: label, lang: dataLang, ...calls[0] });
 
@@ -157,7 +157,7 @@ test("Coloring Book PDF toggle fires pdf-viewed for all available episodes", asy
     }
   }
 
-  await testInfo.attach("all coloring book pdf events", {
+  await testInfo.attach("all coloring book view events", {
     body: JSON.stringify(allCalls, null, 2),
     contentType: "application/json",
   });

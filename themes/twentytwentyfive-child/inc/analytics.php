@@ -12,7 +12,8 @@
 //
 // Episode video downloads: custom/educational-video-download block only.
 // Coloring book + flexible educational PDFs: coloring-book-download and educational-content-download.
-// Inline PDF opens: default pdf-viewed-{lang}; optional data-track on educational-content-download.
+// Inline PDF opens: coloring-books-viewed-{lang} on coloring block; default pdf-viewed-{lang} elsewhere.
+// Optional data-track on educational-content-download overrides the default.
 
 function track_user_interactions() {
 
@@ -34,8 +35,8 @@ function track_user_interactions() {
     //   Returns 'english', 'spanish', or null (for content with no language variant).
     //
     // trackPdfView(btn)
-    //   Fires {slug}-viewed-{lang} when data-track is set on the ECD or pdf-toggle wrapper,
-    //   otherwise pdf-viewed-{lang}.
+    //   Fires {slug}-viewed-{lang} when data-track is set on the block wrapper,
+    //   coloring-books-viewed-{lang} on coloring-book blocks, otherwise pdf-viewed-{lang}.
 
     $shared_helpers = "
         function track(eventName) {
@@ -74,15 +75,28 @@ function track_user_interactions() {
             return container?.dataset?.track || null;
         }
 
+        function pdfViewCategory(btn) {
+            const container = btn.closest('.educational-coloring-book-download-block, .educational-content-download-block, .pdf-toggle-block');
+            if (container?.classList.contains('educational-coloring-book-download-block')) {
+                return 'coloring-books';
+            }
+            return null;
+        }
+
         function trackPdfView(btn) {
             const lang = langFromDataAttr(btn);
             if (!lang) return;
             const slug = pdfTrackingSlug(btn);
             if (slug) {
                 track(eventName(slug, 'viewed', lang));
-            } else {
-                track(eventName('pdf', 'viewed', lang));
+                return;
             }
+            const category = pdfViewCategory(btn);
+            if (category) {
+                track(eventName(category, 'viewed', lang));
+                return;
+            }
+            track(eventName('pdf', 'viewed', lang));
         }
     ";
 

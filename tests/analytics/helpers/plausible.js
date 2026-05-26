@@ -36,7 +36,7 @@ export const downloadCardBlocks = {
     downloadEvent: (lang) => `coloring-books-downloaded-${lang}`,
     pdfToggleSelector:
       ".ecd-toggle:not(.ecd-toggle--download):not(.ecd-toggle--coming-soon)",
-    pdfEvent: (lang) => `pdf-viewed-${lang}`,
+    pdfEvent: (lang) => `coloring-books-viewed-${lang}`,
   },
   educationalContent: {
     block: ".educational-content-download-block",
