@@ -64,11 +64,29 @@ function track_user_interactions() {
             document.body.removeChild(temp);
         }
 
-        function trackDownloadClick(event, link, eventName) {
-            if (!eventName) return;
-            if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
-                return;
+        function isPrimaryClick(event) {
+            return event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
+        }
+
+        function trackThenNavigate(event, link, plausibleEventName) {
+            if (!plausibleEventName || !isPrimaryClick(event)) return;
+            event.preventDefault();
+            let proceeded = false;
+            function proceed() {
+                if (proceeded) return;
+                proceeded = true;
+                window.location.href = link.href;
             }
+            if (window.plausible) {
+                plausible(plausibleEventName, { callback: proceed });
+                setTimeout(proceed, 750);
+            } else {
+                proceed();
+            }
+        }
+
+        function trackDownloadClick(event, link, plausibleEventName) {
+            if (!plausibleEventName || !isPrimaryClick(event)) return;
             event.preventDefault();
             let proceeded = false;
             function proceed() {
@@ -77,11 +95,19 @@ function track_user_interactions() {
                 triggerFileDownload(link);
             }
             if (window.plausible) {
-                plausible(eventName, { callback: proceed });
+                plausible(plausibleEventName, { callback: proceed });
                 setTimeout(proceed, 750);
             } else {
                 proceed();
             }
+        }
+
+        function languageNameFromSwitcherLink(link) {
+            const fromLabel = link.querySelector('.trp-language-item-name')?.textContent?.trim().toLowerCase();
+            if (fromLabel) return fromLabel;
+            const fromTitle = link.getAttribute('title')?.trim().toLowerCase();
+            if (fromTitle) return fromTitle;
+            return 'unknown';
         }
 
         function eventName(category, action, lang) {
@@ -208,12 +234,14 @@ function track_user_interactions() {
     <?php echo $shared_helpers; ?>
 
     // ── Global — fires on every page ───────────────────────────────────────────
-    // Track TranslatePress language switcher clicks.
-    // Reads the language name from .trp-language-item-name (e.g. "spanish").
-    document.querySelectorAll('.trp-switcher-dropdown-list .trp-language-item').forEach(function(link) {
-        link.addEventListener('click', function() {
-            const lang = link.querySelector('.trp-language-item-name')?.textContent?.trim().toLowerCase() || 'unknown';
-            track(eventName('language', 'switched', lang));
+    // TranslatePress: opposite-language floaters put the link in .trp-language-switcher-inner,
+    // not inside .trp-switcher-dropdown-list (that list is often empty). Delegate on the switcher.
+    document.querySelectorAll('.trp-language-switcher').forEach(function(switcher) {
+        switcher.addEventListener('click', function(event) {
+            const link = event.target.closest('a.trp-language-item');
+            if (!link || !switcher.contains(link)) return;
+            const lang = languageNameFromSwitcherLink(link);
+            trackThenNavigate(event, link, eventName('language', 'switched', lang));
         });
     });
 

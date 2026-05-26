@@ -449,3 +449,32 @@ test("Partnerships PDF toggle block does not fire when closing", async ({
 
   expect(calls).toHaveLength(0);
 });
+
+// ********************** TRANSLATEPRESS LANGUAGE SWITCH *********************
+
+test("TranslatePress language switch fires language-switched", async ({
+  page,
+}, testInfo) => {
+  await page.goto("/");
+
+  const link = page.locator(".trp-language-switcher a.trp-language-item").first();
+  await expect(link).toBeVisible();
+
+  const lang =
+    (await link.locator(".trp-language-item-name").textContent())?.trim().toLowerCase() ||
+    (await link.getAttribute("title"))?.trim().toLowerCase() ||
+    "unknown";
+
+  await spyOnPlausible(page);
+  await link.click();
+  await page.waitForTimeout(300);
+
+  const calls = await getPlausibleCalls(page);
+  await testInfo.attach("language switch plausible event", {
+    body: JSON.stringify(calls, null, 2),
+    contentType: "application/json",
+  });
+
+  expect(calls).toHaveLength(1);
+  expect(calls[0].event).toBe(`language-switched-${lang}`);
+});
