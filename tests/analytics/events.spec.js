@@ -2,7 +2,6 @@ import { test, expect } from "@playwright/test";
 import {
   spyOnPlausible,
   getPlausibleCalls,
-  clickAndWaitForPlausible,
   ensureLanguageSwitcherLink,
   ensureLanguageAnalyticsHandler,
   firstColoringViewPdfButton,
@@ -77,7 +76,7 @@ test("Download video fires category-downloaded for all episodes in both language
       .textContent();
 
     for (const { selector, lang } of languageDownloadButtons) {
-      await spyOnPlausible(page);
+      await spyOnPlausible(page, { runCallback: true });
 
       const [download] = await Promise.all([
         page.waitForEvent("download"),
@@ -196,7 +195,7 @@ test("Coloring Book Download fires coloring-books-downloaded for available PDFs"
         continue;
       }
 
-      await spyOnPlausible(page);
+      await spyOnPlausible(page, { runCallback: true });
 
       const [download] = await Promise.all([
         page.waitForEvent("download"),
@@ -410,7 +409,7 @@ test("Partnership PDF toggle Download fires slug-downloaded for available langua
         continue;
       }
 
-      await spyOnPlausible(page);
+      await spyOnPlausible(page, { runCallback: true });
 
       const [download] = await Promise.all([
         page.waitForEvent("download"),
@@ -498,7 +497,10 @@ test("TranslatePress language switch fires language-switched", async ({
     body: handlerSource,
     contentType: "text/plain",
   });
-  const calls = await clickAndWaitForPlausible(page, link);
+  // Do not run Plausible callback here — it navigates via location.href and clears the spy.
+  await link.click();
+  await page.waitForTimeout(300);
+  const calls = await getPlausibleCalls(page);
   await testInfo.attach("language switch plausible event", {
     body: JSON.stringify(calls, null, 2),
     contentType: "application/json",

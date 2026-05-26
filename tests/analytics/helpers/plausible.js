@@ -15,16 +15,22 @@ export async function gotoExpectOk(page, path) {
   ).not.toMatch(/WordPress.*Error/i);
 }
 
-export async function spyOnPlausible(page) {
-  await page.evaluate(() => {
+/**
+ * @param {{ runCallback?: boolean }} options
+ *   runCallback: true for download tracking (trackDownloadClick must run proceed() after the beacon).
+ *   Leave false for language switch — production trackThenNavigate's callback sets location.href,
+ *   which navigates away and clears _plausibleCalls before we can assert (route.abort does not block that).
+ */
+export async function spyOnPlausible(page, { runCallback = false } = {}) {
+  await page.evaluate((runCallback) => {
     window._plausibleCalls = [];
     window.plausible = function (event, options) {
       window._plausibleCalls.push({ event, options });
-      if (typeof options?.callback === "function") {
+      if (runCallback && typeof options?.callback === "function") {
         options.callback();
       }
     };
-  });
+  }, runCallback);
 }
 
 export async function getPlausibleCalls(page) {
