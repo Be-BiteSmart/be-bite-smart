@@ -128,6 +128,8 @@ p.ages-badge {
 /* Add small "SM" after the site title */
 .wp-block-site-title::after {
   content: "SM";
+  white-space: nowrap;
+  /* now wrap prevents sm from wrapping under the site title on very small mobile screens*/
   font-size: var(--sm-font-size);
   vertical-align: var(--sm-vertical-align);
   line-height: var(--sm-line-height);
