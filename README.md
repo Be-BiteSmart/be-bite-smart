@@ -90,6 +90,8 @@ Optional PDF slugs live in **page content** (block editor), not in git. After de
 
 If the Plausible plugin also logs a generic **file download** goal for PDF clicks, disable automatic file-download tracking in the plugin settings (or ignore that goal) so custom events above are the source of truth.
 
+**Download links:** custom events use `preventDefault` + `plausible(..., { callback })` before starting the file download, so the beacon is not dropped when the browser begins the download (Playwright tests can still pass while production missed events).
+
 ### Playwright Tests
 
 Tests that Plausible custom events are firing correctly and returning expected values.

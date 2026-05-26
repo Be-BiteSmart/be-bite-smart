@@ -34,14 +34,54 @@ function track_user_interactions() {
     //      Used by Watch Now / play buttons which have no label text to read.
     //   Returns 'english', 'spanish', or null (for content with no language variant).
     //
-    // trackPdfView(btn) / trackPdfDownload(link)
+    // trackPdfView(btn) / pdfDownloadEventName(link) + trackDownloadClick(...)
     //   When data-track is set on the block wrapper: {slug}-viewed-{lang} or {slug}-downloaded-{lang}.
     //   Otherwise block-specific defaults (coloring-books, educational-content, pdf).
+    //
+    // File downloads use trackDownloadClick: the browser starts the download immediately on
+    // click, which can cancel Plausible's XHR before it reaches the server. Playwright still
+    // passes because it replaces plausible() in-memory. Real users need preventDefault +
+    // plausible(..., { callback }) then a programmatic download.
 
     $shared_helpers = "
         function track(eventName) {
             if (!window.plausible) return;
             plausible(eventName);
+        }
+
+        function triggerFileDownload(link) {
+            const temp = document.createElement('a');
+            temp.href = link.href;
+            if (link.hasAttribute('download')) {
+                temp.setAttribute('download', link.getAttribute('download') || '');
+            }
+            if (link.target) {
+                temp.target = link.target;
+            }
+            temp.style.display = 'none';
+            document.body.appendChild(temp);
+            temp.click();
+            document.body.removeChild(temp);
+        }
+
+        function trackDownloadClick(event, link, eventName) {
+            if (!eventName) return;
+            if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+                return;
+            }
+            event.preventDefault();
+            let proceeded = false;
+            function proceed() {
+                if (proceeded) return;
+                proceeded = true;
+                triggerFileDownload(link);
+            }
+            if (window.plausible) {
+                plausible(eventName, { callback: proceed });
+                setTimeout(proceed, 750);
+            } else {
+                proceed();
+            }
         }
 
         function eventName(category, action, lang) {
@@ -99,23 +139,20 @@ function track_user_interactions() {
             track(eventName('pdf', 'viewed', lang));
         }
 
-        function trackPdfDownload(link) {
+        function pdfDownloadEventName(link) {
             const lang = langFromDataAttr(link) || getLang(link);
-            if (!lang) return;
+            if (!lang) return null;
             const slug = pdfTrackingSlug(link);
             if (slug) {
-                track(eventName(slug, 'downloaded', lang));
-                return;
+                return eventName(slug, 'downloaded', lang);
             }
             if (link.closest('.educational-coloring-book-download-block')) {
-                track(eventName('coloring-books', 'downloaded', lang));
-                return;
+                return eventName('coloring-books', 'downloaded', lang);
             }
             if (link.closest('.educational-content-download-block')) {
-                track(eventName('educational-content', 'downloaded', lang));
-                return;
+                return eventName('educational-content', 'downloaded', lang);
             }
-            track(eventName('pdf', 'downloaded', lang));
+            return eventName('pdf', 'downloaded', lang);
         }
     ";
 
@@ -160,8 +197,8 @@ function track_user_interactions() {
     // PDF file downloads (pdf-toggle + download-card rows). Uses data-track slug when set.
     $track_pdf_downloads = "
         document.querySelectorAll('.download-card-pdf-download').forEach(function(link) {
-            link.addEventListener('click', function() {
-                trackPdfDownload(link);
+            link.addEventListener('click', function(event) {
+                trackDownloadClick(event, link, pdfDownloadEventName(link));
             });
         });
     ";
@@ -185,19 +222,19 @@ function track_user_interactions() {
 
         // Episode video file downloads (educational-video-download block only)
         document.querySelectorAll('.educational-video-download-block .ecd-toggle--download').forEach(function(btn) {
-            btn.addEventListener('click', function() {
+            btn.addEventListener('click', function(event) {
                 const lang = getLang(btn);
                 if (!lang) return;
-                track(eventName('episode-videos', 'downloaded', lang));
+                trackDownloadClick(event, btn, eventName('episode-videos', 'downloaded', lang));
             });
         });
 
         // Other educational download links (external URL fields only)
         document.querySelectorAll('.educational-content-download-block .ecd-toggle--download').forEach(function(btn) {
-            btn.addEventListener('click', function() {
+            btn.addEventListener('click', function(event) {
                 const lang = getLang(btn);
                 if (!lang) return;
-                track(eventName('educational-content', 'downloaded', lang));
+                trackDownloadClick(event, btn, eventName('educational-content', 'downloaded', lang));
             });
         });
 
