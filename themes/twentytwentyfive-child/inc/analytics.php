@@ -13,35 +13,39 @@
 // Episode video downloads: custom/educational-video-download block only.
 // Coloring book + flexible educational PDFs: coloring-book-download and educational-content-download.
 // Inline PDF opens: coloring-books-viewed-{lang} on coloring block; default pdf-viewed-{lang} elsewhere.
-// Optional data-track on educational-content-download overrides the default.
+// Optional data-track on block wrapper (pdf-toggle, educational-content-download) sets a custom slug:
+//   data-track="partnership-pdf" → partnership-pdf-viewed-english, partnership-pdf-downloaded-english, etc.
+//
+// ── Script timing (read this before changing selectors or init) ───────────────
+// This file prints one inline <script> from wp_footer. Two timing rules matter:
+//
+// 1) Elements that appear LATER in the HTML (e.g. TranslatePress floating switcher at the
+//    very end of <body>) are NOT in the DOM when the script first runs. Do not use
+//    querySelectorAll('.trp-language-switcher').forEach(...) at parse time — it finds nothing.
+//    Use document-level click delegation instead (see language switcher block below).
+//
+// 2) Gutenberg block markup in page content IS already in the DOM when this script runs, so
+//    querySelectorAll on .pdf-toggle, .download-card-pdf-download, etc. is fine.
+//
+// ── Clicks that leave the page or start a download ────────────────────────────
+// Plausible sends custom events via XHR. If the browser navigates or starts a file download
+// on the same click, the request is often aborted and the event never reaches the dashboard
+// (the plugin's automatic "file download" goal may still appear — different code path).
+// Use trackThenNavigate / trackDownloadClick: preventDefault → plausible(..., { callback })
+// → then navigate or trigger a synthetic <a download> click. Playwright tests replace
+// window.plausible in memory, so they can pass even when production beacons were failing.
 
 function track_user_interactions() {
 
-    // ── Shared helpers ─────────────────────────────────────────────────────────
+    // ── Shared helpers (injected into the inline script below) ─────────────────
     //
-    // track(eventName)
-    //   Fires a Plausible custom event with no props.
-    //
-    // eventName(category, action, lang)
-    //   Builds kebab-case event names, e.g. coloring-books-viewed-english.
-    //   Pass null for lang when the content has no language variant.
-    //
-    // getLang(btn)
-    //   Detects language from two sources:
-    //   1. Button label text — checks .btn-label (or full text) for (EN), (ENG), (ES).
-    //      Used by ECD download/PDF buttons and pdf-toggle buttons.
-    //   2. Active language toggle — reads .toggle-label.active[data-lang] on the episode card.
-    //      Used by Watch Now / play buttons which have no label text to read.
-    //   Returns 'english', 'spanish', or null (for content with no language variant).
-    //
-    // trackPdfView(btn) / pdfDownloadEventName(link) + trackDownloadClick(...)
-    //   When data-track is set on the block wrapper: {slug}-viewed-{lang} or {slug}-downloaded-{lang}.
-    //   Otherwise block-specific defaults (coloring-books, educational-content, pdf).
-    //
-    // File downloads use trackDownloadClick: the browser starts the download immediately on
-    // click, which can cancel Plausible's XHR before it reaches the server. Playwright still
-    // passes because it replaces plausible() in-memory. Real users need preventDefault +
-    // plausible(..., { callback }) then a programmatic download.
+    // track(eventName) — fire-and-forget; OK when the page does not unload (PDF view, Watch Now).
+    // eventName(category, action, lang) — builds names like coloring-books-downloaded-english.
+    // getLang / langFromDataAttr — language from button label (EN)/(ES) or data-lang or episode toggle.
+    // pdfTrackingSlug — reads data-track from the nearest block wrapper.
+    // trackPdfView — inline PDF open only (not download links).
+    // pdfDownloadEventName + trackDownloadClick — PDF file downloads with slug/block fallbacks.
+    // trackThenNavigate — language switcher; same beacon-then-continue pattern as downloads.
 
     $shared_helpers = "
         function track(eventName) {
@@ -49,6 +53,8 @@ function track_user_interactions() {
             plausible(eventName);
         }
 
+        // After we prevented the real click, start the download from a temporary link so the
+        // Plausible callback can finish first (same href + download attribute as the original).
         function triggerFileDownload(link) {
             const temp = document.createElement('a');
             temp.href = link.href;
@@ -64,10 +70,12 @@ function track_user_interactions() {
             document.body.removeChild(temp);
         }
 
+        // Ignore modified clicks so "open in new tab" still works without our handler blocking them.
         function isPrimaryClick(event) {
             return event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
         }
 
+        // Language switcher: defer window.location until Plausible acknowledges the event.
         function trackThenNavigate(event, link, plausibleEventName) {
             if (!plausibleEventName || !isPrimaryClick(event)) return;
             event.preventDefault();
@@ -79,12 +87,14 @@ function track_user_interactions() {
             }
             if (window.plausible) {
                 plausible(plausibleEventName, { callback: proceed });
+                // Fallback if callback never runs (ad blocker, network error).
                 setTimeout(proceed, 750);
             } else {
                 proceed();
             }
         }
 
+        // PDF / video file downloads: same pattern as trackThenNavigate but triggers download instead.
         function trackDownloadClick(event, link, plausibleEventName) {
             if (!plausibleEventName || !isPrimaryClick(event)) return;
             event.preventDefault();
@@ -102,6 +112,7 @@ function track_user_interactions() {
             }
         }
 
+        // Plausible goals use full names: language-switched-english, language-switched-spanish.
         function languageNameFromSwitcherLink(link) {
             const fromLabel = link.querySelector('.trp-language-item-name')?.textContent?.trim().toLowerCase();
             if (fromLabel) return fromLabel;
@@ -136,6 +147,7 @@ function track_user_interactions() {
             return getLang(btn);
         }
 
+        // Optional editor field "PDF tracking slug" → data-track on the block wrapper (save.js / pdf-toggle).
         function pdfTrackingSlug(btn) {
             const container = btn.closest('.educational-content-download-block, .educational-coloring-book-download-block, .pdf-toggle-block');
             return container?.dataset?.track || null;
@@ -220,7 +232,8 @@ function track_user_interactions() {
         });
     ";
 
-    // PDF file downloads (pdf-toggle + download-card rows). Uses data-track slug when set.
+    // PDF file downloads (pdf-toggle + download-card rows). Class download-card-pdf-download is
+    // required so we fire a custom event instead of relying only on Plausible's auto file-download.
     $track_pdf_downloads = "
         document.querySelectorAll('.download-card-pdf-download').forEach(function(link) {
             link.addEventListener('click', function(event) {
@@ -233,16 +246,24 @@ function track_user_interactions() {
     <script>
     <?php echo $shared_helpers; ?>
 
-    // ── Global — fires on every page ───────────────────────────────────────────
-    // TranslatePress: opposite-language floaters put the link in .trp-language-switcher-inner,
-    // not inside .trp-switcher-dropdown-list (that list is often empty). Delegate on the switcher.
-    document.querySelectorAll('.trp-language-switcher').forEach(function(switcher) {
-        switcher.addEventListener('click', function(event) {
-            const link = event.target.closest('a.trp-language-item');
-            if (!link || !switcher.contains(link)) return;
-            const lang = languageNameFromSwitcherLink(link);
-            trackThenNavigate(event, link, eventName('language', 'switched', lang));
-        });
+    // ── TranslatePress language switcher (every page) ─────────────────────────
+    //
+    // WHY document.addEventListener instead of querySelectorAll('.trp-language-switcher'):
+    // View page source on production: this <script> appears ABOVE the floating switcher <nav>.
+    // Scripts run as the parser reaches them, so the switcher does not exist yet — forEach on
+    // .trp-language-switcher attaches zero listeners. Delegation on document still works on click.
+    //
+    // WHY not '.trp-switcher-dropdown-list .trp-language-item':
+    // With "opposite language" enabled (trp-opposite-language), the only visible link sits in
+    // .trp-language-switcher-inner; the dropdown list is often empty (hidden + inert). That
+    // selector matched nothing on bebitesmart.org and broke both production and Playwright.
+    //
+    // Event: language-switched-{lang} where {lang} is from .trp-language-item-name (e.g. spanish).
+    document.addEventListener('click', function(event) {
+        const link = event.target.closest('.trp-language-switcher a.trp-language-item');
+        if (!link) return;
+        const lang = languageNameFromSwitcherLink(link);
+        trackThenNavigate(event, link, eventName('language', 'switched', lang));
     });
 
     <?php if ( is_page( 'education' ) ) : ?>
@@ -320,11 +341,12 @@ function track_user_interactions() {
         <?php echo $track_documentary; ?>
 
     <?php endif; ?>
-    // Runs on every page — pdf-toggle blocks and inline PDF download links
+    // PDF toggle + download-card listeners (blocks are in post content, already in DOM at parse time).
         <?php echo $track_pdf_clicks; ?>
         <?php echo $track_pdf_downloads; ?>
     </script>
     <?php
 }
 
+// Priority 10 is default; raising priority does not help the switcher — it is output after this hook.
 add_action('wp_footer', 'track_user_interactions', 10);

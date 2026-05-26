@@ -80,7 +80,7 @@ Most categories are defined in `analytics.php` (no editor setup). **Inline PDF o
 | `pdf-toggle` / download-card PDF Download | Default, or block slug if set | `pdf-downloaded-{lang}` or `{slug}-downloaded-{lang}` |
 | Mini-documentary | Hardcoded | `documentary-watched` |
 | Article links, Read more | Hardcoded | `article-viewed` |
-| TranslatePress switcher | Hardcoded (`.trp-language-switcher a.trp-language-item`) | `language-switched-{lang}` (e.g. `language-switched-spanish`) |
+| TranslatePress switcher | Document click delegation (floater renders after footer script) | `language-switched-{lang}` (e.g. `language-switched-spanish`) |
 
 Download-card block types live in `plugins/custom-blocks-for-be-bite-smart/src/shared/download-card/` (shared edit/save). Use **Episode Video Download** for `#download-videos`, **Educational Coloring Book Download** for coloring rows (View PDF + Download per language, like PDF Toggle), **Educational Content Download** for other worksheets/guides.
 

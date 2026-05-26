@@ -14,7 +14,10 @@ export async function getPlausibleCalls(page) {
   return page.evaluate(() => window._plausibleCalls ?? []);
 }
 
-/** Click and wait until the spy records at least one plausible() call. */
+/**
+ * Click and wait until the spy records at least one plausible() call.
+ * Use for actions that call plausible() asynchronously or after preventDefault (e.g. language switch).
+ */
 export async function clickAndWaitForPlausible(page, locator) {
   const callsReady = page.waitForFunction(
     () =>

@@ -452,6 +452,9 @@ test("Partnerships PDF toggle block does not fire when closing", async ({
 });
 
 // ********************** TRANSLATEPRESS LANGUAGE SWITCH *********************
+// Runs against production HTML. Requires analytics.php to use document-level delegation
+// (switcher is printed after the footer script). Aborts navigation so the spy can read
+// _plausibleCalls before unload; trackThenNavigate also preventDefault() on the site.
 
 test("TranslatePress language switch fires language-switched", async ({
   page,
