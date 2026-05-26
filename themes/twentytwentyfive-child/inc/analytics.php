@@ -31,9 +31,9 @@
 // Plausible sends custom events via XHR. If the browser navigates or starts a file download
 // on the same click, the request is often aborted and the event never reaches the dashboard
 // (the plugin's automatic "file download" goal may still appear — different code path).
-// Use trackThenNavigate / trackDownloadClick: preventDefault → plausible(..., { callback })
-// → then navigate or trigger a synthetic <a download> click. Playwright tests replace
-// window.plausible in memory, so they can pass even when production beacons were failing.
+// Use trackThenNavigate / trackDownloadClick: preventDefault → invokePlausible(..., { callback })
+// → then navigate or trigger a synthetic <a download> click. Always use typeof check — on some
+// pages window.plausible is truthy but not a function (plugin stub), which broke downloads.
 
 function track_user_interactions() {
 
@@ -48,9 +48,14 @@ function track_user_interactions() {
     // trackThenNavigate — language switcher; same beacon-then-continue pattern as downloads.
 
     $shared_helpers = "
+        function invokePlausible(eventName, options) {
+            if (typeof window.plausible !== 'function') return false;
+            window.plausible(eventName, options);
+            return true;
+        }
+
         function track(eventName) {
-            if (!window.plausible) return;
-            plausible(eventName);
+            invokePlausible(eventName);
         }
 
         // After we prevented the real click, start the download from a temporary link so the
@@ -85,8 +90,7 @@ function track_user_interactions() {
                 proceeded = true;
                 window.location.href = link.href;
             }
-            if (window.plausible) {
-                plausible(plausibleEventName, { callback: proceed });
+            if (invokePlausible(plausibleEventName, { callback: proceed })) {
                 // Fallback if callback never runs (ad blocker, network error).
                 setTimeout(proceed, 750);
             } else {
@@ -104,8 +108,7 @@ function track_user_interactions() {
                 proceeded = true;
                 triggerFileDownload(link);
             }
-            if (window.plausible) {
-                plausible(plausibleEventName, { callback: proceed });
+            if (invokePlausible(plausibleEventName, { callback: proceed })) {
                 setTimeout(proceed, 750);
             } else {
                 proceed();
