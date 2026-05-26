@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import {
   spyOnPlausible,
   getPlausibleCalls,
+  clickAndWaitForPlausible,
   langToEventSuffix,
   testEpisodeLanguage,
   testOutboundArticleClick,
@@ -465,11 +466,13 @@ test("TranslatePress language switch fires language-switched", async ({
     (await link.getAttribute("title"))?.trim().toLowerCase() ||
     "unknown";
 
-  await spyOnPlausible(page);
-  await link.click();
-  await page.waitForTimeout(300);
+  const href = await link.getAttribute("href");
+  if (href) {
+    await page.route(href, (route) => route.abort());
+  }
 
-  const calls = await getPlausibleCalls(page);
+  await spyOnPlausible(page);
+  const calls = await clickAndWaitForPlausible(page, link);
   await testInfo.attach("language switch plausible event", {
     body: JSON.stringify(calls, null, 2),
     contentType: "application/json",

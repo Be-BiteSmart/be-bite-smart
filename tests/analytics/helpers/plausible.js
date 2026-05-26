@@ -11,7 +11,19 @@ export async function spyOnPlausible(page) {
 }
 
 export async function getPlausibleCalls(page) {
-  return page.evaluate(() => window._plausibleCalls);
+  return page.evaluate(() => window._plausibleCalls ?? []);
+}
+
+/** Click and wait until the spy records at least one plausible() call. */
+export async function clickAndWaitForPlausible(page, locator) {
+  const callsReady = page.waitForFunction(
+    () =>
+      Array.isArray(window._plausibleCalls) &&
+      window._plausibleCalls.length > 0,
+    { timeout: 5000 },
+  );
+  await Promise.all([locator.click(), callsReady]);
+  return getPlausibleCalls(page);
 }
 
 /** Plausible event names for pdf-toggle / download-card when data-track slug is set (or default pdf). */
