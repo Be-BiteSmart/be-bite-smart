@@ -94,7 +94,9 @@ If the Plausible plugin also logs a generic **file download** goal for PDF click
 
 ### Playwright Tests
 
-Tests that Plausible custom events are firing correctly and returning expected values.
+Tests that Plausible custom events are firing correctly and returning expected values. They run against production (`https://bebitesmart.org`) in GitHub Actions.
+
+If a block or widget is missing from a page (documentary video, pdf-toggle on Partnerships, TranslatePress floater, Read More articles), the related test **skips** with a short reason instead of timing out. Skipped tests are expected when content is not published yet; restore the block on the page to re-enable coverage.
 
 `tests`
 
