@@ -86,7 +86,7 @@ header
 }
 
 /* Mobile: add padding to the donate button. !important because WP's default classes override it */
-@media (max-width: 600px) {
+@media (max-width: 599px) {
   header
     .wp-block-navigation__container
     > .wp-block-navigation-item:last-child
@@ -140,8 +140,11 @@ Fix: 620 width forces Contact to jump down to the donate button */
 }
 
 /* ============================================
-Mobile submenu logic (max-width: 600px)
+Mobile submenu logic (max-width: 599px)
 ============================================
+
+Special note: Wordpress shows the hamburger icon below or equal to 599px. 
+
 On mobile WP renders nav inside a modal overlay. Submenus are hidden by
 default and shown only when aria-expanded is true on the toggle button.
 
@@ -150,7 +153,7 @@ here because the submenu ul is a direct child of the nav item, not the
 responsive wrapper — so that selector never matches.
 ============================================ */
 
-@media (max-width: 600px) {
+@media (max-width: 599px) {
   .wp-block-navigation__responsive-container-content
     .wp-block-navigation-item__content {
     font-size: 1.2rem;
@@ -255,7 +258,7 @@ Mobile menu closes automatically if resized to desktop
 }
 
 /* ============================================
-   DESKTOP SUBMENU LOGIC (min-width: 601px)
+   DESKTOP SUBMENU LOGIC (min-width: 600px)
    ============================================
    Visibility is controlled by two mechanisms working together:
 
@@ -294,7 +297,7 @@ Mobile menu closes automatically if resized to desktop
    CSS hover is more reliable than JS mouseenter/mouseleave since it
    doesn't depend on WP's Interactivity API or aria-expanded at all.
    Submenu open and closing with the mouse click on chevron is controlled with JS. */
-@media (min-width: 601px) {
+@media (min-width: 600px) {
   .wp-block-navigation-submenu > .wp-block-navigation__submenu-container {
     opacity: 0 !important;
     visibility: hidden !important;
