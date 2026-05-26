@@ -67,7 +67,7 @@ Actions: `viewed` (inline PDF), `downloaded`, `watched` (video), `switched` (sit
 
 #### Analytics / tracking (hardcoded + PDF overrides)
 
-Most categories are defined in `analytics.php` (no editor setup). **Inline PDF opens** default to `pdf-viewed-english` / `pdf-viewed-spanish`. To track one PDF separately, set **PDF tracking slug (optional)** on that ECD or PDF Toggle block → `data-track` → e.g. `partnership-pdf-viewed-english`.
+Most categories are defined in `analytics.php` (no editor setup). **Inline PDF opens** default to `pdf-viewed-english` / `pdf-viewed-spanish`. To track one PDF separately, set **PDF tracking slug (optional)** on that block (e.g. `partnership-pdf`) → View PDF fires `partnership-pdf-viewed-{lang}`, Download fires `partnership-pdf-downloaded-{lang}`.
 
 | Behavior | How it’s determined | Event name(s) |
 |----------|---------------------|----------------|
@@ -76,7 +76,8 @@ Most categories are defined in `analytics.php` (no editor setup). **Inline PDF o
 | Coloring book inline PDF (`educational-coloring-book-download` block) | View PDF button | `coloring-books-viewed-{lang}` |
 | Coloring book PDF file download | `.download-card-pdf-download` in coloring block | `coloring-books-downloaded-{lang}` |
 | Other educational PDFs / links (`educational-content-download` block) | Default PDF, or block slug if set | `pdf-viewed-{lang}`, `educational-content-downloaded-{lang}`, or `{slug}-viewed-{lang}` |
-| `pdf-toggle` open | Default, or block slug if set | `pdf-viewed-{lang}` or `{slug}-viewed-{lang}` |
+| `pdf-toggle` View PDF | Default, or block slug if set | `pdf-viewed-{lang}` or `{slug}-viewed-{lang}` |
+| `pdf-toggle` / download-card PDF Download | Default, or block slug if set | `pdf-downloaded-{lang}` or `{slug}-downloaded-{lang}` |
 | Mini-documentary | Hardcoded | `documentary-watched` |
 | Article links, Read more | Hardcoded | `article-viewed` |
 | TranslatePress switcher | Hardcoded | `language-switched-{lang}` |

@@ -14,6 +14,15 @@ export async function getPlausibleCalls(page) {
   return page.evaluate(() => window._plausibleCalls);
 }
 
+/** Plausible event names for pdf-toggle / download-card when data-track slug is set (or default pdf). */
+export function pdfSlugEvents(slug) {
+  const base = slug || "pdf";
+  return {
+    viewed: (lang) => `${base}-viewed-${lang}`,
+    downloaded: (lang) => `${base}-downloaded-${lang}`,
+  };
+}
+
 /** Map download-card button data-lang or test lang string to event suffix. */
 export function langToEventSuffix(lang) {
   if (lang === "en" || lang === "english") return "english";

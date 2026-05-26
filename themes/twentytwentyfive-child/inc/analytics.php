@@ -34,9 +34,9 @@ function track_user_interactions() {
     //      Used by Watch Now / play buttons which have no label text to read.
     //   Returns 'english', 'spanish', or null (for content with no language variant).
     //
-    // trackPdfView(btn)
-    //   Fires {slug}-viewed-{lang} when data-track is set on the block wrapper,
-    //   coloring-books-viewed-{lang} on coloring-book blocks, otherwise pdf-viewed-{lang}.
+    // trackPdfView(btn) / trackPdfDownload(link)
+    //   When data-track is set on the block wrapper: {slug}-viewed-{lang} or {slug}-downloaded-{lang}.
+    //   Otherwise block-specific defaults (coloring-books, educational-content, pdf).
 
     $shared_helpers = "
         function track(eventName) {
@@ -98,6 +98,25 @@ function track_user_interactions() {
             }
             track(eventName('pdf', 'viewed', lang));
         }
+
+        function trackPdfDownload(link) {
+            const lang = langFromDataAttr(link) || getLang(link);
+            if (!lang) return;
+            const slug = pdfTrackingSlug(link);
+            if (slug) {
+                track(eventName(slug, 'downloaded', lang));
+                return;
+            }
+            if (link.closest('.educational-coloring-book-download-block')) {
+                track(eventName('coloring-books', 'downloaded', lang));
+                return;
+            }
+            if (link.closest('.educational-content-download-block')) {
+                track(eventName('educational-content', 'downloaded', lang));
+                return;
+            }
+            track(eventName('pdf', 'downloaded', lang));
+        }
     ";
 
     // ── Reusable event blocks ──────────────────────────────────────────────────
@@ -138,6 +157,15 @@ function track_user_interactions() {
         });
     ";
 
+    // PDF file downloads (pdf-toggle + download-card rows). Uses data-track slug when set.
+    $track_pdf_downloads = "
+        document.querySelectorAll('.download-card-pdf-download').forEach(function(link) {
+            link.addEventListener('click', function() {
+                trackPdfDownload(link);
+            });
+        });
+    ";
+
     ?>
     <script>
     <?php echo $shared_helpers; ?>
@@ -168,24 +196,6 @@ function track_user_interactions() {
         document.querySelectorAll('.educational-content-download-block .ecd-toggle--download').forEach(function(btn) {
             btn.addEventListener('click', function() {
                 const lang = getLang(btn);
-                if (!lang) return;
-                track(eventName('educational-content', 'downloaded', lang));
-            });
-        });
-
-        // Coloring book PDF file downloads (Download button beside View PDF)
-        document.querySelectorAll('.educational-coloring-book-download-block .download-card-pdf-download').forEach(function(link) {
-            link.addEventListener('click', function() {
-                const lang = langFromDataAttr(link) || getLang(link);
-                if (!lang) return;
-                track(eventName('coloring-books', 'downloaded', lang));
-            });
-        });
-
-        // Educational content PDF file downloads (uploaded PDF, not external link)
-        document.querySelectorAll('.educational-content-download-block .download-card-pdf-download').forEach(function(link) {
-            link.addEventListener('click', function() {
-                const lang = langFromDataAttr(link) || getLang(link);
                 if (!lang) return;
                 track(eventName('educational-content', 'downloaded', lang));
             });
@@ -245,8 +255,9 @@ function track_user_interactions() {
         <?php echo $track_documentary; ?>
 
     <?php endif; ?>
-    // runs on every page, covers any pdf-toggle block
+    // Runs on every page — pdf-toggle blocks and inline PDF download links
         <?php echo $track_pdf_clicks; ?>
+        <?php echo $track_pdf_downloads; ?>
     </script>
     <?php
 }

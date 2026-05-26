@@ -9,6 +9,7 @@ import {
   downloadCardBlocks,
   downloadCardSections,
   languageDownloadButtons,
+  pdfSlugEvents,
 } from "./helpers/plausible";
 
 // ── Education page ─────────────────────────────────────────────
@@ -318,6 +319,8 @@ test("Partnership PDF toggle block fires pdf-viewed for all available languages"
 
   for (let i = 0; i < blockCount; i++) {
     const block = blocks.nth(i);
+    const slug = await block.getAttribute("data-track");
+    const { viewed: viewEvent } = pdfSlugEvents(slug);
 
     // Grab EN and ES buttons by testid prefix within this block
     const buttons = [
@@ -350,9 +353,9 @@ test("Partnership PDF toggle block fires pdf-viewed for all available languages"
       });
 
       expect(calls).toHaveLength(1);
-      expect(calls[0].event).toBe(`pdf-viewed-${lang}`);
+      expect(calls[0].event).toBe(viewEvent(lang));
 
-      allCalls.push({ block: i + 1, testId, lang, ...calls[0] });
+      allCalls.push({ block: i + 1, testId, lang, slug, ...calls[0] });
 
       // Close before moving to next button
       await btn.click();
@@ -361,6 +364,58 @@ test("Partnership PDF toggle block fires pdf-viewed for all available languages"
   }
 
   await testInfo.attach("all pdf toggle events", {
+    body: JSON.stringify(allCalls, null, 2),
+    contentType: "application/json",
+  });
+});
+
+test("Partnership PDF toggle Download fires slug-downloaded for available languages", async ({
+  page,
+}, testInfo) => {
+  await page.goto("/partnerships");
+
+  const blocks = page.locator(".pdf-toggle-block");
+  const blockCount = await blocks.count();
+  const allCalls = [];
+
+  for (let i = 0; i < blockCount; i++) {
+    const block = blocks.nth(i);
+    const slug = await block.getAttribute("data-track");
+    const { downloaded: downloadEvent } = pdfSlugEvents(slug);
+
+    for (const { dataLang, lang } of [
+      { dataLang: "en", lang: "english" },
+      { dataLang: "es", lang: "spanish" },
+    ]) {
+      const link = block.locator(
+        `.download-card-pdf-download[data-lang='${dataLang}']`,
+      );
+      if ((await link.count()) === 0) {
+        continue;
+      }
+
+      await spyOnPlausible(page);
+
+      const [download] = await Promise.all([
+        page.waitForEvent("download"),
+        link.click(),
+      ]);
+      await download.cancel();
+
+      const calls = await getPlausibleCalls(page);
+      await testInfo.attach(`block ${i + 1} ${lang} download plausible event`, {
+        body: JSON.stringify(calls, null, 2),
+        contentType: "application/json",
+      });
+
+      expect(calls).toHaveLength(1);
+      expect(calls[0].event).toBe(downloadEvent(lang));
+
+      allCalls.push({ block: i + 1, lang, slug, ...calls[0] });
+    }
+  }
+
+  await testInfo.attach("all pdf toggle download events", {
     body: JSON.stringify(allCalls, null, 2),
     contentType: "application/json",
   });

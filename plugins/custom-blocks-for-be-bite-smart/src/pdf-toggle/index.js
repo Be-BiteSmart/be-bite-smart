@@ -233,7 +233,9 @@ registerBlockType("custom/pdf-toggle", {
               {
                 href: attributes.pdfUrl,
                 download: true,
-                className: "block-toggle-btn is-style-outline",
+                className:
+                  "block-toggle-btn is-style-outline download-card-pdf-download",
+                "data-lang": "en",
               },
               "Download (ENG)",
             ),
@@ -259,7 +261,9 @@ registerBlockType("custom/pdf-toggle", {
               {
                 href: attributes.pdfUrlEs,
                 download: true,
-                className: "block-toggle-btn is-style-outline",
+                className:
+                  "block-toggle-btn is-style-outline download-card-pdf-download",
+                "data-lang": "es",
               },
               "Download (ES)",
             ),
