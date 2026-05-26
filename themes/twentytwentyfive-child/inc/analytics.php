@@ -150,10 +150,28 @@ function track_user_interactions() {
             });
         });
 
-        // Other educational download links (PDF block type with link fields filled in)
+        // Other educational download links (external URL fields only)
         document.querySelectorAll('.educational-content-download-block .ecd-toggle--download').forEach(function(btn) {
             btn.addEventListener('click', function() {
                 const lang = getLang(btn);
+                if (!lang) return;
+                track(eventName('educational-content', 'downloaded', lang));
+            });
+        });
+
+        // Coloring book PDF file downloads (Download button beside View PDF)
+        document.querySelectorAll('.educational-coloring-book-download-block .download-card-pdf-download').forEach(function(link) {
+            link.addEventListener('click', function() {
+                const lang = langFromDataAttr(link) || getLang(link);
+                if (!lang) return;
+                track(eventName('coloring-books', 'downloaded', lang));
+            });
+        });
+
+        // Educational content PDF file downloads (uploaded PDF, not external link)
+        document.querySelectorAll('.educational-content-download-block .download-card-pdf-download').forEach(function(link) {
+            link.addEventListener('click', function() {
+                const lang = langFromDataAttr(link) || getLang(link);
                 if (!lang) return;
                 track(eventName('educational-content', 'downloaded', lang));
             });

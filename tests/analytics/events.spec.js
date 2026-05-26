@@ -163,6 +163,59 @@ test("Coloring Book PDF toggle fires pdf-viewed for all available episodes", asy
   });
 });
 
+test("Coloring Book Download fires coloring-books-downloaded for available PDFs", async ({
+  page,
+}, testInfo) => {
+  await page.goto("/education");
+
+  const { section, block, downloadSelector, downloadEvent } =
+    downloadCardBlocks.coloring;
+  const sections = downloadCardSections(page, { section, block });
+  const sectionCount = await sections.count();
+  const allCalls = [];
+
+  for (let i = 0; i < sectionCount; i++) {
+    const row = sections.nth(i);
+    const episodeLabel = await row
+      .locator(".capitalized-and-colored")
+      .textContent();
+
+    for (const { dataLang, lang } of [
+      { dataLang: "en", lang: "english" },
+      { dataLang: "es", lang: "spanish" },
+    ]) {
+      const link = row.locator(`${downloadSelector}[data-lang='${dataLang}']`);
+      if ((await link.count()) === 0) {
+        continue;
+      }
+
+      await spyOnPlausible(page);
+
+      const [download] = await Promise.all([
+        page.waitForEvent("download"),
+        link.click(),
+      ]);
+      await download.cancel();
+
+      const calls = await getPlausibleCalls(page);
+      await testInfo.attach(`${episodeLabel} ${lang} download plausible event`, {
+        body: JSON.stringify(calls, null, 2),
+        contentType: "application/json",
+      });
+
+      expect(calls).toHaveLength(1);
+      expect(calls[0].event).toBe(downloadEvent(lang));
+
+      allCalls.push({ episode: episodeLabel.trim(), lang, ...calls[0] });
+    }
+  }
+
+  await testInfo.attach("all coloring book download events", {
+    body: JSON.stringify(allCalls, null, 2),
+    contentType: "application/json",
+  });
+});
+
 // *************** PDF NOT FIRING AGAIN ON CLOSE **************
 
 test("Education page PDF toggle does not fire again when closing", async ({
