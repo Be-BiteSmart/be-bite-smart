@@ -23,7 +23,7 @@ function render_video_quote_block( $attributes ) {
             'large',
             false,
             [
-                'sizes' => '(min-width: 900px) 420px, 90vw',
+                'sizes' => '90vw',
                 'loading' => 'lazy',
                 'alt'     => wp_strip_all_tags( $title ),
             ]

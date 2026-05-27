@@ -9,7 +9,7 @@
   margin-bottom: 2rem;
 }
 
-/* ── Main content wrapper ── */
+/* ── Main content wrapper (video always above text) ── */
 .video-quote-content-wrapper {
   display: flex;
   flex-direction: column;
@@ -19,39 +19,20 @@
 
 @media (min-width: 900px) {
   .video-quote-content-wrapper {
-    flex-direction: row;
-    align-items: stretch;
     gap: 3rem;
   }
 }
 
 /* ── Video side ── */
 .video-quote-video-side {
-  flex: 1;
+  width: 100%;
   min-width: 0;
-}
-
-@media (min-width: 900px) {
-  .video-quote-video-side {
-    flex: 0 0 50%;
-    max-width: 50%;
-  }
 }
 
 /* ── Text side ── */
 .video-quote-text-side {
-  flex: 1;
+  width: 100%;
   min-width: 0;
-}
-
-@media (min-width: 900px) {
-  .video-quote-text-side {
-    flex: 0 0 50%;
-    max-width: 50%;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between; /* pushes button to top, blockquote to bottom */
-  }
 }
 
 .video-quote-container {
@@ -83,12 +64,6 @@
   border-radius: 0.5rem;
 }
 
-@media (min-width: 900px) {
-  .video-quote-thumbnail-section {
-    max-width: none; /* Remove max-width constraint for larger screens */
-  }
-}
-
 /* ── Thumbnail hover effects ──
    video-thumbnail-wrapper, video-thumbnail, video-overlay, video-player
    base styles all live in shared-block-styles.css              */
@@ -118,17 +93,14 @@
   margin-bottom: 12px;
 }
 
-/* center watch button on tablet and mobile screens */
-@media (max-width: 899px) {
-  body:not(.block-editor-page)
-    .video-quote-block
-    .video-quote-text-side
-    .video-quote-watch-button {
-    /*needs those classes to beat the specificity of a competing style of block toggle button styling */
-    display: block;
-    margin-left: auto;
-    margin-right: auto;
-  }
+/* center watch button (beats competing block-toggle button styles) */
+body:not(.block-editor-page)
+  .video-quote-block
+  .video-quote-text-side
+  .video-quote-watch-button {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .video-quote-watch-button:active {
