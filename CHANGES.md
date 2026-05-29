@@ -11,11 +11,11 @@
 
 **Patterns or conventions followed from the codebase:**
 - Same `inc/` + `require_once` pattern as `inc/analytics.php`
-- Inline `wp_head` script hook (similar to preconnect / hero preload hooks in `functions.php`)
-- `wp_head` priority `1` so `a2a_config` exists before AddToAny’s script runs
+- `wp_add_inline_script( 'addtoany-core', …, 'before' )` at priority `20` so UTMs run after the plugin’s inline config
 
 **Problems encountered and how they were fixed:**
-- None
+- `a2a_config.linkurl` in `wp_head` did not apply to X/Twitter shares — the plugin resets `a2a_config.callbacks` in its own inline script and direct service buttons use the click-time URL. Fixed by hooking `addtoany-core` at enqueue priority `20` and using AddToAny’s `share` callback to set `data.url` with UTMs on every share
+- `data-a2a-url` in page HTML stays as the plain permalink until JS runs — expected; `ready` callback now syncs `.a2a_kit[data-a2a-url]` after AddToAny loads (inspector should show UTMs after load, not only on click)
 
 **TODOs:**
 - None
