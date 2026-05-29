@@ -1,43 +1,75 @@
 /**
  * video-toggle.js
- * Shared video toggle logic for .video-episode-block and .video-quote-block.
- * Handles play button, thumbnail click, watch button, and language switching
- * (language toggle only runs when the relevant elements are present).
- *
- * video-quote: one Vimeo ID with multi audio/subtitle tracks — defaults tracks from
- * TranslatePress (data-site-lang on the block, or html/body classes as fallback).
+ * Shared video logic for .video-episode-block and .video-quote-block.
  */
 
-function normalizeVimeoLang(code) {
-  if (!code) return "en";
-  const c = String(code).toLowerCase();
-  if (c === "es" || c.startsWith("es-") || c.startsWith("es_")) return "es";
-  return "en";
-}
-
-/** TranslatePress sets html lang and body classes like translatepress-es_ES. */
-function detectSiteLangFromDocument() {
-  const htmlLang = (document.documentElement.lang || "").toLowerCase();
-  if (htmlLang.startsWith("es")) return "es";
-
-  const bodyClass = document.body.className.toLowerCase();
-  if (
-    bodyClass.includes("translatepress-es") ||
-    /\btranslatepress-es[_-]/.test(bodyClass)
-  ) {
-    return "es";
-  }
-
-  return "en";
-}
+import {
+  detectSiteLangFromDocument,
+  normalizeLangCode,
+  parseJsonDataset,
+  resolveVideosForBlock,
+} from "./shared/languages";
+import { confirmLanguageRestart } from "./video-lang-restart-modal";
 
 function buildVimeoPlayerSrc(vimeoId, lang) {
   const params = new URLSearchParams({ autoplay: "1" });
-  if (lang === "es") {
+  const code = normalizeLangCode(lang);
+
+  if (code === "es") {
     params.set("texttrack", "es");
     params.set("audiotrack", "es");
+  } else if (code === "hi") {
+    params.set("texttrack", "hi");
+    params.set("audiotrack", "hi");
   }
+
   return `https://player.vimeo.com/video/${vimeoId}?${params.toString()}`;
+}
+
+function getLangSegments(block) {
+  const segments = block.querySelectorAll(".lang-segment");
+  if (segments.length) {
+    return segments;
+  }
+  return block.querySelectorAll(".toggle-label");
+}
+
+function getLangPicker(block) {
+  return block.querySelector(".episode-lang-picker, .language-toggle");
+}
+
+function defaultEpisodeLang(block, videos, siteLang) {
+  const codes = Object.keys(videos);
+  if (!codes.length) {
+    return "en";
+  }
+
+  const normalizedSite = normalizeLangCode(siteLang);
+  if (videos[normalizedSite]) {
+    return normalizedSite;
+  }
+
+  if (videos.en) {
+    return "en";
+  }
+
+  return codes[0];
+}
+
+function updatePickerIndex(picker, segments, activeLang) {
+  if (!picker || !segments.length) {
+    return;
+  }
+
+  const codes = Array.from(segments).map((el) => el.dataset.lang);
+  const index = Math.max(0, codes.indexOf(activeLang));
+
+  if (picker.classList.contains("episode-lang-picker")) {
+    picker.style.setProperty("--lang-count", String(codes.length));
+    picker.style.setProperty("--lang-index", String(index));
+  } else if (picker.classList.contains("language-toggle")) {
+    picker.classList.toggle("es", activeLang === "es");
+  }
 }
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -54,46 +86,48 @@ document.addEventListener("DOMContentLoaded", function () {
     );
     const buttonText = watchButton?.querySelector(".button-text");
 
-    // Language toggle — episode-card only
-    const toggleLabels = block.querySelectorAll(".toggle-label");
-    const languageToggle = block.querySelector(".language-toggle");
+    const langSegments = getLangSegments(block);
+    const langPicker = getLangPicker(block);
     const isQuoteBlock = block.classList.contains("video-quote-block");
-    const siteLang = normalizeVimeoLang(
+    const siteLang = normalizeLangCode(
       block.dataset.siteLang || detectSiteLangFromDocument(),
     );
-    let currentLang = isQuoteBlock ? siteLang : "en";
+    const videos = resolveVideosForBlock(block);
+    const watchLabels = parseJsonDataset(block.dataset.watchLabels, {
+      en: "Watch Now",
+      es: "Ver Ahora",
+      hi: "अभी देखें",
+    });
+
+    let currentLang = isQuoteBlock
+      ? siteLang
+      : defaultEpisodeLang(block, videos, siteLang);
+    let playingLang = null;
     let isPlaying = false;
 
-    function setEpisodeLanguage(lang, reloadIfPlaying = false) {
-      currentLang = lang;
-      toggleLabels.forEach((label) => {
-        label.classList.toggle("active", label.dataset.lang === lang);
+    function setEpisodeLanguage(lang) {
+      currentLang = normalizeLangCode(lang);
+
+      langSegments.forEach((segment) => {
+        segment.classList.toggle("active", segment.dataset.lang === currentLang);
       });
-      if (languageToggle) {
-        languageToggle.classList.toggle("es", lang === "es");
-      }
+
+      updatePickerIndex(langPicker, langSegments, currentLang);
+
       if (buttonText) {
-        buttonText.textContent = lang === "en" ? "Watch Now" : "Ver Ahora";
-      }
-      if (reloadIfPlaying && isPlaying) {
-        loadVideo();
+        buttonText.textContent =
+          watchLabels[currentLang] ?? watchLabels.en ?? "Watch Now";
       }
     }
 
-    // Episode cards save with EN active; sync toggle UI to TranslatePress on load.
-    if (!isQuoteBlock && toggleLabels.length && siteLang === "es") {
-      setEpisodeLanguage("es");
+    if (!isQuoteBlock && langSegments.length) {
+      setEpisodeLanguage(currentLang);
     }
 
-    // ── Load video ────────────────────────────────────────────────────────────
     function loadVideo() {
-      // episode-card stores EN/ES ids as data-vimeo-en / data-vimeo-es
-      // video-quote stores a single id as data-vimeo-id
-      // it tries data-vimeo-en/data-vimeo-es first (episode-card), then falls back to data-vimeo-id (video-quote).
-      const vimeoId =
-        block.dataset[
-          `vimeo${currentLang.charAt(0).toUpperCase() + currentLang.slice(1)}`
-        ] || block.dataset.vimeoId;
+      const vimeoId = isQuoteBlock
+        ? block.dataset.vimeoId
+        : videos[currentLang];
 
       if (!vimeoId) {
         console.error("No Vimeo ID found for", currentLang);
@@ -109,20 +143,49 @@ document.addEventListener("DOMContentLoaded", function () {
       videoPlayer.appendChild(iframe);
       thumbnail.classList.add("hidden");
       isPlaying = true;
+
+      if (!isQuoteBlock) {
+        playingLang = currentLang;
+      }
     }
 
-    // ── Language toggle (episode-card only) ───────────────────────────────────
-    // . The language toggle block only runs when .toggle-label elements are found, so it's silently skipped for video-quote.
-    if (toggleLabels.length) {
-      toggleLabels.forEach((label) => {
-        label.addEventListener("click", function (e) {
+    function handleLangSegmentClick(lang, triggerEl) {
+      const target = normalizeLangCode(lang);
+
+      if (isQuoteBlock) {
+        setEpisodeLanguage(target);
+        return;
+      }
+
+      if (!isPlaying) {
+        setEpisodeLanguage(target);
+        return;
+      }
+
+      if (target === playingLang) {
+        return;
+      }
+
+      confirmLanguageRestart(playingLang, target, triggerEl).then((confirmed) => {
+        if (!confirmed) {
+          setEpisodeLanguage(playingLang);
+          return;
+        }
+
+        setEpisodeLanguage(target);
+        loadVideo();
+      });
+    }
+
+    if (langSegments.length) {
+      langSegments.forEach((segment) => {
+        segment.addEventListener("click", function (e) {
           e.stopPropagation();
-          setEpisodeLanguage(this.dataset.lang, true);
+          handleLangSegmentClick(this.dataset.lang, this);
         });
       });
     }
 
-    // ── Play button ───────────────────────────────────────────────────────────
     if (playButton) {
       playButton.addEventListener("click", function (e) {
         e.preventDefault();
@@ -131,7 +194,6 @@ document.addEventListener("DOMContentLoaded", function () {
       });
     }
 
-    // ── Watch button ──────────────────────────────────────────────────────────
     if (watchButton) {
       watchButton.addEventListener("click", function (e) {
         e.preventDefault();
@@ -139,7 +201,6 @@ document.addEventListener("DOMContentLoaded", function () {
       });
     }
 
-    // ── Thumbnail click ───────────────────────────────────────────────────────
     if (thumbnail) {
       thumbnail.addEventListener("click", function (e) {
         e.preventDefault();

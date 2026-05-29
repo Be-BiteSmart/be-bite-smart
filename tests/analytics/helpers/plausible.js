@@ -146,6 +146,15 @@ export function pdfSlugEvents(slug) {
 export function langToEventSuffix(lang) {
   if (lang === "en" || lang === "english") return "english";
   if (lang === "es" || lang === "spanish") return "spanish";
+  if (lang === "hi" || lang === "hindi") return "hindi";
+  return lang;
+}
+
+/** Short code for episode language picker (english → en). */
+export function episodeLangCode(lang) {
+  if (lang === "english") return "en";
+  if (lang === "spanish") return "es";
+  if (lang === "hindi") return "hi";
   return lang;
 }
 
@@ -218,19 +227,19 @@ export const languageDownloadButtons = [
 
 export async function testEpisodeLanguage(page, testInfo, episode, lang) {
   const episodeNumber = await episode.locator(".episode-number").textContent();
-  const toggle = episode.locator(
-    `.toggle-label[data-lang='${lang === "english" ? "en" : "es"}']`,
+  const code = episodeLangCode(lang);
+  const segment = episode.locator(
+    `.lang-segment[data-lang='${code}'], .toggle-label[data-lang='${code}']`,
   );
 
-  // ****** Part 1: Check language toggle is active ****
-  const toggleClass = await toggle.getAttribute("class");
+  // ****** Part 1: Check language segment is active ****
+  const segmentClass = await segment.getAttribute("class");
 
-  // attach toggle result to html report
-  await testInfo.attach(`${episodeNumber} ${lang} toggle class`, {
-    body: toggleClass,
+  await testInfo.attach(`${episodeNumber} ${lang} segment class`, {
+    body: segmentClass,
     contentType: "text/plain",
   });
-  await expect(toggle).toHaveClass(/active/);
+  await expect(segment).toHaveClass(/active/);
 
   // Click Watch Now and spy
 

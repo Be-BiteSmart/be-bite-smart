@@ -128,25 +128,38 @@ function track_user_interactions() {
             return lang ? category + '-' + action + '-' + lang : category + '-' + action;
         }
 
+        const LANG_ANALYTICS = {
+            en: 'english',
+            es: 'spanish',
+            hi: 'hindi',
+        };
+
+        function analyticsNameForLangCode(code) {
+            if (!code) return null;
+            const normalized = String(code).toLowerCase().split('-')[0];
+            return LANG_ANALYTICS[normalized] || normalized;
+        }
+
         function getLang(btn) {
             // Check button label text for language markers like (EN), (ENG), (ES)
             const label = (btn.querySelector('.btn-label')?.textContent || btn.textContent || '').toUpperCase();
             if (/\\(ENG\\)|\\(EN\\)/i.test(label)) return 'english';
             if (/\\(ES\\)/i.test(label)) return 'spanish';
-            // Fall back to active language toggle (for Watch Now / play buttons on episode cards)
+            if (/\\(HI\\)|\\(HIN\\)/i.test(label)) return 'hindi';
+            // Active language on episode cards (segmented picker or legacy toggle)
             const card = btn.closest('.video-episode-block');
             if (card) {
-                const active = card.querySelector('.toggle-label.active');
-                if (active?.dataset.lang === 'en') return 'english';
-                if (active?.dataset.lang === 'es') return 'spanish';
+                const active = card.querySelector('.lang-segment.active, .toggle-label.active');
+                const fromEpisode = analyticsNameForLangCode(active?.dataset.lang);
+                if (fromEpisode) return fromEpisode;
             }
             return null;
         }
 
         function langFromDataAttr(btn) {
             const raw = btn.getAttribute('data-lang');
-            if (raw === 'en') return 'english';
-            if (raw === 'es') return 'spanish';
+            const fromAttr = analyticsNameForLangCode(raw);
+            if (fromAttr) return fromAttr;
             return getLang(btn);
         }
 

@@ -1,5 +1,188 @@
 # Change log
 
+## 2026-05-29 — Editable language-switch dialog (block editor)
+
+**What was built and why:** Editors can change confirm-dialog wording without code. Site-wide copy is stored in WordPress (`bitesmart_lang_restart_dialog`), edited from any Video Episode block sidebar → **Language switch dialog**, and passed to the front end via `bitesmartLangRestartDialog`.
+
+**How to use:** Open a Video Episode block → sidebar → **Language switch dialog** → edit title/message/buttons per dialog language (English / Spanish / Hindi sections). Use `{language}` in message and confirm text for the target language name. Click **Save dialog text**. **Reset to defaults** restores built-in copy.
+
+**Files created or modified:**
+
+- `src/includes/lang-restart-dialog.php` — defaults, option, REST `GET/POST /bitesmart/v1/lang-restart-dialog`
+- `src/episode-card/lang-restart-dialog-panel.js` — inspector panel + save
+- `src/episode-card/index.js` — wires panel into InspectorControls
+- `src/video-lang-restart-modal.js` — reads `window.bitesmartLangRestartDialog`, `{language}` placeholder
+- `custom-blocks-for-be-bite-smart.php` — require + localize on `video-toggle`
+- `build/*` — `pnpm run build`
+
+## 2026-05-29 — Episode language restart: dialog in playing language
+
+**What was built and why:** Confirm modal copy uses the **language currently playing** (not the segment clicked), so a mistaken tap on another language still shows a prompt they understand—e.g. watching EN and tapping HI shows English: “The video will restart in Hindi.”
+
+**Files modified:** `src/video-lang-restart-modal.js`, `src/video-toggle.js`, `build/video-toggle.js` (`pnpm run build`)
+
+## 2026-05-29 — Episode language restart: accessible modal
+
+**What was built and why:** `window.confirm` for mid-play language switches is hard for screen readers and off-brand. Replaced with a single page-level dialog (`role="dialog"`, `aria-modal`, labelled title/description, focus trap, Escape/backdrop cancel, focus return to the segment).
+
+**Files created or modified:**
+
+- `app/public/wp-content/plugins/custom-blocks-for-be-bite-smart/src/video-lang-restart-modal.js` — `confirmLanguageRestart()` Promise API, EN/ES/HI copy
+- `app/public/wp-content/plugins/custom-blocks-for-be-bite-smart/src/video-lang-restart-modal.css` — overlay + panel styles (theme accent buttons)
+- `app/public/wp-content/plugins/custom-blocks-for-be-bite-smart/src/video-toggle.js` — uses modal instead of `window.confirm`
+- `app/public/wp-content/plugins/custom-blocks-for-be-bite-smart/custom-blocks-for-be-bite-smart.php` — enqueues `build/video-toggle.css` with script
+- `app/public/wp-content/plugins/custom-blocks-for-be-bite-smart/build/video-toggle.js` (+ `video-toggle.css`) — `pnpm run build`
+
+**Patterns or conventions followed from the codebase:**
+
+- One shared dialog on `document.body` (same enqueue scope as `video-toggle.js` on education + front page)
+- Button styling aligned with `block-toggle-btn` / accent-2
+
+**Verification:**
+
+- Play episode → switch language → Cancel / backdrop / Escape → picker reverts, same video
+- Confirm → one reload in new language
+- Tab cycles only Cancel / Switch buttons while open
+
+## 2026-05-29 — Third episode language: Hindi (not French)
+
+**What was built and why:** Site language config listed French (`fr`) as the third episode language; the client uses Hindi (`hi`) instead.
+
+**Files created or modified:**
+
+- `app/public/wp-content/plugins/custom-blocks-for-be-bite-smart/src/includes/site-lang.php` — `hi` / Hindi / `hindi` analytics
+- `app/public/wp-content/plugins/custom-blocks-for-be-bite-smart/src/shared/languages.js` — default languages list
+- `app/public/wp-content/plugins/custom-blocks-for-be-bite-smart/src/video-toggle.js` — Hindi watch label, confirm copy, Vimeo `hi` track params
+- `app/public/wp-content/themes/twentytwentyfive-child/inc/analytics.php` — `hindi` Plausible suffix
+- `app/public/wp-content/tests/analytics/helpers/plausible.js` — `hi` / `hindi` mappings
+- `app/public/wp-content/tests/analytics/events.spec.js` — segment `hi` → `hindi`
+- `app/public/wp-content/plugins/custom-blocks-for-be-bite-smart/build/*` — `pnpm run build`
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**TODOs:** If any block `videosByLang` was saved with key `fr`, re-enter URLs under Hindi in the editor.
+
+## 2026-05-29 — Episode language switch: confirm before restart
+
+**What was built and why:** Tapping EN/ES/HI while a video was playing immediately replaced the Vimeo iframe and started a new stream—rapid toggling could trigger multiple reloads. Language changes during playback now require a confirm dialog; cancel restores the active segment to the language currently playing.
+
+### Problem
+
+In `video-toggle.js`, segment clicks previously called `setEpisodeLanguage(lang, true)`. When `isPlaying` was true, that immediately ran `loadVideo()`—destroying the iframe and loading another Vimeo embed (separate ID per language).
+
+Each toggle = full player restart + new stream. Rapid clicking multiplies Vimeo traffic and hurts UX. The load is browser ↔ Vimeo, not WordPress—but it is still wasteful and annoying.
+
+### Chosen UX
+
+**Confirm restart:** While a video is playing, changing the language segment opens a browser confirm: *“Switch to [language]? The video will restart.”* Reload only if the user accepts. Cancel restores the active segment to the language currently playing.
+
+- **Not playing:** Segment click only updates selection + Watch CTA (no iframe).
+- **Playing, same language:** No-op (no confirm, no reload).
+- **Playing, different language:** Confirm → on OK, one `loadVideo()`; on Cancel, revert picker to `playingLang`.
+
+This blocks button-smashing without disabling the control or hiding that a restart is required.
+
+```mermaid
+flowchart TD
+  segmentClick[User clicks lang segment]
+  playing{isPlaying?}
+  sameLang{same as playingLang?}
+  updateUI[Update selection + CTA only]
+  confirm[window.confirm restart?]
+  load[loadVideo once]
+  revert[Revert segment to playingLang]
+
+  segmentClick --> playing
+  playing -->|no| updateUI
+  playing -->|yes| sameLang
+  sameLang -->|yes| updateUI
+  sameLang -->|no| confirm
+  confirm -->|OK| load
+  confirm -->|Cancel| revert
+```
+
+### Implementation summary
+
+1. **`playingLang`** — set when `loadVideo()` succeeds (episode cards only); separate from selected segment (`currentLang`).
+2. **Segment clicks** — never auto-reload while playing; `handleLangSegmentClick()` handles confirm flow.
+3. **Confirm copy** (`RESTART_CONFIRM_MESSAGES`) — target language’s message: EN / ES / HI (e.g. “Switch to English? The video will restart.”). Native `window.confirm()` is blocking, so only one dialog at a time.
+4. **Documentary** (`video-quote-block`) — unchanged (no language segments on that block).
+5. **Analytics** — no change; Plausible still fires on Watch/play with active `.lang-segment`; user must confirm before a mid-play restart.
+
+### Out of scope (later)
+
+- Custom modal instead of `window.confirm` (better a11y/branding).
+- Vimeo Player API track switch without iframe teardown (if moving to one multi-track asset).
+- Applying language on “next play” without confirm.
+
+### Verification checklist
+
+- Play episode in EN → switch to ES → Cancel → still EN audio, EN segment active.
+- Play EN → switch ES → OK → one reload, ES plays.
+- Rapid EN/ES/HI clicks while playing → at most one confirm at a time; no iframe storm without confirmations.
+- Switch segment before play → no confirm; first play uses selected language.
+- Legacy `.toggle-label` markup behaves the same (shared segment handler).
+
+**Files created or modified:**
+
+- `app/public/wp-content/plugins/custom-blocks-for-be-bite-smart/src/video-toggle.js` — `playingLang`, `handleLangSegmentClick()`, `RESTART_CONFIRM_MESSAGES` (en/es/hi); removed auto-reload on segment click
+- `app/public/wp-content/plugins/custom-blocks-for-be-bite-smart/build/video-toggle.js` — compiled output (`pnpm run build`)
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Patterns or conventions followed from the codebase:**
+
+- Episode-only behavior; documentary (`video-quote-block`) unchanged
+- Native `window.confirm` (blocking, prevents iframe storm without extra UI)
+
+**Problems encountered and how they were fixed:**
+
+- None
+
+**TODOs:**
+
+- Optional: branded modal instead of `window.confirm` for accessibility
+
+**What the next logical step would be:**
+
+- Manually verify on `/education`: play episode → switch language → Cancel keeps EN; OK restarts in chosen language
+
+## 2026-05-29 — Episode videos: 3+ languages (segmented picker)
+
+**What was built and why:** Episode cards were limited to a binary EN/ES toggle and `vimeoUrlEn` / `vimeoUrlEs` attributes. The site is adding a third language; episodes now use a scalable segmented language picker, JSON `data-videos` map, and shared language config (EN, ES, FR).
+
+**Files created or modified:**
+
+- `app/public/wp-content/plugins/custom-blocks-for-be-bite-smart/src/includes/site-lang.php` — `bitesmart_site_languages()`, `bitesmart_normalize_lang_code()`, episode `render_block` injects `data-videos`, `data-watch-labels`, `data-site-lang`; editor localize via `generate_block_asset_handle`
+- `app/public/wp-content/plugins/custom-blocks-for-be-bite-smart/src/shared/languages.js` — shared language list and Vimeo/JSON helpers
+- `app/public/wp-content/plugins/custom-blocks-for-be-bite-smart/src/episode-card/episode-helpers.js` — migrate legacy attrs, render language picker, save data attributes
+- `app/public/wp-content/plugins/custom-blocks-for-be-bite-smart/src/episode-card/index.js` — `videosByLang`, segmented UI, block deprecation from `vimeoUrlEn`/`vimeoUrlEs`
+- `app/public/wp-content/plugins/custom-blocks-for-be-bite-smart/src/episode-card/style.css` — `.episode-lang-picker` / `.lang-segment` styles (legacy toggle CSS retained)
+- `app/public/wp-content/plugins/custom-blocks-for-be-bite-smart/src/video-toggle.js` — reads `data-videos`, defaults to site language, supports legacy toggle markup
+- `app/public/wp-content/plugins/custom-blocks-for-be-bite-smart/build/*` — `pnpm run build`
+- `app/public/wp-content/themes/twentytwentyfive-child/inc/analytics.php` — `getLang()` reads `.lang-segment.active`, French analytics suffix
+- `app/public/wp-content/tests/analytics/helpers/plausible.js` — episode tests use lang segments; `episodeLangCode`, `french` mapping
+- `app/public/wp-content/tests/analytics/events.spec.js` — loops all configured languages per episode
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Patterns or conventions followed from the codebase:**
+
+- Static block + `render_block` runtime data (same as prior `data-site-lang` approach)
+- PDF/download blocks still EN/ES-only; episodes use new segmented picker pattern
+- Block `deprecated` + `migrate` for editor; `render_block` + JS legacy fallbacks for saved HTML
+
+**Problems encountered and how they were fixed:**
+
+- Binary toggle CSS (`50%` width, `.es` class) cannot scale to N languages — replaced with `--lang-count` / `--lang-index` on `.episode-lang-picker`
+- Existing posts keep legacy HTML until re-saved; `video-toggle.js` still supports `.toggle-label` and `data-vimeo-en`/`es` via `resolveVideosForBlock()`
+
+**TODOs:**
+
+- Re-save episode blocks in the editor to output FR segment when French Vimeo URLs are added
+- Extend pdf-toggle / download-card to same `bitesmart_site_languages()` list (out of scope for this change)
+
+**What the next logical step would be:**
+
+- Add French Vimeo URLs per episode in the block sidebar, re-save, and verify FR segment + `episodes-watched-french` in Plausible
+
 ## 2026-05-29 — AddToAny share UTM tracking (child theme)
 
 **What was built and why:** AddToAny share buttons should send visitors to the current page with consistent UTM parameters (`utm_source=word_of_mouth`, `utm_medium=share`, `utm_campaign=site_share`) so shared links are attributable in analytics.

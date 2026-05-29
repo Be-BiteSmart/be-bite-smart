@@ -32,20 +32,26 @@ test("Watch Now fires episodes-watched for all episodes in both languages", asyn
   const episodeCount = await episodes.count();
   const allCalls = [];
 
+  let expectedCalls = 0;
+
   for (let i = 0; i < episodeCount; i++) {
     const episode = episodes.nth(i);
-
-    // Switch to EN first (default), test it
-    await episode.locator(".toggle-label[data-lang='en']").click();
-    allCalls.push(
-      await testEpisodeLanguage(page, testInfo, episode, "english"),
+    const langSegments = episode.locator(
+      ".lang-segment[data-lang], .toggle-label[data-lang]",
     );
+    const langCount = await langSegments.count();
+    expectedCalls += langCount;
 
-    // Switch to ES, test it
-    await episode.locator(".toggle-label[data-lang='es']").click();
-    allCalls.push(
-      await testEpisodeLanguage(page, testInfo, episode, "spanish"),
-    );
+    for (let j = 0; j < langCount; j++) {
+      const segment = langSegments.nth(j);
+      const code = await segment.getAttribute("data-lang");
+      const analyticsLang =
+        code === "es" ? "spanish" : code === "hi" ? "hindi" : "english";
+      await segment.click();
+      allCalls.push(
+        await testEpisodeLanguage(page, testInfo, episode, analyticsLang),
+      );
+    }
   }
 
   await testInfo.attach("all plausible events", {
@@ -53,7 +59,7 @@ test("Watch Now fires episodes-watched for all episodes in both languages", asyn
     contentType: "application/json",
   });
 
-  expect(allCalls).toHaveLength(episodeCount * 2);
+  expect(allCalls).toHaveLength(expectedCalls);
 });
 
 // ********************** EPISODE DOWNLOADS *********************

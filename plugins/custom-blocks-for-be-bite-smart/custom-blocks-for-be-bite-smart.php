@@ -9,6 +9,7 @@
 
 // Shared helpers (TranslatePress site language, etc.)
 require_once __DIR__ . '/src/includes/site-lang.php';
+require_once __DIR__ . '/src/includes/lang-restart-dialog.php';
 
 // -----------------------------
 // Register all blocks
@@ -179,7 +180,18 @@ function custom_blocks_scripts() {
 
        if ( $on_education || $on_front ) {
         $asset = include plugin_dir_path( __FILE__ ) . 'build/video-toggle.asset.php';
+        wp_enqueue_style(
+            'video-toggle',
+            plugins_url( 'build/video-toggle.css', __FILE__ ),
+            array(),
+            $asset['version']
+        );
         wp_enqueue_script( 'video-toggle', plugins_url( 'build/video-toggle.js', __FILE__ ), array(), $asset['version'], true );
+        wp_localize_script(
+            'video-toggle',
+            'bitesmartLangRestartDialog',
+            bitesmart_get_lang_restart_dialog()
+        );
     }
  
  
