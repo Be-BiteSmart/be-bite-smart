@@ -1,0 +1,4 @@
+# Normalize line endings to LF for all text files, to avoid the LF will be replaced by CRLF the next time Git touches it message
+# That way git won't try to convert Unix Style ending (LF) to windows style endings (CRLF)
+
+* text=auto eol=lf
