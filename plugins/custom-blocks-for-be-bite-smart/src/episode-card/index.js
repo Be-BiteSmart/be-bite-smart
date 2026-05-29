@@ -422,7 +422,8 @@ registerBlockType("custom/episode-card", {
               "div",
               { className: "episode-controls" },
 
-              // Language Toggle
+              // Language Toggle — save() defaults to EN; on the front end, video-toggle.js
+              // sets ES active when TranslatePress is serving Spanish (data-site-lang).
               wp.element.createElement(
                 "div",
                 {

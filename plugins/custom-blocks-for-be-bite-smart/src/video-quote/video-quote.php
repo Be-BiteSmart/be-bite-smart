@@ -1,32 +1,6 @@
 <?php
 
-/**
- * Site UI language for Vimeo defaults (en|es). Uses TranslatePress when available.
- */
-function video_quote_site_lang_code() {
-    $lang = null;
-
-    if ( function_exists( 'trp_get_current_language' ) ) {
-        $lang = trp_get_current_language();
-    } else {
-        global $TRP_LANGUAGE;
-        if ( ! empty( $TRP_LANGUAGE ) ) {
-            $lang = $TRP_LANGUAGE;
-        }
-    }
-
-    if ( ! $lang ) {
-        $lang = apply_filters( 'trp_user_language', get_locale() );
-    }
-
-    $lang = strtolower( str_replace( '_', '-', (string) $lang ) );
-
-    if ( str_starts_with( $lang, 'es' ) ) {
-        return 'es';
-    }
-
-    return 'en';
-}
+require_once dirname( __DIR__ ) . '/includes/site-lang.php';
 
 function render_video_quote_block( $attributes ) {
     $title        = wp_kses_post( $attributes['title']       ?? '' );
@@ -58,7 +32,7 @@ function render_video_quote_block( $attributes ) {
         );
     }
 
-    $site_lang = video_quote_site_lang_code();
+    $site_lang = bitesmart_site_lang_code();
 
     ob_start(); ?>
     <article

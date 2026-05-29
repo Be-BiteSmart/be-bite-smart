@@ -58,13 +58,31 @@ document.addEventListener("DOMContentLoaded", function () {
     const toggleLabels = block.querySelectorAll(".toggle-label");
     const languageToggle = block.querySelector(".language-toggle");
     const isQuoteBlock = block.classList.contains("video-quote-block");
-    let currentLang = "en";
+    const siteLang = normalizeVimeoLang(
+      block.dataset.siteLang || detectSiteLangFromDocument(),
+    );
+    let currentLang = isQuoteBlock ? siteLang : "en";
     let isPlaying = false;
 
-    if (isQuoteBlock) {
-      currentLang = normalizeVimeoLang(
-        block.dataset.siteLang || detectSiteLangFromDocument(),
-      );
+    function setEpisodeLanguage(lang, reloadIfPlaying = false) {
+      currentLang = lang;
+      toggleLabels.forEach((label) => {
+        label.classList.toggle("active", label.dataset.lang === lang);
+      });
+      if (languageToggle) {
+        languageToggle.classList.toggle("es", lang === "es");
+      }
+      if (buttonText) {
+        buttonText.textContent = lang === "en" ? "Watch Now" : "Ver Ahora";
+      }
+      if (reloadIfPlaying && isPlaying) {
+        loadVideo();
+      }
+    }
+
+    // Episode cards save with EN active; sync toggle UI to TranslatePress on load.
+    if (!isQuoteBlock && toggleLabels.length && siteLang === "es") {
+      setEpisodeLanguage("es");
     }
 
     // ── Load video ────────────────────────────────────────────────────────────
@@ -99,29 +117,7 @@ document.addEventListener("DOMContentLoaded", function () {
       toggleLabels.forEach((label) => {
         label.addEventListener("click", function (e) {
           e.stopPropagation();
-          currentLang = this.dataset.lang;
-
-          // Update active state
-          toggleLabels.forEach((l) => l.classList.remove("active"));
-          this.classList.add("active");
-
-          // Slide the toggle pill
-          if (currentLang === "es") {
-            languageToggle.classList.add("es");
-          } else {
-            languageToggle.classList.remove("es");
-          }
-
-          // Update button text
-          if (buttonText) {
-            buttonText.textContent =
-              currentLang === "en" ? "Watch Now" : "Ver Ahora";
-          }
-
-          // Reload video if already playing
-          if (isPlaying) {
-            loadVideo();
-          }
+          setEpisodeLanguage(this.dataset.lang, true);
         });
       });
     }

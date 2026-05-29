@@ -7,6 +7,9 @@
  * Requires Plugins: TranslatePress
  */
 
+// Shared helpers (TranslatePress site language, etc.)
+require_once __DIR__ . '/src/includes/site-lang.php';
+
 // -----------------------------
 // Register all blocks
 // register_block_type now reads block.json from build/, which handles
