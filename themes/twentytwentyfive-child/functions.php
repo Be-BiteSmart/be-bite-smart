@@ -23,6 +23,7 @@ function get_asset( $path ) {
 }
 
 require_once get_stylesheet_directory() . '/inc/analytics.php';
+require_once get_stylesheet_directory() . '/inc/addtoany.php';
 
 function twentytwentyfive_child_enqueue_styles() {
 

@@ -1,5 +1,28 @@
 # Change log
 
+## 2026-05-29 — AddToAny share UTM tracking (child theme)
+
+**What was built and why:** AddToAny share buttons should send visitors to the current page with consistent UTM parameters (`utm_source=word_of_mouth`, `utm_medium=share`, `utm_campaign=site_share`) so shared links are attributable in analytics.
+
+**Files created or modified:**
+- `app/public/wp-content/themes/twentytwentyfive-child/inc/addtoany.php` — sets `a2a_config.linkurl` in `wp_head` (page URL without existing query string + UTMs)
+- `app/public/wp-content/themes/twentytwentyfive-child/functions.php` — `require_once` for `addtoany.php`
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Patterns or conventions followed from the codebase:**
+- Same `inc/` + `require_once` pattern as `inc/analytics.php`
+- Inline `wp_head` script hook (similar to preconnect / hero preload hooks in `functions.php`)
+- `wp_head` priority `1` so `a2a_config` exists before AddToAny’s script runs
+
+**Problems encountered and how they were fixed:**
+- None
+
+**TODOs:**
+- None
+
+**What the next logical step would be:**
+- Share a page via AddToAny, open the shared link, and confirm UTMs appear in the landing URL and in Plausible/analytics
+
 ## 2026-05-29 — Episode card language toggle defaults to Spanish (TranslatePress)
 
 **What was built and why:** Episode cards are static blocks saved with the EN toggle active and “Watch Now”. When TranslatePress serves the site in Spanish, each card should start on ES (slider position, active label, “Ver Ahora”, and `data-vimeo-es` when play is clicked) without re-saving blocks in the editor.
