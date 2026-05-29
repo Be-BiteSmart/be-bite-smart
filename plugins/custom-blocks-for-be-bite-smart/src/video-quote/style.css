@@ -86,11 +86,11 @@
 
 /* ── Watch button ── */
 .video-quote-watch-button {
-  margin-top: 0 !important;
+  margin-top: 0.5rem !important;
   margin-left: auto;
   margin-right: auto;
   max-width: max-content;
-  margin-bottom: 12px;
+  margin-bottom: 2.5rem;
 }
 
 /* center watch button (beats competing block-toggle button styles) */
