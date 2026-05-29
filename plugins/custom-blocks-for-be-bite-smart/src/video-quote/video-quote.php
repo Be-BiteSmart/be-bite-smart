@@ -1,5 +1,33 @@
 <?php
 
+/**
+ * Site UI language for Vimeo defaults (en|es). Uses TranslatePress when available.
+ */
+function video_quote_site_lang_code() {
+    $lang = null;
+
+    if ( function_exists( 'trp_get_current_language' ) ) {
+        $lang = trp_get_current_language();
+    } else {
+        global $TRP_LANGUAGE;
+        if ( ! empty( $TRP_LANGUAGE ) ) {
+            $lang = $TRP_LANGUAGE;
+        }
+    }
+
+    if ( ! $lang ) {
+        $lang = apply_filters( 'trp_user_language', get_locale() );
+    }
+
+    $lang = strtolower( str_replace( '_', '-', (string) $lang ) );
+
+    if ( str_starts_with( $lang, 'es' ) ) {
+        return 'es';
+    }
+
+    return 'en';
+}
+
 function render_video_quote_block( $attributes ) {
     $title        = wp_kses_post( $attributes['title']       ?? '' );
     $vimeo_url    = esc_url(      $attributes['vimeoUrl']    ?? '' );
@@ -30,8 +58,14 @@ function render_video_quote_block( $attributes ) {
         );
     }
 
+    $site_lang = video_quote_site_lang_code();
+
     ob_start(); ?>
-    <article class="wp-block-custom-video-quote video-quote-block" data-vimeo-id="<?php echo esc_attr( $vimeo_id ); ?>">
+    <article
+        class="wp-block-custom-video-quote video-quote-block"
+        data-vimeo-id="<?php echo esc_attr( $vimeo_id ); ?>"
+        data-site-lang="<?php echo esc_attr( $site_lang ); ?>"
+    >
 
         <?php if ( $title ) : ?>
             <h3 class="video-quote-title"><?php echo $title; ?></h3>

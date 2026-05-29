@@ -3,7 +3,43 @@
  * Shared video toggle logic for .video-episode-block and .video-quote-block.
  * Handles play button, thumbnail click, watch button, and language switching
  * (language toggle only runs when the relevant elements are present).
+ *
+ * video-quote: one Vimeo ID with multi audio/subtitle tracks — defaults tracks from
+ * TranslatePress (data-site-lang on the block, or html/body classes as fallback).
  */
+
+function normalizeVimeoLang(code) {
+  if (!code) return "en";
+  const c = String(code).toLowerCase();
+  if (c === "es" || c.startsWith("es-") || c.startsWith("es_")) return "es";
+  return "en";
+}
+
+/** TranslatePress sets html lang and body classes like translatepress-es_ES. */
+function detectSiteLangFromDocument() {
+  const htmlLang = (document.documentElement.lang || "").toLowerCase();
+  if (htmlLang.startsWith("es")) return "es";
+
+  const bodyClass = document.body.className.toLowerCase();
+  if (
+    bodyClass.includes("translatepress-es") ||
+    /\btranslatepress-es[_-]/.test(bodyClass)
+  ) {
+    return "es";
+  }
+
+  return "en";
+}
+
+function buildVimeoPlayerSrc(vimeoId, lang) {
+  const params = new URLSearchParams({ autoplay: "1" });
+  if (lang === "es") {
+    params.set("texttrack", "es");
+    params.set("audiotrack", "es");
+  }
+  return `https://player.vimeo.com/video/${vimeoId}?${params.toString()}`;
+}
+
 document.addEventListener("DOMContentLoaded", function () {
   const videoBlocks = document.querySelectorAll(
     ".video-episode-block, .video-quote-block",
@@ -21,8 +57,15 @@ document.addEventListener("DOMContentLoaded", function () {
     // Language toggle — episode-card only
     const toggleLabels = block.querySelectorAll(".toggle-label");
     const languageToggle = block.querySelector(".language-toggle");
+    const isQuoteBlock = block.classList.contains("video-quote-block");
     let currentLang = "en";
     let isPlaying = false;
+
+    if (isQuoteBlock) {
+      currentLang = normalizeVimeoLang(
+        block.dataset.siteLang || detectSiteLangFromDocument(),
+      );
+    }
 
     // ── Load video ────────────────────────────────────────────────────────────
     function loadVideo() {
@@ -40,7 +83,7 @@ document.addEventListener("DOMContentLoaded", function () {
       }
 
       const iframe = document.createElement("iframe");
-      iframe.src = `https://player.vimeo.com/video/${vimeoId}?autoplay=1`;
+      iframe.src = buildVimeoPlayerSrc(vimeoId, currentLang);
       iframe.frameBorder = "0";
       iframe.allow = "autoplay; fullscreen; picture-in-picture";
       iframe.allowFullscreen = true;
