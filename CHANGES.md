@@ -10,7 +10,7 @@
 - `app/public/wp-content/package.json` — exact Playwright version (no caret)
 - `app/public/wp-content/CHANGES.md` — this entry
 
-**When bumping Playwright:** update `package.json`, `pnpm-lock.yaml`, and the Docker image tag together.
+**When bumping Playwright:** update `package.json`, `pnpm-lock.yaml` (specifier + version), and the Docker image tag together.
 
 ## 2026-06-17 — CI: cache Playwright browsers, parallel workers
 
