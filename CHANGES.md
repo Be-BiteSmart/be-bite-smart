@@ -1,5 +1,18 @@
 # Change log
 
+## 2026-06-17 — CI: cache Playwright browsers, parallel workers
+
+**What was built and why:** Every GitHub Actions run was downloading ~170MB Chromium plus apt font/system packages via `playwright install --with-deps`. Browsers are now cached keyed on `pnpm-lock.yaml`; install runs only on cache miss. Tests use 2 workers in CI and `dot` reporter for shorter logs.
+
+**Files modified:**
+
+- `app/public/wp-content/.github/workflows/playwright.yml` — `actions/cache` on `~/.cache/ms-playwright`; skip install when cache hits
+- `app/public/wp-content/playwright.config.js` — `workers: 2` and `fullyParallel: true` in CI
+- `app/public/wp-content/package.json` — `test:ci` uses `dot` reporter instead of `list`
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Note:** First run after a `@playwright/test` version bump still does a full install (cache key changes). Later runs should skip that step.
+
 ## 2026-06-17 — Analytics: Learn page slug `education` → `learn`
 
 **What was built and why:** `analytics.php` still gated the Learn page listeners on `is_page( 'education' )` after the page slug changed to `learn`. Episode watches, downloads, coloring-book toggles, and documentary tracking on `/learn/` never ran.
