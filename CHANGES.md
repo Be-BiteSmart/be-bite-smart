@@ -1,5 +1,49 @@
 # Change log
 
+## 2026-06-17 — Analytics tests: `/education` → `/learn/`
+
+**What was built and why:** Production returns 404 for `/education`; the Learn page slug is `/learn/`. Analytics specs now use a shared `EDUCATION_PATH` constant so CI passes against the live site.
+
+**Files modified:**
+
+- `app/public/wp-content/tests/analytics/helpers/plausible.js` — export `EDUCATION_PATH = "/learn/"`
+- `app/public/wp-content/tests/analytics/events.spec.js` — all education-page navigations use `EDUCATION_PATH`
+- `app/public/wp-content/tests/videos/loading.spec.js` — import shared constant (removed local duplicate)
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Next step:** Run `pnpm playwright test` from `app/public/wp-content` to confirm the full suite.
+
+## 2026-06-17 — Playwright video loading tests
+
+**What was built and why:** Added Playwright tests that verify Vimeo embeds actually load (not just analytics events): correct iframe `src`, thumbnail hidden, and a successful `player.vimeo.com` network response.
+
+**Files created or modified:**
+
+- `app/public/wp-content/tests/videos/helpers/videos.js` — shared helpers (`expectedVimeoPlayerSrc`, `assertVimeoPlayerLoads`, episode `data-videos` parsing)
+- `app/public/wp-content/tests/videos/loading.spec.js` — documentary (home + learn) and episode video loading specs
+- `app/public/wp-content/playwright.config.js` — `testDir` set to `./tests` so analytics and video suites both run
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Patterns or conventions followed from the codebase:**
+
+- Reused `gotoExpectOk` from `tests/analytics/helpers/plausible.js`
+- Vimeo URL params mirror `src/video-toggle.js` (`autoplay`, `texttrack` / `audiotrack` for ES/HI)
+- Education page path via shared `EDUCATION_PATH` in `plausible.js`
+
+**Problems encountered and how they were fixed:**
+
+- `/education` returns 404 on production — tests use `/learn/` via `EDUCATION_PATH`
+- Switching episode language while a video is playing opens the restart modal — episode multi-language test reloads the page per language so each run starts from a clean state
+
+**TODOs:**
+
+- Optional: add a spec for mid-play language switch (confirm modal → new embed loads)
+
+**What the next logical step would be:**
+
+- Run full suite: `pnpm playwright test` from `app/public/wp-content`
+- Point `PLAYWRIGHT_BASE_URL` at local/staging when testing unpublished changes
+
 ## 2026-05-29 — Editable language-switch dialog (block editor)
 
 **What was built and why:** Editors can change confirm-dialog wording without code. Site-wide copy is stored in WordPress (`bitesmart_lang_restart_dialog`), edited from any Video Episode block sidebar → **Language switch dialog**, and passed to the front end via `bitesmartLangRestartDialog`.

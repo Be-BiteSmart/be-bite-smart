@@ -7,6 +7,7 @@ import {
   firstColoringViewPdfButton,
   firstPdfToggleViewButton,
   gotoExpectOk,
+  EDUCATION_PATH,
   langToEventSuffix,
   testEpisodeLanguage,
   testOutboundArticleClick,
@@ -26,7 +27,7 @@ test("Watch Now fires episodes-watched for all episodes in both languages", asyn
 }, testInfo) => {
   test.setTimeout(120000);
   // long timeout since it has to wait for iframes multiple times
-  await gotoExpectOk(page, "/education");
+  await gotoExpectOk(page, EDUCATION_PATH);
 
   const episodes = page.locator("#developed-episodes article");
   const episodeCount = await episodes.count();
@@ -68,7 +69,7 @@ test("Download video fires category-downloaded for all episodes in both language
   page,
 }, testInfo) => {
   test.setTimeout(60000);
-  await gotoExpectOk(page, "/education");
+  await gotoExpectOk(page, EDUCATION_PATH);
 
   const { section, block, downloadEvent } = downloadCardBlocks.video;
   const sections = downloadCardSections(page, { section, block });
@@ -116,7 +117,7 @@ test("Download video fires category-downloaded for all episodes in both language
 test("Coloring Book PDF toggle fires coloring-books-viewed for all available episodes", async ({
   page,
 }, testInfo) => {
-  await gotoExpectOk(page, "/education");
+  await gotoExpectOk(page, EDUCATION_PATH);
 
   const { section, block } = downloadCardBlocks.coloring;
   const sections = downloadCardSections(page, { section, block });
@@ -178,7 +179,7 @@ test("Coloring Book PDF toggle fires coloring-books-viewed for all available epi
 test("Coloring Book Download fires coloring-books-downloaded for available PDFs", async ({
   page,
 }, testInfo) => {
-  await gotoExpectOk(page, "/education");
+  await gotoExpectOk(page, EDUCATION_PATH);
 
   const { section, block, downloadSelector, downloadEvent } =
     downloadCardBlocks.coloring;
@@ -233,7 +234,7 @@ test("Coloring Book Download fires coloring-books-downloaded for available PDFs"
 test("Education page PDF toggle does not fire again when closing", async ({
   page,
 }, testInfo) => {
-  await gotoExpectOk(page, "/education");
+  await gotoExpectOk(page, EDUCATION_PATH);
 
   const btn = await firstColoringViewPdfButton(page);
   await btn.click();
@@ -257,7 +258,7 @@ test("Education page PDF toggle does not fire again when closing", async ({
 test("Documentary on Education page play fires documentary-watched", async ({
   page,
 }, testInfo) => {
-  await testMiniDocPlay(page, testInfo, "/education");
+  await testMiniDocPlay(page, testInfo, EDUCATION_PATH);
 });
 
 // ── News / Legal pages ─────────────────────────────────────────

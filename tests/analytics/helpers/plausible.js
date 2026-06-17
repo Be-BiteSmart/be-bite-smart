@@ -1,5 +1,8 @@
 import { expect } from "@playwright/test";
 
+/** WordPress page slug for the Learn / education content page. */
+export const EDUCATION_PATH = "/learn/";
+
 /** Fail in seconds with a clear message instead of a 30s click timeout. */
 export async function gotoExpectOk(page, path) {
   const response = await page.goto(path, { waitUntil: "domcontentloaded" });
