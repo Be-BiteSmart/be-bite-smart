@@ -1,9 +1,16 @@
 // playwright.config.js
 import { defineConfig } from "@playwright/test";
 
+const htmlReporter = [
+  "html",
+  { open: "never", outputFolder: "playwright-report" },
+];
+
 export default defineConfig({
   testDir: "./tests",
-  reporter: [["list"], ["html", { open: "never" }]],
+  reporter: process.env.CI
+    ? [["github"], ["list"], htmlReporter]
+    : [["list"], htmlReporter],
   timeout: 60_000,
   expect: { timeout: 15_000 },
   use: {

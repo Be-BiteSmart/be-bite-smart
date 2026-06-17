@@ -18,7 +18,8 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "playwright test"
+    "test": "playwright test",
+    "test:ci": "playwright test --reporter=html,list,github"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1"

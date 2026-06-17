@@ -1,5 +1,18 @@
 # Change log
 
+## 2026-06-17 — CI: Playwright HTML report artifact upload
+
+**What was built and why:** GitHub Actions warned `No files were found with the provided path: playwright-report/` because the upload step ran even when no HTML report was produced (e.g. install/test step failed before Playwright finished). CI now uses the project-local Playwright CLI, forces the HTML reporter, sets an explicit `outputFolder`, and only uploads when the report exists.
+
+**Files modified:**
+
+- `app/public/wp-content/playwright.config.js` — explicit `outputFolder: "playwright-report"`; CI adds `github` reporter
+- `app/public/wp-content/package.json` — `test:ci` script with `--reporter=html,list`
+- `app/public/wp-content/.github/workflows/playwright.yml` — `pnpm exec playwright install`, `pnpm run test:ci`, `cache-dependency-path`, upload guarded with `hashFiles`
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Next step:** Push to `main` and confirm the `playwright-report` artifact appears on the workflow run (even when some tests fail).
+
 ## 2026-06-17 — Analytics tests: `/education` → `/learn/`
 
 **What was built and why:** Production returns 404 for `/education`; the Learn page slug is `/learn/`. Analytics specs now use a shared `EDUCATION_PATH` constant so CI passes against the live site.
