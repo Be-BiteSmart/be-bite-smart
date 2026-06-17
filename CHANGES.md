@@ -1,5 +1,16 @@
 # Change log
 
+## 2026-06-17 — Analytics: Learn page slug `education` → `learn`
+
+**What was built and why:** `analytics.php` still gated the Learn page listeners on `is_page( 'education' )` after the page slug changed to `learn`. Episode watches, downloads, coloring-book toggles, and documentary tracking on `/learn/` never ran.
+
+**Files modified:**
+
+- `app/public/wp-content/themes/twentytwentyfive-child/inc/analytics.php` — `is_page( 'learn' )` (matches `custom-blocks-for-be-bite-smart.php`)
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Next step:** Deploy child theme and purge cache; re-run Playwright analytics tests against `/learn/`.
+
 ## 2026-06-17 — CI: Playwright HTML report artifact upload
 
 **What was built and why:** GitHub Actions warned `No files were found with the provided path: playwright-report/` because the upload step ran even when no HTML report was produced (e.g. install/test step failed before Playwright finished). CI now uses the project-local Playwright CLI, forces the HTML reporter, sets an explicit `outputFolder`, and only uploads when the report exists.

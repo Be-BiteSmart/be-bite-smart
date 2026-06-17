@@ -282,7 +282,7 @@ function track_user_interactions() {
         trackThenNavigate(event, link, eventName('language', 'switched', lang));
     });
 
-    <?php if ( is_page( 'education' ) ) : ?>
+    <?php if ( is_page( 'learn' ) ) : ?>
         // ── Education page ─────────────────────────────────────────────
 
         // Episode video file downloads (educational-video-download block only)
