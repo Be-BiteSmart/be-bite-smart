@@ -9,7 +9,7 @@ const htmlReporter = [
 export default defineConfig({
   testDir: "./tests",
   fullyParallel: true,
-  workers: process.env.CI ? 2 : undefined,
+  workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI
     ? [["github"], ["list"], htmlReporter]
     : [["list"], htmlReporter],

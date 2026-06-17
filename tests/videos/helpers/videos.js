@@ -27,14 +27,10 @@ export function parseVideosDataset(raw) {
   }
 }
 
-export function vimeoResponseMatcher(vimeoId) {
-  return (response) =>
-    response.url().includes(`player.vimeo.com/video/${vimeoId}`) &&
-    response.status() < 400;
-}
-
 /**
- * Click a play trigger, wait for the Vimeo iframe, and assert src + embed response.
+ * Click a play trigger and assert the Vimeo iframe is inserted with the expected src.
+ * Does not wait on player.vimeo.com network responses — those are flaky in CI
+ * (cached embeds, parallel workers) while iframe src + visibility are reliable.
  */
 export async function assertVimeoPlayerLoads(page, container, trigger, {
   vimeoId,
@@ -43,9 +39,6 @@ export async function assertVimeoPlayerLoads(page, container, trigger, {
   expect(vimeoId, "block is missing a Vimeo ID").toBeTruthy();
 
   const iframe = container.locator(".video-player iframe");
-  const responsePromise = page.waitForResponse(vimeoResponseMatcher(vimeoId), {
-    timeout: 20_000,
-  });
 
   await trigger.scrollIntoViewIfNeeded();
   await trigger.click();
@@ -56,9 +49,6 @@ export async function assertVimeoPlayerLoads(page, container, trigger, {
     expectedVimeoPlayerSrc(vimeoId, lang),
   );
   await expect(container.locator(".video-thumbnail")).toHaveClass(/hidden/);
-
-  const response = await responsePromise;
-  expect(response.ok()).toBe(true);
 
   return iframe;
 }

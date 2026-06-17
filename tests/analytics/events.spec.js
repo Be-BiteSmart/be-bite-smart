@@ -8,6 +8,8 @@ import {
   firstPdfToggleViewButton,
   gotoExpectOk,
   EDUCATION_PATH,
+  EVIDENCE_PATH,
+  langCodeToAnalytics,
   langToEventSuffix,
   testEpisodeLanguage,
   testOutboundArticleClick,
@@ -25,15 +27,12 @@ import {
 test("Watch Now fires episodes-watched for all episodes in both languages", async ({
   page,
 }, testInfo) => {
-  test.setTimeout(120000);
-  // long timeout since it has to wait for iframes multiple times
+  test.setTimeout(180_000);
   await gotoExpectOk(page, EDUCATION_PATH);
 
   const episodes = page.locator("#developed-episodes article");
   const episodeCount = await episodes.count();
-  const allCalls = [];
-
-  let expectedCalls = 0;
+  const episodePlans = [];
 
   for (let i = 0; i < episodeCount; i++) {
     const episode = episodes.nth(i);
@@ -41,14 +40,29 @@ test("Watch Now fires episodes-watched for all episodes in both languages", asyn
       ".lang-segment[data-lang], .toggle-label[data-lang]",
     );
     const langCount = await langSegments.count();
-    expectedCalls += langCount;
-
+    const langs = [];
     for (let j = 0; j < langCount; j++) {
-      const segment = langSegments.nth(j);
-      const code = await segment.getAttribute("data-lang");
-      const analyticsLang =
-        code === "es" ? "spanish" : code === "hi" ? "hindi" : "english";
+      langs.push(await langSegments.nth(j).getAttribute("data-lang"));
+    }
+    episodePlans.push({ index: i, langs });
+  }
+
+  const allCalls = [];
+  let expectedCalls = 0;
+
+  for (const plan of episodePlans) {
+    expectedCalls += plan.langs.length;
+
+    for (const code of plan.langs) {
+      const analyticsLang = langCodeToAnalytics(code);
+
+      await gotoExpectOk(page, EDUCATION_PATH);
+      const episode = page.locator("#developed-episodes article").nth(plan.index);
+      const segment = episode.locator(
+        `.lang-segment[data-lang='${code}'], .toggle-label[data-lang='${code}']`,
+      );
       await segment.click();
+
       allCalls.push(
         await testEpisodeLanguage(page, testInfo, episode, analyticsLang),
       );
@@ -310,7 +324,7 @@ test("News Page Read More fires article-viewed", async ({ page }, testInfo) => {
 test("Library Page Article link click fires article-viewed", async ({
   page,
 }, testInfo) => {
-  await testOutboundArticleClick(page, testInfo, "/library");
+  await testOutboundArticleClick(page, testInfo, EVIDENCE_PATH);
 });
 
 // ── Home page ──────────────────────────────────────────────────

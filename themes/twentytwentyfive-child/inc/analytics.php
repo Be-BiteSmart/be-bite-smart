@@ -345,8 +345,8 @@ function track_user_interactions() {
         });
 
 
-    <?php elseif ( is_page( 'library' ) ) : ?>
-        // ── Library page ───────────────────────────────────────────────
+    <?php elseif ( is_page( 'evidence' ) ) : ?>
+        // ── Evidence / research articles page ──────────────────────────
 
         <?php echo $track_article_clicks; ?>
 

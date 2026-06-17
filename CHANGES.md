@@ -1,5 +1,20 @@
 # Change log
 
+## 2026-06-17 — Fix four failing Playwright CI tests
+
+**What was built and why:** CI had four failures: episode analytics loop left a video playing before switching language (ES segment never went `active`), `/library` 404 (live slug is `/evidence/`), episode video tests timed out waiting on Vimeo network responses (flaky in CI), and `analytics.php` still used `is_page( 'library' )`.
+
+**Files modified:**
+
+- `app/public/wp-content/tests/analytics/events.spec.js` — reload `/learn/` per episode language; use `EVIDENCE_PATH`
+- `app/public/wp-content/tests/analytics/helpers/plausible.js` — `EVIDENCE_PATH`, `langCodeToAnalytics()`
+- `app/public/wp-content/tests/videos/helpers/videos.js` — assert iframe `src` + visibility only (no network wait)
+- `app/public/wp-content/themes/twentytwentyfive-child/inc/analytics.php` — `is_page( 'evidence' )`
+- `app/public/wp-content/playwright.config.js` — `workers: 1` in CI to reduce parallel load on production
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Deploy:** child theme `analytics.php` change + cache purge for evidence-page article tracking.
+
 ## 2026-06-17 — CI: Playwright Docker image (skip browser install)
 
 **What was built and why:** CI was stalling on `playwright install --with-deps chromium` (apt + ~170MB Chromium download every run, or on cache miss). The job now runs inside `mcr.microsoft.com/playwright:v1.59.1-noble`, which ships browsers and OS deps pre-installed. `@playwright/test` pinned to `1.59.1` to match the image tag.
