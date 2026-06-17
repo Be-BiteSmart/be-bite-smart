@@ -171,14 +171,14 @@ add_action( 'init', 'press_release_register_block' );
 
 function custom_blocks_scripts() {
 
-    $on_education  = is_page( 'education' );
+    $on_learn  = is_page( 'learn' );
     $on_news       = is_page( 'news-media' );
     $on_legal       = is_page( 'legal' );
     $on_partnerships     = is_page( 'partnerships' );
     $on_front      = is_front_page();
 
 
-       if ( $on_education || $on_front ) {
+       if ( $on_learn || $on_front ) {
         $asset = include plugin_dir_path( __FILE__ ) . 'build/video-toggle.asset.php';
         wp_enqueue_style(
             'video-toggle',
@@ -217,10 +217,10 @@ function custom_blocks_scripts() {
     $asset = include plugin_dir_path( __FILE__ ) . 'build/pdf-toggle/index.asset.php';
     wp_enqueue_style( 'pdf-toggle-style', plugins_url( 'build/pdf-toggle/style-index.css', __FILE__ ), array(), $asset['version'] );
 
-    // Shared by educational-*-download blocks. Webpack only emits one style chunk per
+    // Shared by learnal-*-download blocks. Webpack only emits one style chunk per
     // shared import path, so video/coloring block.json style files are not generated.
     // Shared download-card CSS (webpack emits one chunk from the first block entry).
-    $download_card_css = plugin_dir_path( __FILE__ ) . 'build/educational-content-download/style-index.css';
+    $download_card_css = plugin_dir_path( __FILE__ ) . 'build/learnal-content-download/style-index.css';
     if ( file_exists( $download_card_css ) ) {
         $download_card_asset = include plugin_dir_path( __FILE__ ) . 'build/educational-content-download/index.asset.php';
         wp_enqueue_style(
