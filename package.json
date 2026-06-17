@@ -22,6 +22,6 @@
     "test:ci": "playwright test --reporter=html,dot,github"
   },
   "devDependencies": {
-    "@playwright/test": "^1.59.1"
+    "@playwright/test": "1.59.1"
   }
 }

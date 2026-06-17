@@ -8,6 +8,12 @@ jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # Browsers + OS deps are pre-installed — avoids slow/hanging
+    # `playwright install --with-deps` on every run (apt + ~170MB download).
+    container:
+      image: mcr.microsoft.com/playwright:v1.59.1-noble
+      options: --user 1001 --ipc=host
+
     steps:
       - uses: actions/checkout@v4
 
@@ -23,17 +29,6 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
-      - name: Cache Playwright browsers
-        uses: actions/cache@v4
-        id: playwright-cache
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-
-      - name: Install Playwright browsers
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: pnpm exec playwright install --with-deps chromium
 
       - name: Run tests
         run: pnpm run test:ci

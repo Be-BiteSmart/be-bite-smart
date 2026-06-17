@@ -1,5 +1,17 @@
 # Change log
 
+## 2026-06-17 — CI: Playwright Docker image (skip browser install)
+
+**What was built and why:** CI was stalling on `playwright install --with-deps chromium` (apt + ~170MB Chromium download every run, or on cache miss). The job now runs inside `mcr.microsoft.com/playwright:v1.59.1-noble`, which ships browsers and OS deps pre-installed. `@playwright/test` pinned to `1.59.1` to match the image tag.
+
+**Files modified:**
+
+- `app/public/wp-content/.github/workflows/playwright.yml` — `container.image`; removed browser cache + install steps
+- `app/public/wp-content/package.json` — exact Playwright version (no caret)
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**When bumping Playwright:** update `package.json`, `pnpm-lock.yaml`, and the Docker image tag together.
+
 ## 2026-06-17 — CI: cache Playwright browsers, parallel workers
 
 **What was built and why:** Every GitHub Actions run was downloading ~170MB Chromium plus apt font/system packages via `playwright install --with-deps`. Browsers are now cached keyed on `pnpm-lock.yaml`; install runs only on cache miss. Tests use 2 workers in CI and `dot` reporter for shorter logs.
