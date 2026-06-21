@@ -154,6 +154,20 @@ function bitesmart_episode_watch_labels() {
 }
 
 /**
+ * Alt text from a media library attachment ID (empty when unset).
+ */
+function bitesmart_attachment_alt_text( $attachment_id ) {
+    $id = (int) $attachment_id;
+    if ( ! $id ) {
+        return '';
+    }
+
+    $alt = get_post_meta( $id, '_wp_attachment_image_alt', true );
+
+    return ( is_string( $alt ) && $alt !== '' ) ? $alt : '';
+}
+
+/**
  * Inject runtime data on episode-card output (site lang, video map, watch labels).
  */
 function bitesmart_episode_card_render( $block_content, $block ) {
@@ -215,6 +229,20 @@ function bitesmart_episode_card_render( $block_content, $block ) {
                 $block_content,
                 1
             );
+        }
+    }
+
+    $thumbnail_id = $attrs['thumbnailId'] ?? 0;
+    if ( $thumbnail_id && str_contains( $block_content, 'video-thumbnail' ) ) {
+        $alt     = esc_attr( bitesmart_attachment_alt_text( $thumbnail_id ) );
+        $updated = preg_replace(
+            '/(<div class="video-thumbnail">\s*)(<img\b[^>]*\balt=)(["\'])([^"\']*)\3/i',
+            '$1$2"' . $alt . '"',
+            $block_content,
+            1
+        );
+        if ( is_string( $updated ) ) {
+            $block_content = $updated;
         }
     }
 

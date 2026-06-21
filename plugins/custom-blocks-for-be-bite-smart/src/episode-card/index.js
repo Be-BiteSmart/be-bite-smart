@@ -29,6 +29,7 @@ const EPISODE_ATTRIBUTES = {
   },
   thumbnailUrl: { type: "string", default: "" },
   thumbnailId: { type: "number" },
+  thumbnailAlt: { type: "string", default: "" },
   downloadsPageUrl: { type: "string", default: "" },
   fundedByName: { type: "string", default: "" },
   fundedByLogoUrl: { type: "string", default: "" },
@@ -80,7 +81,7 @@ function EpisodeCardSave({ attributes }) {
               attributes.thumbnailUrl &&
                 wp.element.createElement("img", {
                   src: attributes.thumbnailUrl,
-                  alt: attributes.title || "Video thumbnail",
+                  alt: attributes.thumbnailAlt || "",
                   loading: "lazy",
                 }),
               wp.element.createElement(
@@ -249,6 +250,7 @@ function EpisodeCardEdit({ attributes, setAttributes }) {
               setAttributes({
                 thumbnailUrl: media.url,
                 thumbnailId: media.id,
+                thumbnailAlt: media.alt || "",
               }),
             allowedTypes: ["image"],
             value: attributes.thumbnailId,
@@ -278,10 +280,11 @@ function EpisodeCardEdit({ attributes, setAttributes }) {
                         Button,
                         {
                           onClick: () =>
-                            setAttributes({
-                              thumbnailUrl: "",
-                              thumbnailId: null,
-                            }),
+                              setAttributes({
+                                thumbnailUrl: "",
+                                thumbnailId: null,
+                                thumbnailAlt: "",
+                              }),
                           variant: "tertiary",
                           isDestructive: true,
                         },

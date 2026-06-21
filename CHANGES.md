@@ -1,5 +1,20 @@
 # Change log
 
+# Change log
+
+## 2026-06-17 — Episode card: media library alt on thumbnail
+
+**What was built and why:** Episode cards statically saved `alt` from the episode title. Thumbnails now use Media Library alt only (`""` when unset). `render_block` replaces alt from `thumbnailId` at runtime so existing blocks update without re-saving.
+
+**Files modified:**
+
+- `app/public/wp-content/plugins/custom-blocks-for-be-bite-smart/src/episode-card/index.js` — `thumbnailAlt` attribute; save/onSelect
+- `app/public/wp-content/plugins/custom-blocks-for-be-bite-smart/src/includes/site-lang.php` — `bitesmart_attachment_alt_text()`, episode `render_block` alt fix
+- `app/public/wp-content/plugins/custom-blocks-for-be-bite-smart/build/episode-card/` — `pnpm run build`
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Deploy:** upload plugin changes and purge cache.
+
 ## 2026-06-17 — Video quote: use media library alt on thumbnail
 
 **What was built and why:** `video-quote.php` passed `alt` as the block title to `wp_get_attachment_image()`, overriding the Media Library alt field. Now uses attachment alt only; empty string when unset (no title fallback).
