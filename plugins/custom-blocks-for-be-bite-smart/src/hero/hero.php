@@ -1,5 +1,30 @@
 <?php
 
+/**
+ * Alt text from hero background attachment IDs (lg → md → sm).
+ * Reads live from the media library so updates apply without re-saving the block.
+ */
+function bitesmart_hero_bg_image_alt( $attributes ) {
+    $ids = array(
+        $attributes['bgImageLgId'] ?? 0,
+        $attributes['bgImageMdId'] ?? 0,
+        $attributes['bgImageSmId'] ?? 0,
+    );
+
+    foreach ( $ids as $id ) {
+        $id = (int) $id;
+        if ( ! $id ) {
+            continue;
+        }
+        $alt = get_post_meta( $id, '_wp_attachment_image_alt', true );
+        if ( is_string( $alt ) && $alt !== '' ) {
+            return $alt;
+        }
+    }
+
+    return '';
+}
+
 function render_hero_block( $attributes ) {
     
 
@@ -10,12 +35,16 @@ function render_hero_block( $attributes ) {
 
     $picture = '';
     if ( $src ) {
+        $alt_text       = bitesmart_hero_bg_image_alt( $attributes );
+        $alt_attr       = esc_attr( $alt_text );
+        $picture_hidden = $alt_text === '' ? ' aria-hidden="true"' : '';
+
         $sources = '';
         if ( $sm ) $sources .= '<source media="(max-width: 640px)" srcset="' . $sm . '">';
         if ( $md ) $sources .= '<source media="(max-width: 1280px)" srcset="' . $md . '">';
-        $picture = '<picture class="dbp-bg-picture" aria-hidden="true">'
+        $picture = '<picture class="dbp-bg-picture"' . $picture_hidden . '>'
             . $sources
-            . '<img src="' . $src . '" alt="" loading="eager" fetchpriority="high">'
+            . '<img src="' . esc_url( $src ) . '" alt="' . $alt_attr . '" loading="eager" fetchpriority="high">'
             . '</picture>';
     }
 

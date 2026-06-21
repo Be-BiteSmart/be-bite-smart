@@ -1,5 +1,18 @@
 # Change log
 
+## 2026-06-17 — Hero block: use media library alt text
+
+**What was built and why:** Hero background images always rendered `alt=""` even when alt text was set in the Media Library. PHP now reads `_wp_attachment_image_alt` from `bgImageLgId` / `bgImageMdId` / `bgImageSmId` at render time. When alt is present, `aria-hidden` is removed from `<picture>` so screen readers get the description.
+
+**Files modified:**
+
+- `app/public/wp-content/plugins/custom-blocks-for-be-bite-smart/src/hero/hero.php` — `bitesmart_hero_bg_image_alt()`, dynamic `alt` on `<img>`
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Deploy:** upload plugin PHP change and purge cache. No `pnpm build` required.
+
+**Note:** Blocks saved before attachment IDs were stored may need images re-selected in the editor once so `bgImage*Id` attributes exist.
+
 ## 2026-06-17 — Phase 2 smoke: broken internal links
 
 **What was built and why:** Crawls same-origin links on home, learn, and evidence (capped per page) and fails on HTTP 404 or 5xx — catches menu/permalink drift like the old `/education` slug issue.

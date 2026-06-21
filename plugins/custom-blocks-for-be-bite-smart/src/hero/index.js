@@ -78,7 +78,10 @@ registerBlockType("custom/hero", {
         null,
         wp.element.createElement(MediaUpload, {
           onSelect: (media) =>
-            setAttributes({ [urlAttr]: media.url, [idAttr]: media.id }),
+            setAttributes({
+              [urlAttr]: media.url,
+              [idAttr]: media.id,
+            }),
           allowedTypes: ["image"],
           value: attributes[idAttr],
           render: ({ open }) =>
