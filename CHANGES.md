@@ -1,5 +1,16 @@
 # Change log
 
+## 2026-06-17 — Video quote: use media library alt on thumbnail
+
+**What was built and why:** `video-quote.php` passed `alt` as the block title to `wp_get_attachment_image()`, overriding the Media Library alt field. Now uses attachment alt only; empty string when unset (no title fallback).
+
+**Files modified:**
+
+- `app/public/wp-content/plugins/custom-blocks-for-be-bite-smart/src/video-quote/video-quote.php`
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Deploy:** upload PHP change and purge cache. No build required.
+
 ## 2026-06-17 — Hero block: use media library alt text
 
 **What was built and why:** Hero background images always rendered `alt=""` even when alt text was set in the Media Library. PHP now reads `_wp_attachment_image_alt` from `bgImageLgId` / `bgImageMdId` / `bgImageSmId` at render time. When alt is present, `aria-hidden` is removed from `<picture>` so screen readers get the description.

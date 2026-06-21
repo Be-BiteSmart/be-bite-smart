@@ -20,14 +20,19 @@ function render_video_quote_block( $attributes ) {
     // ── Thumbnail ─────────────────────────────────────────────────────────
     $thumbnail = '';
     if ( $thumbnail_id ) {
+        $attachment_alt = get_post_meta( (int) $thumbnail_id, '_wp_attachment_image_alt', true );
+        $alt            = ( is_string( $attachment_alt ) && $attachment_alt !== '' )
+            ? $attachment_alt
+            : '';
+
         $thumbnail = wp_get_attachment_image(
             $thumbnail_id,
             'large',
             false,
             [
-                'sizes' => '90vw',
+                'sizes'   => '90vw',
                 'loading' => 'lazy',
-                'alt'     => wp_strip_all_tags( $title ),
+                'alt'     => $alt,
             ]
         );
     }
