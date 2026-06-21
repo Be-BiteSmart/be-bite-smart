@@ -2,6 +2,19 @@
 
 # Change log
 
+# Change log
+
+## 2026-06-17 — Bio card: media library alt on photo
+
+**What was built and why:** Bio card photos used the person's name as `alt` instead of the Media Library alt field. Now uses `bitesmart_attachment_alt_text()` (`""` when unset).
+
+**Files modified:**
+
+- `app/public/wp-content/plugins/custom-blocks-for-be-bite-smart/src/bio-card/bio-card.php`
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Deploy:** upload PHP change and purge cache. No build required.
+
 ## 2026-06-17 — Episode card: media library alt on thumbnail
 
 **What was built and why:** Episode cards statically saved `alt` from the episode title. Thumbnails now use Media Library alt only (`""` when unset). `render_block` replaces alt from `thumbnailId` at runtime so existing blocks update without re-saving.

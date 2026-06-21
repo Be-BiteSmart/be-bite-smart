@@ -22,7 +22,7 @@ function render_bio_card_block( $attributes, $content ) {
             [
                 'sizes' => '(max-width: 600px) 100vw, 288px',
                 'class' => 'bio-photo',
-                'alt'   => esc_attr( wp_strip_all_tags( $name ) ),
+                'alt'   => esc_attr( bitesmart_attachment_alt_text( $photo_id ) ),
             ]
         );
     }
