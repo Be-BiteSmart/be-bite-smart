@@ -4,6 +4,78 @@
 
 # Change log
 
+## 2026-06-21 — Document wp-config 500 as acceptable in security test
+
+**What was built and why:** Clarified that `/wp-config.php` fails the security test only on **2xx**. **500** is acceptable on shared hosts (DreamHost PHP abort); requiring **403** would need wp-config above the web root — unnecessary for this oops detector.
+
+**Files modified:**
+
+- `app/public/wp-content/tests/helpers/security.js` — rationale comments + `WP_CONFIG_RATIONALE`
+- `app/public/wp-content/tests/smoke/security.spec.js` — test title + HTML report attachment
+- `app/public/wp-content/README.md` — security table and deploy section
+- `app/public/wp-content/server-snippets/root-htaccess-wp-config.snippet` — optional only, not required
+- `app/public/wp-content/CHANGES.md` — this entry
+
+## 2026-06-21 — wp-config security test + RedirectMatch snippet for DreamHost
+
+**What was built and why:** `<Files>` and `RewriteRule` for wp-config often return **500** on DreamHost (PHP runs before deny). Updated snippet to `RedirectMatch 403` at top of `.htaccess`; security test now fails wp-config only on **2xx** (file served), not on 500.
+
+**Files modified:**
+
+- `app/public/wp-content/server-snippets/root-htaccess-wp-config.snippet` — `RedirectMatch` first line
+- `app/public/wp-content/tests/helpers/security.js` — per-path modes (`blocked` vs `not-public`)
+- `app/public/wp-content/tests/smoke/security.spec.js` — updated expectations
+- `app/public/wp-content/README.md` — DreamHost htaccess guidance
+- `app/public/.htaccess` — LocalWP uses RedirectMatch
+- `app/public/wp-content/CHANGES.md` — this entry
+
+## 2026-06-17 — Remove wp-content .htaccess debug.log block
+
+**What was built and why:** Removed `wp-content/.htaccess` that denied web access to `debug.log`. Blocking via repo conflicted with occasionally enabling `WP_DEBUG_LOG`; production should keep debug off by default instead. Security test still fails if `debug.log` is publicly readable (HTTP 200).
+
+**Files deleted:**
+
+- `app/public/wp-content/.htaccess`
+
+**Files modified:**
+
+- `app/public/wp-content/README.md` — debugging vs security test note
+- `app/public/wp-content/CHANGES.md` — this entry
+
+## 2026-06-17 — Apache 403 rules for wp-config.php and debug.log
+
+**What was built and why:** Return **403** for `/wp-config.php` (instead of 500). Site-root snippet for DreamHost; ~~wp-content/.htaccess for debug.log~~ (removed — see entry above).
+
+**Files created or modified:**
+
+- `app/public/wp-content/server-snippets/root-htaccess-wp-config.snippet` — paste into **site root** `.htaccess` on DreamHost (manual; not deployed by git pull)
+- `app/public/wp-content/README.md` — DreamHost one-time setup steps
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Deploy:** Copy snippet into site root `.htaccess` on DreamHost once, then re-run `tests/smoke/security.spec.js`.
+
+## 2026-06-17 — Security hygiene smoke tests
+
+**What was built and why:** Lightweight read-only checks that sensitive paths are not publicly readable (403/404 oops detector).
+
+**Files created:**
+
+- `app/public/wp-content/tests/helpers/security.js` — `SENSITIVE_PATHS`, `isSensitivePathBlocked()`
+- `app/public/wp-content/tests/smoke/security.spec.js` — 3 parameterized GET checks
+
+**Files modified:**
+
+- `app/public/wp-content/README.md` — security test command and scope
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Production snapshot (2026-06-17):**
+
+- `/.env` — 404 (pass)
+- `/wp-config.php` — 500 (fails strict test; not 200 but host should ideally return 403)
+- `/wp-content/debug.log` — **200 (fails — file is publicly readable; remove or block on server)**
+
+**TODOs:** With debug disabled and log deleted, `/wp-content/debug.log` should 404. If enabling debug temporarily, expect the security test to fail until logging is off and the file is removed or not web-accessible.
+
 ## 2026-06-17 — Fix a11y: bio-card headings and aside landmark labels
 
 **What was built and why:** Resolved three axe failures after adding `best-practice` rules: bio names skipped from h1 to h3 on Team/Advisors; Learn page had two unlabeled `<aside>` landmarks.

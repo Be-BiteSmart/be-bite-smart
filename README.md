@@ -103,10 +103,18 @@ pnpm install --frozen-lockfile   # prefer when lockfile is committed
 pnpm exec playwright install chromium   # first time only, local browsers
 pnpm test                        # all suites
 pnpm exec playwright test tests/a11y/axe.spec.js   # a11y only
+pnpm exec playwright test tests/smoke/security.spec.js   # security hygiene
 pnpm exec playwright show-report # open HTML report after a run
 ```
 
-**View results:** Terminal shows pass/fail during the run. After any run, `pnpm exec playwright show-report` opens `playwright-report/index.html`. In CI, download the `playwright-report` artifact from the GitHub Actions run.
+**Security hygiene** (`tests/smoke/security.spec.js`) — read-only oops detector:
+
+| Path | Pass when | Why |
+|------|-----------|-----|
+| `/.env`, `/wp-content/debug.log` | **403 or 404** | Must not be web-readable |
+| `/wp-config.php` | **Any non-2xx** (403, 404, **500**, etc.) | Fail only on **2xx** (file served). DreamHost often returns **500** when PHP aborts — acceptable. **403** would require moving `wp-config.php` above the web root; we skip that for this lightweight check. |
+
+**View results:** Terminal shows pass/fail during the run. After any run, `pnpm exec playwright show-report` opens `playwright-report/index.html`. In CI, download the `playwright-report` artifact. The wp-config test includes a **Why 500 is acceptable** attachment.
 
 **A11y — what was checked:** Open a passed a11y test in the HTML report and expand **Attachments**. Each page has:
 - `{Page} — what was checked` — plain-text summary: WCAG rule tags, pass/fail threshold, excludes, and every **passed rule id** with its description (e.g. `color-contrast`, `image-alt`)
@@ -226,6 +234,14 @@ cd bebitesmart.org/wp-content && git pull origin main && rm -rf cache/supercache
 
 This pulls the latest commit from `main` and clears WP Super Cache so
 visitors immediately see the updated site.
+
+#### wp-config.php and the security test
+
+`wp-config.php` is **not** in this repo. Our security test **does not require 403** for `/wp-config.php` — it fails only on **2xx** (config actually served). DreamHost often returns **500** when something requests that URL directly (PHP aborts before deny rules). That is **acceptable**; forcing **403** would mean moving `wp-config.php` above the web root or custom server config — extra work we skip for this lightweight CI check.
+
+Optional `.htaccess` ideas are noted in `server-snippets/root-htaccess-wp-config.snippet` if you want to experiment; they are not required for CI to pass.
+
+When `WP_DEBUG_LOG` is enabled, WordPress still writes `wp-content/debug.log`; keep debug off in production normally. The security test flags if that file is **web-readable** (HTTP 200). There is no repo `.htaccess` block for the log so you can enable debugging when needed — turn it off and delete the file when finished.
 
 ---
 
