@@ -310,6 +310,69 @@ function bitesmart_outlet_logo_alt_render( $block_content, $block ) {
 add_filter( 'render_block', 'bitesmart_outlet_logo_alt_render', 10, 2 );
 
 /**
+ * First heading text inside block HTML (for landmark labels).
+ */
+function bitesmart_first_heading_text_from_html( $html ) {
+    if ( ! is_string( $html ) || $html === '' ) {
+        return '';
+    }
+
+    if ( preg_match( '/<h[1-6]\b[^>]*>(.*?)<\/h[1-6]>/is', $html, $matches ) ) {
+        $text = wp_strip_all_tags( $matches[1] );
+        return trim( preg_replace( '/\s+/', ' ', $text ) );
+    }
+
+    return '';
+}
+
+/**
+ * Group blocks rendered as <aside> need unique aria-labels (landmark-unique).
+ */
+function bitesmart_complementary_landmark_labels( $block_content, $block ) {
+    if ( ( $block['blockName'] ?? '' ) !== 'core/group' ) {
+        return $block_content;
+    }
+
+    if ( ( $block['attrs']['tagName'] ?? '' ) !== 'aside' ) {
+        return $block_content;
+    }
+
+    if ( ! is_string( $block_content ) || $block_content === '' ) {
+        return $block_content;
+    }
+
+    if ( ! str_contains( $block_content, '<aside' ) ) {
+        return $block_content;
+    }
+
+    if ( preg_match( '/<aside\b[^>]*\baria-label="/i', $block_content ) ) {
+        return $block_content;
+    }
+
+    if ( ! empty( $block['attrs']['ariaLabel'] ) ) {
+        $label = $block['attrs']['ariaLabel'];
+    } else {
+        $label = bitesmart_first_heading_text_from_html( $block_content );
+        if ( $label === '' ) {
+            static $complementary_index = 0;
+            $complementary_index++;
+            $label = sprintf( 'Supplementary content %d', $complementary_index );
+        }
+    }
+
+    $updated = preg_replace(
+        '/(<aside\b)/i',
+        '$1 aria-label="' . esc_attr( $label ) . '"',
+        $block_content,
+        1
+    );
+
+    return is_string( $updated ) ? $updated : $block_content;
+}
+
+add_filter( 'render_block', 'bitesmart_complementary_landmark_labels', 10, 2 );
+
+/**
  * Editor: pass site language config into episode-card script.
  */
 function bitesmart_localize_episode_card_editor() {

@@ -4,6 +4,152 @@
 
 # Change log
 
+## 2026-06-17 — Fix a11y: bio-card headings and aside landmark labels
+
+**What was built and why:** Resolved three axe failures after adding `best-practice` rules: bio names skipped from h1 to h3 on Team/Advisors; Learn page had two unlabeled `<aside>` landmarks.
+
+**Files modified:**
+
+- `app/public/wp-content/plugins/custom-blocks-for-be-bite-smart/src/bio-card/bio-card.php` — person name `h3` → `h2.bio-name`
+- `app/public/wp-content/plugins/custom-blocks-for-be-bite-smart/src/bio-card/style.css` — styles target `.bio-details > h2.bio-name`
+- `app/public/wp-content/plugins/custom-blocks-for-be-bite-smart/src/includes/site-lang.php` — `bitesmart_complementary_landmark_labels()` adds `aria-label` from first heading in `core/group` asides
+- `app/public/wp-content/plugins/custom-blocks-for-be-bite-smart/build/bio-card/` — rebuilt CSS
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Deploy:** Upload plugin PHP + build, purge WP Super Cache, then re-run `pnpm exec playwright test tests/a11y/axe.spec.js`.
+
+## 2026-06-17 — A11y: add best-practice axe rules
+
+**What was built and why:** Expanded axe scope with the `best-practice` tag so extra nitpicks beyond WCAG A/AA are scanned. Minor findings remain non-blocking in attachments.
+
+**Files modified:**
+
+- `app/public/wp-content/tests/a11y/helpers/axe.js` — `AXE_RULE_TAGS` includes `best-practice`
+- `app/public/wp-content/tests/a11y/axe.spec.js` — updated test title
+- `app/public/wp-content/README.md` — scope description
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**New blocking failures on production (moderate, best-practice):**
+
+- **Learn** — `landmark-unique`: duplicate `<aside>` landmarks without unique labels (`.wpbbe-8` / `.wpbbe-11`)
+- **Advisors** — `heading-order`: bio card `h3` after skipped heading level
+- **Team** — `heading-order`: same bio card pattern
+
+**TODOs:** Fix landmark labels on Learn and heading levels in bio-card block (or page templates) so CI passes again. Minor-impact violations still 0 across all pages with expanded tags.
+
+## 2026-06-17 — A11y report: always list minor violations (non-blocking)
+
+**What was built and why:** Minor axe findings were already non-blocking but easy to miss (section hidden when empty; JSON said "ignored"). Report now always includes a **Minor violations** section and `minorViolations` in JSON attachments.
+
+**Files modified:**
+
+- `app/public/wp-content/tests/a11y/helpers/axe.js` — explicit minor section; clearer scope labels
+- `app/public/wp-content/README.md` — minor issues documented as logged, not blocking
+- `app/public/wp-content/CHANGES.md` — this entry
+
+## 2026-06-17 — A11y tests: fail on moderate violations too
+
+**What was built and why:** Raised the axe failure threshold from critical/serious to include **moderate** violations. Minor nits still ignored.
+
+**Files modified:**
+
+- `app/public/wp-content/tests/a11y/helpers/axe.js` — `BLOCKING_IMPACTS` includes `moderate`; renamed helper to `expectNoBlockingA11yViolations`
+- `app/public/wp-content/tests/a11y/axe.spec.js` — updated import and test title
+- `app/public/wp-content/tests/helpers/paths.js` — comment update
+- `app/public/wp-content/README.md` — scope description
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Verification:** 11/11 a11y tests passed against production with moderate threshold.
+
+## 2026-06-17 — A11y tests: attach scan scope and rule list to report
+
+**What was built and why:** Passing a11y tests only showed "ok" with no visibility into which WCAG checks ran. Each test now attaches a plain-text + JSON summary listing rule tags, scope, excludes, every passed rule id, incomplete items, and non-blocking violations.
+
+**Files modified:**
+
+- `app/public/wp-content/tests/a11y/helpers/axe.js` — explicit `withTags(wcag2a/aa, wcag21a/aa)`; `buildA11yScanReport()`
+- `app/public/wp-content/tests/a11y/axe.spec.js` — testInfo attachments; clearer test title
+- `app/public/wp-content/README.md` — how to read attachments in HTML report
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**How to view:** Run tests → `pnpm exec playwright show-report` → open an a11y test → **Attachments** → `{Page} — what was checked`.
+
+## 2026-06-17 — A11y axe scans: all critical pages
+
+**What was built and why:** Expanded axe accessibility tests from 4 pages to all 11 `CRITICAL_PAGES` routes (same list as smoke path tests).
+
+**Files modified:**
+
+- `app/public/wp-content/tests/helpers/paths.js` — `A11Y_CHECK_PAGES = CRITICAL_PAGES`
+- `app/public/wp-content/tests/a11y/helpers/axe.js` — exclude YouTube/Vimeo iframes (third-party player markup)
+- `app/public/wp-content/README.md` — updated failure description
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Problems encountered and how they were fixed:**
+
+- `/parents/` failed on a **serious** `aria-prohibited-attr` violation inside a YouTube embed (`#movie_player`) — not fixable in our theme. Axe now excludes YouTube/Vimeo iframe subtrees.
+
+**Verification:** 11/11 axe tests passed against production.
+
+## 2026-06-17 — Remove pnpm maturity bypass from custom blocks plugin
+
+**What was built and why:** Removed `pnpm.minimumReleaseAge` and `minimumReleaseAgeExclude` from the custom blocks plugin — same supply-chain policy as the Playwright test package.
+
+**Files modified:**
+
+- `app/public/wp-content/plugins/custom-blocks-for-be-bite-smart/package.json` — removed `pnpm` block
+- `app/public/wp-content/.cursor/rules/pnpm-supply-chain.mdc` — scope widened to all wp-content packages
+- `app/public/wp-content/README.md` — shared **pnpm install troubleshooting** section; `--frozen-lockfile` in Step 5
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**What the next logical step would be:** If `pnpm install` fails in the plugin dir, run `pnpm why <package>` and bump `@wordpress/scripts` (or the blocking transitive dep) rather than re-adding repo bypasses.
+
+## 2026-06-17 — Document pnpm maturity policy (no repo bypasses)
+
+**What was built and why:** Added persistent guidance so `ERR_PNPM_NO_MATURE_MATCHING_VERSION` is troubleshooted instead of disabling pnpm's `minimumReleaseAge` in the repo again.
+
+**Files created or modified:**
+
+- `app/public/wp-content/.cursor/rules/pnpm-supply-chain.mdc` — Cursor rule when editing `package.json` / lockfile
+- `app/public/wp-content/README.md` — Playwright install/run/report; maturity error troubleshooting
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**What the next logical step would be:** If maturity errors persist after a Playwright bump, run `pnpm why <package>` and align `@playwright/test` + CI Docker image tag with a tree that satisfies your maturity threshold.
+
+## 2026-06-17 — Remove pnpm minimumReleaseAge overrides from test package
+
+**What was built and why:** Removed project-level `pnpm.minimumReleaseAge` and `.npmrc` workarounds from the Playwright test package. Those disabled pnpm’s release-maturity safety; CI installs from the frozen lockfile without them.
+
+**Files modified:**
+
+- `app/public/wp-content/package.json` — removed `pnpm` block
+- `app/public/wp-content/.npmrc` — deleted
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Note:** See README → **Playwright Tests** → `ERR_PNPM_NO_MATURE_MATCHING_VERSION` for troubleshooting. Do not re-add repo-level bypasses.
+
+## 2026-06-17 — Phase 2b: axe accessibility on key pages
+
+**What was built and why:** Read-only `@axe-core/playwright` scans on home, learn, evidence, and contact against production. Fails only on **critical** or **serious** axe violations — moderate/minor nits are ignored.
+
+**Files created:**
+
+- `app/public/wp-content/tests/a11y/helpers/axe.js` — `expectNoSeriousA11yViolations()`
+- `app/public/wp-content/tests/a11y/axe.spec.js` — 4 parameterized page scans
+
+**Files modified:**
+
+- `app/public/wp-content/tests/helpers/paths.js` — `A11Y_CHECK_PAGES`
+- `app/public/wp-content/package.json` — `@axe-core/playwright` 4.11.3
+- `app/public/wp-content/pnpm-lock.yaml` — lockfile update
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Patterns followed:** Same `gotoExpectOk` + `PLAYWRIGHT_BASE_URL` as smoke tests; `waitForLoadState('load')` instead of `networkidle` for prod stability.
+
+**Verification:** All 4 a11y tests passed against `https://www.bebitesmart.org` locally.
+
+**Next step:** Tighten to zero violations (include moderate) once backlog is clear, or add `exclude()` for known third-party embed issues if any appear.
+
 ## 2026-06-17 — Bio card: media library alt on photo
 
 **What was built and why:** Bio card photos used the person's name as `alt` instead of the Media Library alt field. Now uses `bitesmart_attachment_alt_text()` (`""` when unset).
@@ -67,7 +213,7 @@
 - `app/public/wp-content/tests/analytics/helpers/plausible.js` — re-export `LINK_CHECK_PAGES`
 - `app/public/wp-content/CHANGES.md` — this entry
 
-**Next step:** Phase 2b — `@axe-core/playwright` on key pages, or lightweight security URL checks.
+**Next step:** Lightweight security URL checks, or staging runs via `PLAYWRIGHT_BASE_URL`.
 
 ## 2026-06-17 — Phase 1 smoke tests (paths + REST API)
 

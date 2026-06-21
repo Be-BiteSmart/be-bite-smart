@@ -3,14 +3,6 @@
   "version": "1.0.0",
   "description": "",
   "main": "pdf-toggle.js",
-  "pnpm": {
-    "minimumReleaseAge": "0s",
-    "minimumReleaseAgeExclude": [
-      "minimist",
-      "@wordpress/scripts",
-      "merge-deep"
-    ]
-  },
   "scripts": {
     "build": "wp-scripts build",
     "start": "wp-scripts start",

@@ -94,11 +94,31 @@ If the Plausible plugin also logs a generic **file download** goal for PDF click
 
 ### Playwright Tests
 
-Tests that Plausible custom events are firing correctly and returning expected values. They run against production (`https://www.bebitesmart.org` by default) in GitHub Actions.
+Smoke, analytics, video, link, and accessibility tests. They run against production (`https://www.bebitesmart.org` by default) in GitHub Actions. Override the target with `PLAYWRIGHT_BASE_URL` for local or staging runs.
 
-Failures usually mean: (1) the page returned HTTP 500 / WordPress error, (2) a block was removed from the page (e.g. Documentary Video, pdf-toggle), or (3) WP Super Cache is serving stale footer HTML without the latest `analytics.php`. Override the target with `PLAYWRIGHT_BASE_URL` for local runs.
+**Install and run** (from `app/public/wp-content`):
 
-`tests`
+```bash
+pnpm install --frozen-lockfile   # prefer when lockfile is committed
+pnpm exec playwright install chromium   # first time only, local browsers
+pnpm test                        # all suites
+pnpm exec playwright test tests/a11y/axe.spec.js   # a11y only
+pnpm exec playwright show-report # open HTML report after a run
+```
+
+**View results:** Terminal shows pass/fail during the run. After any run, `pnpm exec playwright show-report` opens `playwright-report/index.html`. In CI, download the `playwright-report` artifact from the GitHub Actions run.
+
+**A11y — what was checked:** Open a passed a11y test in the HTML report and expand **Attachments**. Each page has:
+- `{Page} — what was checked` — plain-text summary: WCAG rule tags, pass/fail threshold, excludes, and every **passed rule id** with its description (e.g. `color-contrast`, `image-alt`)
+- `{Page} — scan details (JSON)` — same data structured for tooling
+
+Scope: **WCAG 2.0/2.1 A & AA** plus **best-practice** axe rules; fails on **critical, serious, and moderate**; **minor** listed in attachments but non-blocking; YouTube/Vimeo iframes excluded.
+
+Failures usually mean: (1) the page returned HTTP 500 / WordPress error, (2) a block was removed from the page (e.g. Documentary Video, pdf-toggle), (3) WP Super Cache is serving stale HTML, or (4) for a11y tests, a **critical, serious, or moderate** axe violation on any critical page.
+
+`tests/`
+
+For pnpm install errors (`ERR_PNPM_NO_MATURE_MATCHING_VERSION`), see **Quick Start → pnpm install troubleshooting** — same policy as the plugin and theme builds.
 
 ### Github Actions
 
@@ -147,15 +167,33 @@ immediately.
 
 ### Step 5: Install dependencies
 
-Run `pnpm install` in each subdirectory that has a build step:
+Run `pnpm install` in each subdirectory that has a build step (or tests):
 
 ```bash
-cd themes/twentytwentyfive-child && pnpm install
-cd ../../plugins/custom-blocks-for-be-bite-smart && pnpm install
+cd themes/twentytwentyfive-child && pnpm install --frozen-lockfile
+cd ../../plugins/custom-blocks-for-be-bite-smart && pnpm install --frozen-lockfile
+cd .. && pnpm install --frozen-lockfile   # Playwright tests (wp-content root)
 ```
 
 The `.git` folder is already present since Duplicator included it in the
 backup, so there is no need to run `git init` or clone the repo again.
+
+#### pnpm install troubleshooting
+
+**Do not** disable pnpm's release-maturity safety in this repo (no `minimumReleaseAge: "0s"` in any `package.json`, no `.npmrc` with `minimum-release-age=0`). Personal bypasses belong in user config only, if at all.
+
+When install fails with `ERR_PNPM_NO_MATURE_MATCHING_VERSION`:
+
+1. Note the blocked package and version in the error (e.g. old `fsevents` via `@playwright/test`, or a transitive dep of `@wordpress/scripts`).
+2. From the failing directory, trace it:
+   ```bash
+   pnpm why <package-name>
+   ```
+3. **Fix upstream:** bump the direct dependency; regenerate and commit `pnpm-lock.yaml`.
+4. **Lockfile already good:** `pnpm install --frozen-lockfile`
+5. **Global pnpm config on your machine:** `pnpm config get minimum-release-age` — adjust user-level settings locally, not in git.
+
+Applies to the Playwright test package, child theme, and custom blocks plugin equally.
 
 ### Step 6: Push changes to GitHub and sync the server
 

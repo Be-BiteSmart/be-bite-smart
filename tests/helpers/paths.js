@@ -25,6 +25,9 @@ export const CRITICAL_PAGES = [
   { path: "/team/", label: "Team" },
 ];
 
+/** Pages scanned for axe violations (critical / serious / moderate; read-only production checks). */
+export const A11Y_CHECK_PAGES = CRITICAL_PAGES;
+
 /** Pages scanned for broken same-origin links (cap per page to limit CI time). */
 export const LINK_CHECK_PAGES = [
   { path: HOME_PATH, label: "Home", maxLinks: 60 },

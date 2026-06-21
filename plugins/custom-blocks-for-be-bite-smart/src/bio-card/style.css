@@ -50,8 +50,8 @@
   filter: grayscale(0%);
 }
 
-/* Name (h3) */
-.wp-block-custom-bio-card h3 {
+/* Name heading (h2 — follows page h1 without skipping a level) */
+.wp-block-custom-bio-card .bio-details > h2.bio-name {
   font-size: 1.875rem;
   font-weight: 700;
   color: #111827;
