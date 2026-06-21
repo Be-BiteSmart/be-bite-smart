@@ -1,5 +1,25 @@
 # Change log
 
+## 2026-06-17 — Phase 1 smoke tests (paths + REST API)
+
+**What was built and why:** Added production-safe smoke coverage: HTTP 200 + core layout on 11 critical pages, and WordPress REST health for `/wp-json/` plus key page slugs. Centralized route constants so slug changes are updated in one place.
+
+**Files created:**
+
+- `app/public/wp-content/tests/helpers/paths.js` — `CRITICAL_PAGES`, `EDUCATION_PATH`, `EVIDENCE_PATH`, `REST_PAGE_SLUGS`
+- `app/public/wp-content/tests/helpers/page.js` — `gotoExpectOk`, `assertCriticalDom`
+- `app/public/wp-content/tests/smoke/paths.spec.js` — parameterized page smoke (11 pages)
+- `app/public/wp-content/tests/smoke/rest-api.spec.js` — REST API smoke (4 tests)
+
+**Files modified:**
+
+- `app/public/wp-content/tests/analytics/helpers/plausible.js` — re-exports shared helpers (backward compatible)
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Patterns followed:** Same `PLAYWRIGHT_BASE_URL` / `gotoExpectOk` conventions as analytics tests; flexible DOM selectors for Twenty Twenty-Five block theme.
+
+**Next step:** Phase 2 — broken internal links on home/learn/evidence, then `@axe-core/playwright` on key pages.
+
 ## 2026-06-17 — Fix four failing Playwright CI tests
 
 **What was built and why:** CI had four failures: episode analytics loop left a video playing before switching language (ES segment never went `active`), `/library` 404 (live slug is `/evidence/`), episode video tests timed out waiting on Vimeo network responses (flaky in CI), and `analytics.php` still used `is_page( 'library' )`.

@@ -1,31 +1,19 @@
 import { expect } from "@playwright/test";
-
-/** WordPress page slug for the Learn / education content page. */
-export const EDUCATION_PATH = "/learn/";
-
-/** Research articles page (formerly `/library`). */
-export const EVIDENCE_PATH = "/evidence/";
+export {
+  EDUCATION_PATH,
+  EVIDENCE_PATH,
+  HOME_PATH,
+  CRITICAL_PAGES,
+  REST_PAGE_SLUGS,
+} from "../../helpers/paths.js";
+export { gotoExpectOk, assertCriticalDom } from "../../helpers/page.js";
+import { gotoExpectOk } from "../../helpers/page.js";
 
 /** Map episode language segment code to Plausible event suffix. */
 export function langCodeToAnalytics(code) {
   if (code === "es") return "spanish";
   if (code === "hi") return "hindi";
   return "english";
-}
-
-/** Fail in seconds with a clear message instead of a 30s click timeout. */
-export async function gotoExpectOk(page, path) {
-  const response = await page.goto(path, { waitUntil: "domcontentloaded" });
-  const status = response?.status() ?? 0;
-  expect(
-    status,
-    `${path} returned HTTP ${status} — fix production or set PLAYWRIGHT_BASE_URL`,
-  ).toBeLessThan(400);
-  const title = await page.title();
-  expect(
-    title,
-    `${path} is a WordPress error page — check server logs / cache`,
-  ).not.toMatch(/WordPress.*Error/i);
 }
 
 /**
