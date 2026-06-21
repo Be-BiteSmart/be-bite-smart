@@ -349,7 +349,7 @@ registerBlockType("custom/news-and-coverage", {
           attributes.outletType === "logo" && attributes.logoUrl
             ? wp.element.createElement("img", {
                 src: attributes.logoUrl,
-                alt: attributes.logoAlt || attributes.outletName || "",
+                alt: attributes.logoAlt || "",
                 className: "media-mention-logo outlet-badge-logo",
               })
             : wp.element.createElement(

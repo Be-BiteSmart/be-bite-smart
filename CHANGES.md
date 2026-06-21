@@ -485,4 +485,33 @@ flowchart TD
 
 **Patterns followed:** Existing BEM-style class names and column flex on `.video-quote-content-wrapper`; PHP markup unchanged (video already precedes text in DOM).
 
-**Next step:** Hard-refresh the frontend and confirm layout inside the theme’s content width; adjust `gap` or max video width if the design calls for a narrower player on very wide screens.
+
+## 2026-06-17 — Sponsor and outlet logo alt from Media Library only
+
+**What was built and why:** Episode sponsor logos and news/press outlet logos now use Media Library alt text only, defaulting to `""` when unset — no fallback to sponsor name or outlet name. Runtime `render_block` filters refresh alt from attachment IDs for saved HTML.
+
+**Files created or modified:**
+
+- `app/public/wp-content/plugins/custom-blocks-for-be-bite-smart/src/includes/site-lang.php` — `bitesmart_replace_img_alt_by_class()`; funded logo handling in `bitesmart_episode_card_render`; new `bitesmart_outlet_logo_alt_render` for news-and-coverage and press-release blocks
+- `app/public/wp-content/plugins/custom-blocks-for-be-bite-smart/src/episode-card/index.js` — `fundedByLogoAlt` attribute; save uses media alt only; `aria-hidden` only when alt empty
+- `app/public/wp-content/plugins/custom-blocks-for-be-bite-smart/src/news-and-coverage/index.js` — save `alt: attributes.logoAlt || ""`
+- `app/public/wp-content/plugins/custom-blocks-for-be-bite-smart/src/press-release/index.js` — save `alt: attributes.logoAlt || ""`
+- `app/public/wp-content/plugins/custom-blocks-for-be-bite-smart/build/` — rebuilt via `pnpm run build`
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Patterns or conventions followed from the codebase:**
+
+- Shared `bitesmart_attachment_alt_text()` helper (same as hero, bio-card, video-quote, episode thumbnail)
+- `render_block` filter for legacy saved markup (episode thumbnail pattern extended to sponsor logo and outlet logos)
+
+**Problems encountered and how they were fixed:**
+
+- Partial patch from prior session left PHP outlet filter unapplied — completed `site-lang.php` updates in this session
+
+**TODOs:**
+
+- Existing posts keep saved alt until re-saved; `render_block` overrides at runtime when `logoId` / `fundedByLogoId` are present in block attrs
+
+**What the next logical step would be:**
+
+- Spot-check an episode with a sponsor logo and a news item with an outlet logo: confirm empty alt when Media Library alt is blank, and correct alt when set

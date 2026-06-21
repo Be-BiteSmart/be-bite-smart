@@ -34,6 +34,7 @@ const EPISODE_ATTRIBUTES = {
   fundedByName: { type: "string", default: "" },
   fundedByLogoUrl: { type: "string", default: "" },
   fundedByLogoId: { type: "number" },
+  fundedByLogoAlt: { type: "string", default: "" },
 };
 
 const LEGACY_EPISODE_ATTRIBUTES = {
@@ -183,9 +184,11 @@ function EpisodeCardSave({ attributes }) {
             attributes.fundedByLogoUrl &&
               wp.element.createElement("img", {
                 src: attributes.fundedByLogoUrl,
-                alt: attributes.fundedByName,
+                alt: attributes.fundedByLogoAlt || "",
                 className: "episode-funded-by-logo",
-                "aria-hidden": "true",
+                ...(attributes.fundedByLogoAlt
+                  ? {}
+                  : { "aria-hidden": "true" }),
               }),
             wp.element.createElement(
               "span",
@@ -354,6 +357,7 @@ function EpisodeCardEdit({ attributes, setAttributes }) {
               setAttributes({
                 fundedByLogoUrl: media.url,
                 fundedByLogoId: media.id,
+                fundedByLogoAlt: media.alt || "",
               }),
             allowedTypes: ["image"],
             value: attributes.fundedByLogoId,
@@ -386,6 +390,7 @@ function EpisodeCardEdit({ attributes, setAttributes }) {
                             setAttributes({
                               fundedByLogoUrl: "",
                               fundedByLogoId: null,
+                              fundedByLogoAlt: "",
                             }),
                           variant: "tertiary",
                           isDestructive: true,

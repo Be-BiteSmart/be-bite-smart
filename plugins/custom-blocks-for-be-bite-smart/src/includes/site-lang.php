@@ -168,6 +168,19 @@ function bitesmart_attachment_alt_text( $attachment_id ) {
 }
 
 /**
+ * Replace the alt attribute on the first <img> whose class contains $class_name.
+ */
+function bitesmart_replace_img_alt_by_class( $html, $class_name, $alt ) {
+    $pattern = '/(<img\b[^>]*\bclass="[^"]*\b'
+        . preg_quote( $class_name, '/' )
+        . '\b[^"]*"[^>]*\balt=)(["\'])([^"\']*)\2/i';
+
+    $updated = preg_replace( $pattern, '$1"' . esc_attr( $alt ) . '"', $html, 1 );
+
+    return is_string( $updated ) ? $updated : $html;
+}
+
+/**
  * Inject runtime data on episode-card output (site lang, video map, watch labels).
  */
 function bitesmart_episode_card_render( $block_content, $block ) {
@@ -246,10 +259,55 @@ function bitesmart_episode_card_render( $block_content, $block ) {
         }
     }
 
+    $funded_logo_id = $attrs['fundedByLogoId'] ?? 0;
+    if ( $funded_logo_id && str_contains( $block_content, 'episode-funded-by-logo' ) ) {
+        $logo_alt      = bitesmart_attachment_alt_text( $funded_logo_id );
+        $block_content = bitesmart_replace_img_alt_by_class(
+            $block_content,
+            'episode-funded-by-logo',
+            $logo_alt
+        );
+        if ( $logo_alt !== '' ) {
+            $block_content = preg_replace(
+                '/(<img\b[^>]*\bclass="[^"]*\bepisode-funded-by-logo\b[^"]*"[^>]*)\s*aria-hidden="true"/i',
+                '$1',
+                $block_content,
+                1
+            );
+        }
+    }
+
     return $block_content;
 }
 
 add_filter( 'render_block', 'bitesmart_episode_card_render', 10, 2 );
+
+/**
+ * Outlet logos on news / press blocks — alt from Media Library only.
+ */
+function bitesmart_outlet_logo_alt_render( $block_content, $block ) {
+    $block_name = $block['blockName'] ?? '';
+    if ( ! in_array( $block_name, array( 'custom/news-and-coverage', 'custom/press-release' ), true ) ) {
+        return $block_content;
+    }
+
+    if ( ! is_string( $block_content ) || $block_content === '' ) {
+        return $block_content;
+    }
+
+    $logo_id = (int) ( $block['attrs']['logoId'] ?? 0 );
+    if ( ! $logo_id || ! str_contains( $block_content, 'outlet-badge-logo' ) ) {
+        return $block_content;
+    }
+
+    return bitesmart_replace_img_alt_by_class(
+        $block_content,
+        'outlet-badge-logo',
+        bitesmart_attachment_alt_text( $logo_id )
+    );
+}
+
+add_filter( 'render_block', 'bitesmart_outlet_logo_alt_render', 10, 2 );
 
 /**
  * Editor: pass site language config into episode-card script.

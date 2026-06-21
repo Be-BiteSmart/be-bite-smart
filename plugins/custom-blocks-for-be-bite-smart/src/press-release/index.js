@@ -442,7 +442,7 @@ registerBlockType("custom/press-release", {
           attributes.outletType === "logo" && attributes.logoUrl
             ? wp.element.createElement("img", {
                 src: attributes.logoUrl,
-                alt: attributes.logoAlt || attributes.outletName || "",
+                alt: attributes.logoAlt || "",
                 className: "press-release-logo outlet-badge-logo",
               })
             : wp.element.createElement(
