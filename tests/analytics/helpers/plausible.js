@@ -4,6 +4,7 @@ export {
   EVIDENCE_PATH,
   HOME_PATH,
   CRITICAL_PAGES,
+  LINK_CHECK_PAGES,
   REST_PAGE_SLUGS,
 } from "../../helpers/paths.js";
 export { gotoExpectOk, assertCriticalDom } from "../../helpers/page.js";

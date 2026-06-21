@@ -1,5 +1,22 @@
 # Change log
 
+## 2026-06-17 — Phase 2 smoke: broken internal links
+
+**What was built and why:** Crawls same-origin links on home, learn, and evidence (capped per page) and fails on HTTP 404 or 5xx — catches menu/permalink drift like the old `/education` slug issue.
+
+**Files created:**
+
+- `app/public/wp-content/tests/helpers/links.js` — `collectInternalLinks`, `checkLinkStatus`
+- `app/public/wp-content/tests/smoke/links.spec.js` — 3 parameterized link checks
+
+**Files modified:**
+
+- `app/public/wp-content/tests/helpers/paths.js` — `LINK_CHECK_PAGES`
+- `app/public/wp-content/tests/analytics/helpers/plausible.js` — re-export `LINK_CHECK_PAGES`
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Next step:** Phase 2b — `@axe-core/playwright` on key pages, or lightweight security URL checks.
+
 ## 2026-06-17 — Phase 1 smoke tests (paths + REST API)
 
 **What was built and why:** Added production-safe smoke coverage: HTTP 200 + core layout on 11 critical pages, and WordPress REST health for `/wp-json/` plus key page slugs. Centralized route constants so slug changes are updated in one place.

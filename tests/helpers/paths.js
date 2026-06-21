@@ -25,5 +25,12 @@ export const CRITICAL_PAGES = [
   { path: "/team/", label: "Team" },
 ];
 
+/** Pages scanned for broken same-origin links (cap per page to limit CI time). */
+export const LINK_CHECK_PAGES = [
+  { path: HOME_PATH, label: "Home", maxLinks: 60 },
+  { path: EDUCATION_PATH, label: "Learn", maxLinks: 40 },
+  { path: EVIDENCE_PATH, label: "Evidence", maxLinks: 40 },
+];
+
 /** Page slugs used in REST API smoke tests. */
 export const REST_PAGE_SLUGS = ["learn", "evidence", "contact"];
