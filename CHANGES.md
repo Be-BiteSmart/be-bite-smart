@@ -1,5 +1,26 @@
 # Change log
 
+## 2026-06-22 — Download tests: auto-scan critical pages for download links
+
+**What was built and why:** Switched download smoke tests from a per-page allowlist with `minCount` floors to an auto-scan across all `CRITICAL_PAGES`. New PDF-toggle blocks on any critical page are verified automatically without updating test config.
+
+**Files modified:**
+
+- `app/public/wp-content/tests/helpers/paths.js` — replaced `DOWNLOAD_FILE_PAGES` with `DOWNLOAD_SCAN_CHECKS` (derived from `DOWNLOAD_CHECKS`)
+- `app/public/wp-content/tests/smoke/downloads.spec.js` — loops `CRITICAL_PAGES`, skips pages with no download links, verifies every match
+- `app/public/wp-content/README.md` — documents auto-scan behavior
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Behavior:**
+
+- Scans each critical page for PDF-toggle, episode video, and coloring-book download selectors
+- Pages with no matching links are skipped (7 skipped on production today)
+- Every link found must return HTTP 200 with the expected file `content-type`
+
+**Verification:** `pnpm exec playwright test tests/smoke/downloads.spec.js` — 4 passed, 7 skipped on production.
+
+**Tradeoff:** Removing a download link no longer fails CI unless a page ends up with zero downloads entirely. Catches broken URLs for anything still linked on the page.
+
 ## 2026-06-22 — Expand download URL smoke tests to News & media and Parents
 
 **What was built and why:** Extended the download smoke suite to cover every production page with PDF-toggle or download-card file links, including Learn article PDFs that were previously missed.

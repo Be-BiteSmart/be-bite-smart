@@ -109,16 +109,15 @@ pnpm exec playwright test tests/smoke/seo.spec.js   # SEO essentials
 pnpm exec playwright show-report # open HTML report after a run
 ```
 
-**Download URLs** (`tests/smoke/downloads.spec.js`) — read-only checks for key file downloads:
+**Download URLs** (`tests/smoke/downloads.spec.js`) — auto-scans every critical page for download links:
 
-| Page | Checks |
-|------|--------|
-| `Learn` | PDF-toggle article PDFs, episode video downloads (`video/mp4`), coloring-book PDFs |
-| `News & media` | PDF-toggle press/article PDFs (`application/pdf`) |
-| `Partnerships` | PDF-toggle downloads (`application/pdf`) |
-| `Parents` | PDF-toggle parent guide PDFs (`application/pdf`) |
+| Pattern | Selector | Expected type |
+|---------|----------|---------------|
+| PDF-toggle | `.pdf-toggle-block .download-card-pdf-download` | `application/pdf` |
+| Episode videos | `#download-videos .ecd-toggle--download` | `video/mp4` |
+| Coloring books | `#download-coloring-books .download-card-pdf-download` | `application/pdf` |
 
-Each link must exist in the rendered DOM and return **HTTP 200** with the expected file `content-type`. Same-origin files are requested by path; off-origin download URLs are fetched directly.
+Pages with no matching links are **skipped**. Any link found is verified for **HTTP 200** and the expected `content-type`. New PDF-toggle blocks on any critical page are picked up automatically — no per-page config updates needed.
 
 **SEO essentials** (`tests/smoke/seo.spec.js`) — read-only checks on all critical pages plus crawl files:
 

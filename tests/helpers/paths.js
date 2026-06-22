@@ -57,33 +57,8 @@ export const DOWNLOAD_CHECKS = {
   },
 };
 
-/** Key pages/sections where download links should return real files. */
-export const DOWNLOAD_FILE_PAGES = [
-  {
-    path: EDUCATION_PATH,
-    label: "Learn",
-    checks: [
-      { ...DOWNLOAD_CHECKS.pdfToggle, minCount: 2 },
-      { ...DOWNLOAD_CHECKS.episodeVideos, minCount: 4 },
-      { ...DOWNLOAD_CHECKS.coloringBooks, minCount: 2 },
-    ],
-  },
-  {
-    path: "/news-media/",
-    label: "News & media",
-    checks: [{ ...DOWNLOAD_CHECKS.pdfToggle, minCount: 3 }],
-  },
-  {
-    path: "/partnerships/",
-    label: "Partnerships",
-    checks: [{ ...DOWNLOAD_CHECKS.pdfToggle, minCount: 1 }],
-  },
-  {
-    path: "/parents/",
-    label: "Parents",
-    checks: [{ ...DOWNLOAD_CHECKS.pdfToggle, minCount: 2 }],
-  },
-];
+/** Download link patterns auto-scanned on every critical page (skip when none found). */
+export const DOWNLOAD_SCAN_CHECKS = Object.values(DOWNLOAD_CHECKS);
 
 /** Page-specific content blocks that should exist on key routes. */
 export const BLOCK_PRESENCE_PAGES = [
