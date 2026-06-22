@@ -1,5 +1,16 @@
 # Change log
 
+## 2026-06-22 — CI: Playwright runs on pull requests only
+
+**What was built and why:** Workflow already targeted PRs only; aligned docs and fixed YAML indentation. Avoids duplicate runs on merge (`push` + `pull_request` closed) now that PRs are required before `main`.
+
+**Files modified:**
+
+- `app/public/wp-content/.github/workflows/playwright.yml` — `pull_request` to `main` only (no `push`)
+- `app/public/wp-content/testing.md` — when tests run
+- `app/public/wp-content/README.md` — GitHub Actions note
+- `app/public/wp-content/CHANGES.md` — this entry
+
 ## 2026-06-22 — testing.md: add test counts (109 total)
 
 **What was built and why:** Added per-group and per-suite test counts to `testing.md` so readers can see suite size at a glance.
