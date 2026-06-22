@@ -1,5 +1,14 @@
 # Change log
 
+## 2026-06-22 — testing.md: add test counts (109 total)
+
+**What was built and why:** Added per-group and per-suite test counts to `testing.md` so readers can see suite size at a glance.
+
+**Files modified:**
+
+- `app/public/wp-content/testing.md` — Test count section, overview table column, section headers
+- `app/public/wp-content/CHANGES.md` — this entry
+
 ## 2026-06-22 — Broken links: scan all critical pages
 
 **What was built and why:** Expanded internal link checks from Home, Learn, and Evidence to all 11 `CRITICAL_PAGES` so broken same-origin links are caught on any main route.
