@@ -228,6 +228,11 @@ body:not(.block-editor-page) .outlet-badge-logo {
   display: block;
 }
 
+/* Bio card affiliation — WCAG AA on white; beats stale inlined block CSS on production */
+html body .wp-block-custom-bio-card .bio-affiliation {
+  color: #374151 !important;
+}
+
 /* article heading */
 
 body:not(.block-editor-page) .article-headline {
