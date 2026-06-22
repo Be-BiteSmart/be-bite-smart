@@ -4,6 +4,25 @@
 
 # Change log
 
+## 2026-06-21 — Block presence smoke: Contact, Donate, Team
+
+**What was built and why:** Extended block-presence checks to Contact, Donate, and Team so CI catches missing forms, donate CTA, or team bio cards even when pages still return 200.
+
+**Files modified:**
+
+- `app/public/wp-content/tests/helpers/paths.js` — added Contact, Donate, Team to `BLOCK_PRESENCE_PAGES`
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Selectors (production-backed):**
+
+| Page | Check |
+|------|--------|
+| Contact | `form.forminator-custom-form` |
+| Donate | `a[href*="paypal.com/donate"]` |
+| Team | `article.wp-block-custom-bio-card` (min 3) |
+
+**Verification:** 5/5 block-presence tests pass against production.
+
 ## 2026-06-21 — Smoke tests for block presence on Learn and Evidence
 
 **What was built and why:** Added a focused smoke suite to catch editor/content regressions where key page-specific blocks disappear even though the page still returns 200 and has the core layout.
@@ -24,7 +43,7 @@
 
 - Initial Evidence selector used `.pdf-toggle-block`, which appears in fetched HTML but not the rendered DOM on production. Updated the test to use the live block marker `article.wp-block-custom-research-article`.
 
-**TODOs:** Expand block-presence checks later to additional critical pages such as Contact, Donate, and Team once we choose the most stable selectors.
+**TODOs:** Expand block-presence checks to remaining critical pages (e.g. Parents, Advisors, Partnerships) when stable selectors are identified.
 
 **What the next logical step would be:** Add SEO / crawl smoke (`robots.txt`, canonical, meta description) or expand security hygiene paths (`xmlrpc.php`, `readme.html`).
 

@@ -69,6 +69,39 @@ export const BLOCK_PRESENCE_PAGES = [
       },
     ],
   },
+  {
+    path: "/contact/",
+    label: "Contact",
+    checks: [
+      {
+        name: "contact form",
+        selector: "form.forminator-custom-form",
+        minCount: 1,
+      },
+    ],
+  },
+  {
+    path: "/donate/",
+    label: "Donate",
+    checks: [
+      {
+        name: "PayPal donate button",
+        selector: 'a[href*="paypal.com/donate"]',
+        minCount: 1,
+      },
+    ],
+  },
+  {
+    path: "/team/",
+    label: "Team",
+    checks: [
+      {
+        name: "team bio cards",
+        selector: "article.wp-block-custom-bio-card",
+        minCount: 3,
+      },
+    ],
+  },
 ];
 
 /** Page slugs used in REST API smoke tests. */
