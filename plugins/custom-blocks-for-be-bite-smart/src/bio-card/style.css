@@ -66,10 +66,9 @@
   font-weight: 500;
 }
 
-/* Affiliation — #4b5563 (~7.5:1 on white); #6b7280 was borderline and axe/CI
-   sometimes resolved theme grays (#737a87, #7b828e) when cascade differed. */
+/* Affiliation — dark gray for reliable WCAG AA on white; !important beats theme presets. */
 html body .wp-block-custom-bio-card .bio-affiliation {
-  color: #4b5563;
+  color: #374151 !important;
   font-weight: 500;
   font-size: 1.125rem;
   margin-bottom: 0.5rem;

@@ -1,5 +1,21 @@
 # Change log
 
+## 2026-06-22 — Bio affiliation: darker color + theme override (production still on #6b7280)
+
+**What was built and why:** CI still fails `.bio-affiliation` color-contrast because **production HTML inlines old plugin CSS** (`color:#6b7280`). Repo fix was never deployed. Darkened to `#374151` (~10:1) with `!important` in plugin CSS, and added the same rule to child theme `shared-block-styles.css` so a theme deploy fixes live site even if inlined block CSS is stale.
+
+**Files modified:**
+
+- `plugins/custom-blocks-for-be-bite-smart/src/bio-card/style.css`
+- `plugins/custom-blocks-for-be-bite-smart/build/bio-card/style-index.css`
+- `plugins/custom-blocks-for-be-bite-smart/build/bio-card/style-index-rtl.css`
+- `themes/twentytwentyfive-child/css/shared-block-styles.css`
+- `themes/twentytwentyfive-child/build/shared-blocks.css`
+- `themes/twentytwentyfive-child/build/shared-blocks-rtl.css`
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Deploy:** `git pull` on DreamHost for `wp-content`, then **WP Super Cache → Delete Cache**. Theme override should pass a11y immediately; plugin deploy updates inlined CSS long-term.
+
 ## 2026-06-22 — Bio affiliation contrast: darken gray for stable axe pass
 
 **What was built and why:** Advisors a11y failed in CI on `.bio-affiliation` with `#737a87` (4.31:1) while DevTools showed `#6b7280`. Not a cache issue — `#6b7280` is only ~4.8:1 on white (borderline), and axe/CI sometimes resolves slightly lighter theme grays when the cascade differs. Darkened affiliation to `#4b5563` (~7.5:1) with `html body` specificity so plugin color wins over theme presets.
