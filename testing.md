@@ -240,6 +240,18 @@ Confirms WordPress’s background API responds and that key pages (`learn`, `evi
 
 Tests run automatically on **pull requests targeting `main`** via GitHub Actions (`.github/workflows/playwright.yml`). They do not run on direct pushes to `main` (after merge, the PR run already validated the changes). By default they target the **live production site** (`https://www.bebitesmart.org`).
 
+### Merging when production must be updated first
+
+Sometimes a PR **fixes** a problem that CI is still reporting on the live site—for example, a CSS color change that only takes effect after DreamHost pulls `main` and WP Super Cache is cleared. The tests always hit **production**, not your branch, so the PR can stay red until deploy catches up.
+
+**Repo admins** can use the GitHub **ruleset bypass** on `main` to merge anyway:
+
+1. Open the pull request → **Merge** → choose **Bypass rules** (wording may be “Merge without waiting”).
+2. After merge, SSH to DreamHost and deploy: `cd bebitesmart.org/wp-content && git pull origin main && rm -rf cache/supercache/*`
+3. Re-run **Playwright Tests** on `main` (Actions tab) to confirm green.
+
+Use the bypass only when the failure is a known production lag (fix is in the PR, live site not updated yet)—not to ignore real regressions. See [README — Deploying to the server](./README.md#deploying-to-the-server) for full deploy steps.
+
 ```20:22:app/public/wp-content/package.json
   "scripts": {
     "test": "playwright test",

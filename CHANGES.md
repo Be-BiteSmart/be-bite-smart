@@ -1,5 +1,14 @@
 # Change log
 
+## 2026-06-22 — TESTING.md: document ruleset bypass for production-first fixes
+
+**What was built and why:** Documented the chicken-and-egg case where CI tests production but the fix is only in the PR—repo admins can bypass `main` rulesets, merge, deploy, then re-run Playwright.
+
+**Files modified:**
+
+- `app/public/wp-content/testing.md` — new “Merging when production must be updated first” under “When tests run”
+- `app/public/wp-content/CHANGES.md` — this entry
+
 ## 2026-06-22 — Bio affiliation: darker color + theme override (production still on #6b7280)
 
 **What was built and why:** CI still fails `.bio-affiliation` color-contrast because **production HTML inlines old plugin CSS** (`color:#6b7280`). Repo fix was never deployed. Darkened to `#374151` (~10:1) with `!important` in plugin CSS, and added the same rule to child theme `shared-block-styles.css` so a theme deploy fixes live site even if inlined block CSS is stale.
