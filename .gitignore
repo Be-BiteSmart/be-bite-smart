@@ -21,6 +21,7 @@ themes/twentytwentyfive-child/node_modules/
 !pnpm-lock.yaml
 
 !CHANGES.md
+!TESTING.md
 
 !playwright.config.js
 
