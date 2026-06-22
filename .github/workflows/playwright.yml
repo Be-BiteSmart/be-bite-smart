@@ -3,9 +3,12 @@ name: Playwright Tests
 on:
   push:
     branches: [main]
+  pull_request:
+      branches: [main]
 
 jobs:
   test:
+    name: Playwright Tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
     # Browsers + OS deps are pre-installed — avoids slow/hanging
