@@ -1,5 +1,25 @@
 # Change log
 
+## 2026-06-22 — HTTPS and canonical www host smoke tests
+
+**What was built and why:** Added production host hygiene checks so CI catches broken HTTP→HTTPS upgrades or apex/non-www URLs that stop redirecting to the canonical `https://www.bebitesmart.org` origin.
+
+**Files created or modified:**
+
+- `app/public/wp-content/tests/helpers/host.js` — canonical origin constants, redirect assertions
+- `app/public/wp-content/tests/smoke/https-host.spec.js` — 11 tests for host resolution and HTTPS upgrade
+- `app/public/wp-content/README.md` — HTTPS/host section and run command
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Behavior:**
+
+- Tests `http://bebitesmart.org`, `http://www.bebitesmart.org`, and `https://bebitesmart.org` for `/` and `/learn/`
+- Asserts final URL is `https://www.bebitesmart.org` with HTTP 200
+- HTTP entry points must redirect to HTTPS on the first hop
+- Skipped when `PLAYWRIGHT_BASE_URL` is not the production canonical origin (staging/local safe)
+
+**Verification:** `pnpm exec playwright test tests/smoke/https-host.spec.js` — 11/11 pass on production.
+
 ## 2026-06-22 — Download tests: auto-scan critical pages for download links
 
 **What was built and why:** Switched download smoke tests from a per-page allowlist with `minCount` floors to an auto-scan across all `CRITICAL_PAGES`. New PDF-toggle blocks on any critical page are verified automatically without updating test config.

@@ -106,8 +106,17 @@ pnpm exec playwright test tests/a11y/axe.spec.js   # a11y only
 pnpm exec playwright test tests/smoke/downloads.spec.js   # download URLs return files
 pnpm exec playwright test tests/smoke/security.spec.js   # security hygiene
 pnpm exec playwright test tests/smoke/seo.spec.js   # SEO essentials
+pnpm exec playwright test tests/smoke/https-host.spec.js   # HTTPS + canonical www host
 pnpm exec playwright show-report # open HTML report after a run
 ```
+
+**HTTPS and canonical host** (`tests/smoke/https-host.spec.js`) — production DNS/host checks (skipped when `PLAYWRIGHT_BASE_URL` is not `https://www.bebitesmart.org`):
+
+| Entry | Expected |
+|-------|----------|
+| `http://bebitesmart.org`, `http://www.bebitesmart.org`, `https://bebitesmart.org` | Resolve to `https://www.bebitesmart.org` (home + `/learn/`) |
+| HTTP entry points | First redirect uses **HTTPS** |
+| Canonical origin | Home returns **200** over HTTPS |
 
 **Download URLs** (`tests/smoke/downloads.spec.js`) — auto-scans every critical page for download links:
 
