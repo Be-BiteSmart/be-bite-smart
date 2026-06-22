@@ -31,12 +31,15 @@ export const A11Y_CHECK_PAGES = CRITICAL_PAGES;
 /** Pages checked for title, canonical URL, and meta description (read-only production). */
 export const SEO_CHECK_PAGES = CRITICAL_PAGES;
 
-/** Pages scanned for broken same-origin links (cap per page to limit CI time). */
-export const LINK_CHECK_PAGES = [
-  { path: HOME_PATH, label: "Home", maxLinks: 60 },
-  { path: EDUCATION_PATH, label: "Learn", maxLinks: 40 },
-  { path: EVIDENCE_PATH, label: "Evidence", maxLinks: 40 },
-];
+/** Default cap on same-origin links checked per page (limits CI time). */
+export const LINK_CHECK_MAX_LINKS = 50;
+
+/** Pages scanned for broken same-origin links — all critical pages. */
+export const LINK_CHECK_PAGES = CRITICAL_PAGES.map(({ path, label }) => ({
+  path,
+  label,
+  maxLinks: LINK_CHECK_MAX_LINKS,
+}));
 
 /** Shared selectors for download-card / PDF-toggle blocks (production-backed). */
 export const DOWNLOAD_CHECKS = {

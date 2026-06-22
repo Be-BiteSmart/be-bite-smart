@@ -96,6 +96,8 @@ If the Plausible plugin also logs a generic **file download** goal for PDF click
 
 Smoke, analytics, video, link, and accessibility tests. They run against production (`https://www.bebitesmart.org` by default) in GitHub Actions. Override the target with `PLAYWRIGHT_BASE_URL` for local or staging runs.
 
+**Non-technical overview:** see **[testing.md](./testing.md)** — what each test group checks, how to read results, and known issues in plain language.
+
 **Install and run** (from `app/public/wp-content`):
 
 ```bash
@@ -142,8 +144,11 @@ Pages with no matching links are **skipped**. Any link found is verified for **H
 
 | Path | Pass when | Why |
 |------|-----------|-----|
-| `/.env`, `/wp-content/debug.log` | **403 or 404** | Must not be web-readable |
-| `/wp-config.php` | **Any non-2xx** (403, 404, **500**, etc.) | Fail only on **2xx** (file served). DreamHost often returns **500** when PHP aborts — acceptable. **403** would require moving `wp-config.php` above the web root; we skip that for this lightweight check. |
+| `/.env`, `/wp-content/debug.log`, `/readme.html`, `/license.txt`, backup dirs, `/.git/HEAD`, `/composer.json` | **403 or 404** | Must not be web-readable |
+| `/wp-config.php`, `/wp-config-sample.php` | **Any non-2xx** | Fail only on **2xx** (config served). **500** OK on DreamHost when PHP aborts |
+| `/xmlrpc.php`, `/xmlrpc.php?rsd` | **Any non-2xx** | GET/RSD must not return a successful response (405 OK for bare GET) |
+
+Hardening note: production may still serve `readme.html`, `license.txt`, or `xmlrpc.php?rsd` — the test flags those so they can be removed or denied in `.htaccess`.
 
 **View results:** Terminal shows pass/fail during the run. After any run, `pnpm exec playwright show-report` opens `playwright-report/index.html`. In CI, download the `playwright-report` artifact. The wp-config test includes a **Why 500 is acceptable** attachment.
 

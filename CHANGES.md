@@ -1,5 +1,48 @@
 # Change log
 
+## 2026-06-22 — Broken links: scan all critical pages
+
+**What was built and why:** Expanded internal link checks from Home, Learn, and Evidence to all 11 `CRITICAL_PAGES` so broken same-origin links are caught on any main route.
+
+**Files modified:**
+
+- `app/public/wp-content/tests/helpers/paths.js` — `LINK_CHECK_PAGES` derived from `CRITICAL_PAGES` with `LINK_CHECK_MAX_LINKS` (50)
+- `app/public/wp-content/testing.md` — updated broken links coverage
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Verification:** `pnpm exec playwright test tests/smoke/links.spec.js` — 10/11 pass on production. **Parents** fails: link to `https://www.bebitesmart.org/education` (404) — update to `/learn/` in WordPress.
+
+## 2026-06-22 — testing.md: plain-language guide to automated tests
+
+**What was built and why:** Added `testing.md` so non-technical team members can understand what Playwright tests cover, when they run, and how to read GitHub results—without reading spec files. Technical appendix included for developers.
+
+**Files created or modified:**
+
+- `app/public/wp-content/testing.md` — new guide (overview table, per-suite explanations, known failures, technical appendix)
+- `app/public/wp-content/README.md` — link to `testing.md` from Playwright section
+- `app/public/wp-content/CHANGES.md` — this entry
+
+## 2026-06-22 — Expand security hygiene smoke tests
+
+**What was built and why:** Extended the security oops detector beyond wp-config, `.env`, and `debug.log` to cover common WordPress exposure paths (version files, XML-RPC, backups, VCS, dependency manifests).
+
+**Files modified:**
+
+- `app/public/wp-content/tests/helpers/security.js` — 12 paths, `SECURITY_RATIONALE` attachments, `wp-config-sample.php`, `xmlrpc.php`, backups, `.git/HEAD`, `composer.json`
+- `app/public/wp-content/tests/smoke/security.spec.js` — rationale attachments per check
+- `app/public/wp-content/README.md` — expanded security table
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Production results (9/12 pass):**
+
+| Path | Status | Action |
+|------|--------|--------|
+| `readme.html`, `license.txt` | **200** — fail | Delete from web root or deny in `.htaccess` |
+| `xmlrpc.php?rsd` | **200** — fail | Disable XML-RPC or block RSD discovery |
+| All other new checks | Pass | — |
+
+**What the next logical step would be:** Harden production (delete/deny `readme.html` + `license.txt`, disable XML-RPC) so CI goes green.
+
 ## 2026-06-22 — HTTPS and canonical www host smoke tests
 
 **What was built and why:** Added production host hygiene checks so CI catches broken HTTP→HTTPS upgrades or apex/non-www URLs that stop redirecting to the canonical `https://www.bebitesmart.org` origin.
