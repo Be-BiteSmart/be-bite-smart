@@ -1,5 +1,18 @@
 # Change log
 
+## 2026-06-22 — Bio affiliation contrast: darken gray for stable axe pass
+
+**What was built and why:** Advisors a11y failed in CI on `.bio-affiliation` with `#737a87` (4.31:1) while DevTools showed `#6b7280`. Not a cache issue — `#6b7280` is only ~4.8:1 on white (borderline), and axe/CI sometimes resolves slightly lighter theme grays when the cascade differs. Darkened affiliation to `#4b5563` (~7.5:1) with `html body` specificity so plugin color wins over theme presets.
+
+**Files modified:**
+
+- `plugins/custom-blocks-for-be-bite-smart/src/bio-card/style.css`
+- `plugins/custom-blocks-for-be-bite-smart/build/bio-card/style-index.css` (rebuilt)
+- `plugins/custom-blocks-for-be-bite-smart/build/bio-card/style-index-rtl.css` (rebuilt)
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Deploy:** Build plugin on server and purge WP Super Cache so inlined/global styles pick up the new color.
+
 ## 2026-06-22 — Rename testing.md to TESTING.md
 
 **Files modified:**
