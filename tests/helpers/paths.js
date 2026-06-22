@@ -28,6 +28,15 @@ export const CRITICAL_PAGES = [
 /** Pages scanned for axe violations (critical / serious / moderate; read-only production checks). */
 export const A11Y_CHECK_PAGES = CRITICAL_PAGES;
 
+/**
+ * Before axe runs, wait for these selectors so cached or slow HTML does not
+ * produce a false pass (e.g. Advisors scanned before bio cards are in the DOM).
+ */
+export const A11Y_PAGE_READY_SELECTORS = {
+  "/advisors/": "article.wp-block-custom-bio-card",
+  "/team/": "article.wp-block-custom-bio-card",
+};
+
 /** Pages checked for title, canonical URL, and meta description (read-only production). */
 export const SEO_CHECK_PAGES = CRITICAL_PAGES;
 
@@ -125,6 +134,17 @@ export const BLOCK_PRESENCE_PAGES = [
     checks: [
       {
         name: "team bio cards",
+        selector: "article.wp-block-custom-bio-card",
+        minCount: 3,
+      },
+    ],
+  },
+  {
+    path: "/advisors/",
+    label: "Advisors",
+    checks: [
+      {
+        name: "advisor bio cards",
         selector: "article.wp-block-custom-bio-card",
         minCount: 3,
       },

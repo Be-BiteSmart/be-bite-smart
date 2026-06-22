@@ -166,7 +166,7 @@ For pnpm install errors (`ERR_PNPM_NO_MATURE_MATCHING_VERSION`), see **Quick Sta
 
 ### Github Actions
 
-Workflow configuration for automated CI runs. Currently runs the Playwright analytics tests automatically on each push.
+Workflow configuration for automated CI runs. Playwright tests run on **pull requests to `main`** (required before merge).
 
 `.github/workflows`
 

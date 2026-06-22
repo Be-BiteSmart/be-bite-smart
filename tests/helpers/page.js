@@ -17,6 +17,19 @@ export async function gotoExpectOk(page, path) {
 }
 
 /**
+ * Wait for page-specific content before an a11y scan (avoids false passes when
+ * WP Super Cache serves HTML without late-rendered blocks).
+ */
+export async function waitForA11yPageReady(page, path, readySelectors) {
+  const selector = readySelectors[path];
+  if (!selector) {
+    return;
+  }
+
+  await page.locator(selector).first().waitFor({ state: "attached" });
+}
+
+/**
  * Assert core layout regions exist (theme/plugin conflicts often remove these).
  * Uses flexible selectors so minor markup changes do not break tests.
  */
