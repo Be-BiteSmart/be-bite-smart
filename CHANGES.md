@@ -4,6 +4,30 @@
 
 # Change log
 
+## 2026-06-21 — Smoke tests for block presence on Learn and Evidence
+
+**What was built and why:** Added a focused smoke suite to catch editor/content regressions where key page-specific blocks disappear even though the page still returns 200 and has the core layout.
+
+**Files created or modified:**
+
+- `app/public/wp-content/tests/smoke/blocks.spec.js` — page-specific content block presence checks
+- `app/public/wp-content/tests/helpers/paths.js` — `BLOCK_PRESENCE_PAGES` config for Learn and Evidence
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Patterns or conventions followed from the codebase:**
+
+- Reused `gotoExpectOk()` from existing smoke/video tests
+- Kept selectors production-backed and lightweight, similar to `CRITICAL_PAGES` / `LINK_CHECK_PAGES`
+- Used JSON test attachments for debugging, same style as other Playwright specs
+
+**Problems encountered and how they were fixed:**
+
+- Initial Evidence selector used `.pdf-toggle-block`, which appears in fetched HTML but not the rendered DOM on production. Updated the test to use the live block marker `article.wp-block-custom-research-article`.
+
+**TODOs:** Expand block-presence checks later to additional critical pages such as Contact, Donate, and Team once we choose the most stable selectors.
+
+**What the next logical step would be:** Add SEO / crawl smoke (`robots.txt`, canonical, meta description) or expand security hygiene paths (`xmlrpc.php`, `readme.html`).
+
 ## 2026-06-21 — Document wp-config 500 as acceptable in security test
 
 **What was built and why:** Clarified that `/wp-config.php` fails the security test only on **2xx**. **500** is acceptable on shared hosts (DreamHost PHP abort); requiring **403** would need wp-config above the web root — unnecessary for this oops detector.

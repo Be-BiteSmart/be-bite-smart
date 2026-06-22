@@ -35,5 +35,41 @@ export const LINK_CHECK_PAGES = [
   { path: EVIDENCE_PATH, label: "Evidence", maxLinks: 40 },
 ];
 
+/** Page-specific content blocks that should exist on key routes. */
+export const BLOCK_PRESENCE_PAGES = [
+  {
+    path: EDUCATION_PATH,
+    label: "Learn",
+    checks: [
+      {
+        name: "documentary video block",
+        selector: ".video-quote-block",
+        minCount: 1,
+      },
+      {
+        name: "developed episode cards",
+        selector: "#developed-episodes article",
+        minCount: 1,
+      },
+      {
+        name: "download cards",
+        selector: ".download-card-block",
+        minCount: 1,
+      },
+    ],
+  },
+  {
+    path: EVIDENCE_PATH,
+    label: "Evidence",
+    checks: [
+      {
+        name: "research article cards",
+        selector: "article.wp-block-custom-research-article",
+        minCount: 1,
+      },
+    ],
+  },
+];
+
 /** Page slugs used in REST API smoke tests. */
 export const REST_PAGE_SLUGS = ["learn", "evidence", "contact"];
