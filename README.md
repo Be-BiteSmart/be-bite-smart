@@ -113,8 +113,10 @@ pnpm exec playwright show-report # open HTML report after a run
 
 | Page | Checks |
 |------|--------|
-| `Learn` | Episode video downloads (`video/mp4`) and coloring-book PDFs (`application/pdf`) |
+| `Learn` | PDF-toggle article PDFs, episode video downloads (`video/mp4`), coloring-book PDFs |
+| `News & media` | PDF-toggle press/article PDFs (`application/pdf`) |
 | `Partnerships` | PDF-toggle downloads (`application/pdf`) |
+| `Parents` | PDF-toggle parent guide PDFs (`application/pdf`) |
 
 Each link must exist in the rendered DOM and return **HTTP 200** with the expected file `content-type`. Same-origin files are requested by path; off-origin download URLs are fetched directly.
 

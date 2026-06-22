@@ -1,5 +1,28 @@
 # Change log
 
+## 2026-06-22 — Expand download URL smoke tests to News & media and Parents
+
+**What was built and why:** Extended the download smoke suite to cover every production page with PDF-toggle or download-card file links, including Learn article PDFs that were previously missed.
+
+**Files modified:**
+
+- `app/public/wp-content/tests/helpers/paths.js` — shared `DOWNLOAD_CHECKS` helpers; added News & media and Parents; Learn now includes PDF-toggle article PDFs
+- `app/public/wp-content/README.md` — updated download coverage table
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Coverage (production-backed):**
+
+| Page | Downloads verified |
+|------|-------------------|
+| Learn | 2 PDF-toggle PDFs, 4 episode MP4s, 2 coloring-book PDFs |
+| News & media | 3 PDF-toggle PDFs |
+| Partnerships | 1 PDF-toggle PDF |
+| Parents | 2 PDF-toggle PDFs (EN/ES parent guide) |
+
+**Verification:** `pnpm exec playwright test tests/smoke/downloads.spec.js` passes on production (`4/4`).
+
+**What the next logical step would be:** Add educational-content download coverage when `#download-educational-content` has live links on production.
+
 ## 2026-06-22 — Download URL smoke tests for PDFs and media files
 
 **What was built and why:** Added read-only smoke checks that verify key download links on production return real files, so CI catches broken upload URLs, wrong file types, or missing downloadable assets even when the page itself still renders.

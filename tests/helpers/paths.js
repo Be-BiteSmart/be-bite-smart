@@ -38,37 +38,50 @@ export const LINK_CHECK_PAGES = [
   { path: EVIDENCE_PATH, label: "Evidence", maxLinks: 40 },
 ];
 
+/** Shared selectors for download-card / PDF-toggle blocks (production-backed). */
+export const DOWNLOAD_CHECKS = {
+  pdfToggle: {
+    name: "PDF-toggle downloads",
+    selector: ".pdf-toggle-block .download-card-pdf-download",
+    expectedMimePrefixes: ["application/pdf"],
+  },
+  episodeVideos: {
+    name: "episode video downloads",
+    selector: "#download-videos .ecd-toggle--download",
+    expectedMimePrefixes: ["video/mp4"],
+  },
+  coloringBooks: {
+    name: "coloring book PDFs",
+    selector: "#download-coloring-books .download-card-pdf-download",
+    expectedMimePrefixes: ["application/pdf"],
+  },
+};
+
 /** Key pages/sections where download links should return real files. */
 export const DOWNLOAD_FILE_PAGES = [
   {
     path: EDUCATION_PATH,
     label: "Learn",
     checks: [
-      {
-        name: "episode video downloads",
-        selector: "#download-videos .ecd-toggle--download",
-        expectedMimePrefixes: ["video/mp4"],
-        minCount: 4,
-      },
-      {
-        name: "coloring book PDFs",
-        selector: "#download-coloring-books .download-card-pdf-download",
-        expectedMimePrefixes: ["application/pdf"],
-        minCount: 2,
-      },
+      { ...DOWNLOAD_CHECKS.pdfToggle, minCount: 2 },
+      { ...DOWNLOAD_CHECKS.episodeVideos, minCount: 4 },
+      { ...DOWNLOAD_CHECKS.coloringBooks, minCount: 2 },
     ],
+  },
+  {
+    path: "/news-media/",
+    label: "News & media",
+    checks: [{ ...DOWNLOAD_CHECKS.pdfToggle, minCount: 3 }],
   },
   {
     path: "/partnerships/",
     label: "Partnerships",
-    checks: [
-      {
-        name: "partnership PDF downloads",
-        selector: ".pdf-toggle-block .download-card-pdf-download",
-        expectedMimePrefixes: ["application/pdf"],
-        minCount: 1,
-      },
-    ],
+    checks: [{ ...DOWNLOAD_CHECKS.pdfToggle, minCount: 1 }],
+  },
+  {
+    path: "/parents/",
+    label: "Parents",
+    checks: [{ ...DOWNLOAD_CHECKS.pdfToggle, minCount: 2 }],
   },
 ];
 
