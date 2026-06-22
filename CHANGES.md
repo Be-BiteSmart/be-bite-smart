@@ -1,5 +1,34 @@
 # Change log
 
+## 2026-06-22 — Download URL smoke tests for PDFs and media files
+
+**What was built and why:** Added read-only smoke checks that verify key download links on production return real files, so CI catches broken upload URLs, wrong file types, or missing downloadable assets even when the page itself still renders.
+
+**Files created or modified:**
+
+- `app/public/wp-content/tests/helpers/downloads.js` — shared helpers to collect download links and verify file-like HTTP responses
+- `app/public/wp-content/tests/smoke/downloads.spec.js` — checks Learn and Partnerships download URLs
+- `app/public/wp-content/tests/helpers/paths.js` — `DOWNLOAD_FILE_PAGES` config
+- `app/public/wp-content/README.md` — download test command and behavior notes
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Patterns or conventions followed from the codebase:**
+
+- Reused `gotoExpectOk()` and JSON test attachments like the other smoke suites
+- Kept page coverage config-driven in `paths.js`, similar to SEO, blocks, and links
+- Extended existing download-card / PDF-toggle selectors already used by analytics tests instead of inventing new ones
+
+**Problems encountered and how they were fixed:**
+
+- Learn currently has no live links in `#download-educational-content`, so the suite targets the download sections that actually render on production today: episode videos, coloring-book PDFs, and Partnerships PDF downloads
+- Some download URLs are off-origin (`bbs-downloads.janet-spellman.workers.dev`), so the helper preserves absolute URLs for cross-origin requests instead of forcing same-origin paths
+
+**Verification:** `pnpm exec playwright test tests/smoke/downloads.spec.js` passes on production (`2/2`). Verified file responses include `application/pdf` for PDFs and `video/mp4` for episode downloads.
+
+**TODOs:** Add educational-content PDF download coverage when that section has live production links to validate.
+
+**What the next logical step would be:** Expand file checks to additional downloadable assets if more PDF-toggle or download-card sections are added to other key pages.
+
 ## 2026-06-22 — SEO smoke tests (title, canonical, meta, robots, sitemap)
 
 **What was built and why:** Added read-only SEO checks on all critical pages plus `/robots.txt` and XML sitemap so CI catches missing titles, canonicals, meta descriptions, or broken crawl files.

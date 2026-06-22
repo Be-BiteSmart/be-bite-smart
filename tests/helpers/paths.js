@@ -38,6 +38,40 @@ export const LINK_CHECK_PAGES = [
   { path: EVIDENCE_PATH, label: "Evidence", maxLinks: 40 },
 ];
 
+/** Key pages/sections where download links should return real files. */
+export const DOWNLOAD_FILE_PAGES = [
+  {
+    path: EDUCATION_PATH,
+    label: "Learn",
+    checks: [
+      {
+        name: "episode video downloads",
+        selector: "#download-videos .ecd-toggle--download",
+        expectedMimePrefixes: ["video/mp4"],
+        minCount: 4,
+      },
+      {
+        name: "coloring book PDFs",
+        selector: "#download-coloring-books .download-card-pdf-download",
+        expectedMimePrefixes: ["application/pdf"],
+        minCount: 2,
+      },
+    ],
+  },
+  {
+    path: "/partnerships/",
+    label: "Partnerships",
+    checks: [
+      {
+        name: "partnership PDF downloads",
+        selector: ".pdf-toggle-block .download-card-pdf-download",
+        expectedMimePrefixes: ["application/pdf"],
+        minCount: 1,
+      },
+    ],
+  },
+];
+
 /** Page-specific content blocks that should exist on key routes. */
 export const BLOCK_PRESENCE_PAGES = [
   {

@@ -103,10 +103,20 @@ pnpm install --frozen-lockfile   # prefer when lockfile is committed
 pnpm exec playwright install chromium   # first time only, local browsers
 pnpm test                        # all suites
 pnpm exec playwright test tests/a11y/axe.spec.js   # a11y only
+pnpm exec playwright test tests/smoke/downloads.spec.js   # download URLs return files
 pnpm exec playwright test tests/smoke/security.spec.js   # security hygiene
 pnpm exec playwright test tests/smoke/seo.spec.js   # SEO essentials
 pnpm exec playwright show-report # open HTML report after a run
 ```
+
+**Download URLs** (`tests/smoke/downloads.spec.js`) — read-only checks for key file downloads:
+
+| Page | Checks |
+|------|--------|
+| `Learn` | Episode video downloads (`video/mp4`) and coloring-book PDFs (`application/pdf`) |
+| `Partnerships` | PDF-toggle downloads (`application/pdf`) |
+
+Each link must exist in the rendered DOM and return **HTTP 200** with the expected file `content-type`. Same-origin files are requested by path; off-origin download URLs are fetched directly.
 
 **SEO essentials** (`tests/smoke/seo.spec.js`) — read-only checks on all critical pages plus crawl files:
 
