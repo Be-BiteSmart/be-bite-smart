@@ -69,7 +69,7 @@ function render_bio_card_block( $attributes, $content ) {
 
                 <div class="bio-details">
                     <?php if ( $name ) : ?>
-                        <h3><?php echo wp_kses_post( $name ); ?></h3>
+                        <h2 class="bio-name"><?php echo wp_kses_post( $name ); ?></h2>
                     <?php endif; ?>
 
                     <?php if ( $role ) : ?>
