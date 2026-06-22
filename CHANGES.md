@@ -1,5 +1,17 @@
 # Change log
 
+## 2026-06-22 — A11y: wait for bio cards; Advisors block presence (false-pass fix)
+
+**What was built and why:** PR and push runs both hit production, but Advisors a11y passed with 0 violations while a later run failed on `.bio-affiliation` color contrast — likely stale cache or HTML without bio cards at scan time. Added bio-card wait before axe on Advisors/Team and Advisors block-presence check.
+
+**Files modified:**
+
+- `app/public/wp-content/tests/helpers/paths.js` — `A11Y_PAGE_READY_SELECTORS`, Advisors in `BLOCK_PRESENCE_PAGES`
+- `app/public/wp-content/tests/helpers/page.js` — `waitForA11yPageReady()`
+- `app/public/wp-content/tests/a11y/axe.spec.js` — wait before scan
+- `app/public/wp-content/testing.md` — production/cache explanation, test counts (110)
+- `app/public/wp-content/CHANGES.md` — this entry
+
 ## 2026-06-22 — CI: Playwright runs on pull requests only
 
 **What was built and why:** Workflow already targeted PRs only; aligned docs and fixed YAML indentation. Avoids duplicate runs on merge (`push` + `pull_request` closed) now that PRs are required before `main`.
