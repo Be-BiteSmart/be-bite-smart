@@ -96,7 +96,7 @@ If the Plausible plugin also logs a generic **file download** goal for PDF click
 
 Smoke, analytics, video, link, and accessibility tests. They run against production (`https://www.bebitesmart.org` by default) in GitHub Actions. Override the target with `PLAYWRIGHT_BASE_URL` for local or staging runs.
 
-**Non-technical overview:** see **[testing.md](./testing.md)** — what each test group checks, how to read results, and known issues in plain language.
+**Non-technical overview:** see **[TESTING.md](./TESTING.md)** — what each test group checks, how to read results, and known issues in plain language.
 
 **Install and run** (from `app/public/wp-content`):
 

@@ -1,5 +1,14 @@
 # Change log
 
+## 2026-06-22 — Rename testing.md to TESTING.md
+
+**Files modified:**
+
+- `app/public/wp-content/testing.md` → `app/public/wp-content/TESTING.md`
+- `app/public/wp-content/README.md` — link updated
+- `app/public/wp-content/TESTING.md` — internal path reference
+- `app/public/wp-content/CHANGES.md` — this entry
+
 ## 2026-06-22 — A11y: wait for bio cards; Advisors block presence (false-pass fix)
 
 **What was built and why:** PR and push runs both hit production, but Advisors a11y passed with 0 violations while a later run failed on `.bio-affiliation` color contrast — likely stale cache or HTML without bio cards at scan time. Added bio-card wait before axe on Advisors/Team and Advisors block-presence check.

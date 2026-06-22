@@ -291,7 +291,7 @@ Some tests skip on purpose—for example, a page with no download links, or HTTP
 
 ```
 app/public/wp-content/
-├── testing.md              ← this file
+├── TESTING.md              ← this file
 ├── playwright.config.js    ← base URL, timeouts, reporters
 ├── package.json            ← pnpm scripts
 └── tests/
