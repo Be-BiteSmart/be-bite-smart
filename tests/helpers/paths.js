@@ -28,11 +28,108 @@ export const CRITICAL_PAGES = [
 /** Pages scanned for axe violations (critical / serious / moderate; read-only production checks). */
 export const A11Y_CHECK_PAGES = CRITICAL_PAGES;
 
-/** Pages scanned for broken same-origin links (cap per page to limit CI time). */
-export const LINK_CHECK_PAGES = [
-  { path: HOME_PATH, label: "Home", maxLinks: 60 },
-  { path: EDUCATION_PATH, label: "Learn", maxLinks: 40 },
-  { path: EVIDENCE_PATH, label: "Evidence", maxLinks: 40 },
+/** Pages checked for title, canonical URL, and meta description (read-only production). */
+export const SEO_CHECK_PAGES = CRITICAL_PAGES;
+
+/** Default cap on same-origin links checked per page (limits CI time). */
+export const LINK_CHECK_MAX_LINKS = 50;
+
+/** Pages scanned for broken same-origin links — all critical pages. */
+export const LINK_CHECK_PAGES = CRITICAL_PAGES.map(({ path, label }) => ({
+  path,
+  label,
+  maxLinks: LINK_CHECK_MAX_LINKS,
+}));
+
+/** Shared selectors for download-card / PDF-toggle blocks (production-backed). */
+export const DOWNLOAD_CHECKS = {
+  pdfToggle: {
+    name: "PDF-toggle downloads",
+    selector: ".pdf-toggle-block .download-card-pdf-download",
+    expectedMimePrefixes: ["application/pdf"],
+  },
+  episodeVideos: {
+    name: "episode video downloads",
+    selector: "#download-videos .ecd-toggle--download",
+    expectedMimePrefixes: ["video/mp4"],
+  },
+  coloringBooks: {
+    name: "coloring book PDFs",
+    selector: "#download-coloring-books .download-card-pdf-download",
+    expectedMimePrefixes: ["application/pdf"],
+  },
+};
+
+/** Download link patterns auto-scanned on every critical page (skip when none found). */
+export const DOWNLOAD_SCAN_CHECKS = Object.values(DOWNLOAD_CHECKS);
+
+/** Page-specific content blocks that should exist on key routes. */
+export const BLOCK_PRESENCE_PAGES = [
+  {
+    path: EDUCATION_PATH,
+    label: "Learn",
+    checks: [
+      {
+        name: "documentary video block",
+        selector: ".video-quote-block",
+        minCount: 1,
+      },
+      {
+        name: "developed episode cards",
+        selector: "#developed-episodes article",
+        minCount: 1,
+      },
+      {
+        name: "download cards",
+        selector: ".download-card-block",
+        minCount: 1,
+      },
+    ],
+  },
+  {
+    path: EVIDENCE_PATH,
+    label: "Evidence",
+    checks: [
+      {
+        name: "research article cards",
+        selector: "article.wp-block-custom-research-article",
+        minCount: 1,
+      },
+    ],
+  },
+  {
+    path: "/contact/",
+    label: "Contact",
+    checks: [
+      {
+        name: "contact form",
+        selector: "form.forminator-custom-form",
+        minCount: 1,
+      },
+    ],
+  },
+  {
+    path: "/donate/",
+    label: "Donate",
+    checks: [
+      {
+        name: "PayPal donate button",
+        selector: 'a[href*="paypal.com/donate"]',
+        minCount: 1,
+      },
+    ],
+  },
+  {
+    path: "/team/",
+    label: "Team",
+    checks: [
+      {
+        name: "team bio cards",
+        selector: "article.wp-block-custom-bio-card",
+        minCount: 3,
+      },
+    ],
+  },
 ];
 
 /** Page slugs used in REST API smoke tests. */

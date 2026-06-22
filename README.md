@@ -96,6 +96,8 @@ If the Plausible plugin also logs a generic **file download** goal for PDF click
 
 Smoke, analytics, video, link, and accessibility tests. They run against production (`https://www.bebitesmart.org` by default) in GitHub Actions. Override the target with `PLAYWRIGHT_BASE_URL` for local or staging runs.
 
+**Non-technical overview:** see **[testing.md](./testing.md)** — what each test group checks, how to read results, and known issues in plain language.
+
 **Install and run** (from `app/public/wp-content`):
 
 ```bash
@@ -103,16 +105,50 @@ pnpm install --frozen-lockfile   # prefer when lockfile is committed
 pnpm exec playwright install chromium   # first time only, local browsers
 pnpm test                        # all suites
 pnpm exec playwright test tests/a11y/axe.spec.js   # a11y only
+pnpm exec playwright test tests/smoke/downloads.spec.js   # download URLs return files
 pnpm exec playwright test tests/smoke/security.spec.js   # security hygiene
+pnpm exec playwright test tests/smoke/seo.spec.js   # SEO essentials
+pnpm exec playwright test tests/smoke/https-host.spec.js   # HTTPS + canonical www host
 pnpm exec playwright show-report # open HTML report after a run
 ```
+
+**HTTPS and canonical host** (`tests/smoke/https-host.spec.js`) — production DNS/host checks (skipped when `PLAYWRIGHT_BASE_URL` is not `https://www.bebitesmart.org`):
+
+| Entry | Expected |
+|-------|----------|
+| `http://bebitesmart.org`, `http://www.bebitesmart.org`, `https://bebitesmart.org` | Resolve to `https://www.bebitesmart.org` (home + `/learn/`) |
+| HTTP entry points | First redirect uses **HTTPS** |
+| Canonical origin | Home returns **200** over HTTPS |
+
+**Download URLs** (`tests/smoke/downloads.spec.js`) — auto-scans every critical page for download links:
+
+| Pattern | Selector | Expected type |
+|---------|----------|---------------|
+| PDF-toggle | `.pdf-toggle-block .download-card-pdf-download` | `application/pdf` |
+| Episode videos | `#download-videos .ecd-toggle--download` | `video/mp4` |
+| Coloring books | `#download-coloring-books .download-card-pdf-download` | `application/pdf` |
+
+Pages with no matching links are **skipped**. Any link found is verified for **HTTP 200** and the expected `content-type`. New PDF-toggle blocks on any critical page are picked up automatically — no per-page config updates needed.
+
+**SEO essentials** (`tests/smoke/seo.spec.js`) — read-only checks on all critical pages plus crawl files:
+
+| Check | Pass when |
+|-------|-----------|
+| `<title>` | Non-empty, not a WordPress error page |
+| `<link rel="canonical">` | Present and matches `PLAYWRIGHT_BASE_URL` + path |
+| `<meta name="description">` | Present, at least 50 characters |
+| `/robots.txt` | HTTP **200**, non-empty body (`Sitemap:` line optional — noted in report) |
+| XML sitemap | HTTP **200** at `/sitemap.xml` (fallbacks: `/sitemap_index.xml`, `/wp-sitemap.xml`) with valid `urlset` or `sitemapindex` |
 
 **Security hygiene** (`tests/smoke/security.spec.js`) — read-only oops detector:
 
 | Path | Pass when | Why |
 |------|-----------|-----|
-| `/.env`, `/wp-content/debug.log` | **403 or 404** | Must not be web-readable |
-| `/wp-config.php` | **Any non-2xx** (403, 404, **500**, etc.) | Fail only on **2xx** (file served). DreamHost often returns **500** when PHP aborts — acceptable. **403** would require moving `wp-config.php` above the web root; we skip that for this lightweight check. |
+| `/.env`, `/wp-content/debug.log`, `/readme.html`, `/license.txt`, backup dirs, `/.git/HEAD`, `/composer.json` | **403 or 404** | Must not be web-readable |
+| `/wp-config.php`, `/wp-config-sample.php` | **Any non-2xx** | Fail only on **2xx** (config served). **500** OK on DreamHost when PHP aborts |
+| `/xmlrpc.php`, `/xmlrpc.php?rsd` | **Any non-2xx** | GET/RSD must not return a successful response (405 OK for bare GET) |
+
+Hardening note: production may still serve `readme.html`, `license.txt`, or `xmlrpc.php?rsd` — the test flags those so they can be removed or denied in `.htaccess`.
 
 **View results:** Terminal shows pass/fail during the run. After any run, `pnpm exec playwright show-report` opens `playwright-report/index.html`. In CI, download the `playwright-report` artifact. The wp-config test includes a **Why 500 is acceptable** attachment.
 

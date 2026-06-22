@@ -1,8 +1,207 @@
 # Change log
 
-# Change log
+## 2026-06-22 — Broken links: scan all critical pages
 
-# Change log
+**What was built and why:** Expanded internal link checks from Home, Learn, and Evidence to all 11 `CRITICAL_PAGES` so broken same-origin links are caught on any main route.
+
+**Files modified:**
+
+- `app/public/wp-content/tests/helpers/paths.js` — `LINK_CHECK_PAGES` derived from `CRITICAL_PAGES` with `LINK_CHECK_MAX_LINKS` (50)
+- `app/public/wp-content/testing.md` — updated broken links coverage
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Verification:** `pnpm exec playwright test tests/smoke/links.spec.js` — 10/11 pass on production. **Parents** fails: link to `https://www.bebitesmart.org/education` (404) — update to `/learn/` in WordPress.
+
+## 2026-06-22 — testing.md: plain-language guide to automated tests
+
+**What was built and why:** Added `testing.md` so non-technical team members can understand what Playwright tests cover, when they run, and how to read GitHub results—without reading spec files. Technical appendix included for developers.
+
+**Files created or modified:**
+
+- `app/public/wp-content/testing.md` — new guide (overview table, per-suite explanations, known failures, technical appendix)
+- `app/public/wp-content/README.md` — link to `testing.md` from Playwright section
+- `app/public/wp-content/CHANGES.md` — this entry
+
+## 2026-06-22 — Expand security hygiene smoke tests
+
+**What was built and why:** Extended the security oops detector beyond wp-config, `.env`, and `debug.log` to cover common WordPress exposure paths (version files, XML-RPC, backups, VCS, dependency manifests).
+
+**Files modified:**
+
+- `app/public/wp-content/tests/helpers/security.js` — 12 paths, `SECURITY_RATIONALE` attachments, `wp-config-sample.php`, `xmlrpc.php`, backups, `.git/HEAD`, `composer.json`
+- `app/public/wp-content/tests/smoke/security.spec.js` — rationale attachments per check
+- `app/public/wp-content/README.md` — expanded security table
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Production results (9/12 pass):**
+
+| Path | Status | Action |
+|------|--------|--------|
+| `readme.html`, `license.txt` | **200** — fail | Delete from web root or deny in `.htaccess` |
+| `xmlrpc.php?rsd` | **200** — fail | Disable XML-RPC or block RSD discovery |
+| All other new checks | Pass | — |
+
+**What the next logical step would be:** Harden production (delete/deny `readme.html` + `license.txt`, disable XML-RPC) so CI goes green.
+
+## 2026-06-22 — HTTPS and canonical www host smoke tests
+
+**What was built and why:** Added production host hygiene checks so CI catches broken HTTP→HTTPS upgrades or apex/non-www URLs that stop redirecting to the canonical `https://www.bebitesmart.org` origin.
+
+**Files created or modified:**
+
+- `app/public/wp-content/tests/helpers/host.js` — canonical origin constants, redirect assertions
+- `app/public/wp-content/tests/smoke/https-host.spec.js` — 11 tests for host resolution and HTTPS upgrade
+- `app/public/wp-content/README.md` — HTTPS/host section and run command
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Behavior:**
+
+- Tests `http://bebitesmart.org`, `http://www.bebitesmart.org`, and `https://bebitesmart.org` for `/` and `/learn/`
+- Asserts final URL is `https://www.bebitesmart.org` with HTTP 200
+- HTTP entry points must redirect to HTTPS on the first hop
+- Skipped when `PLAYWRIGHT_BASE_URL` is not the production canonical origin (staging/local safe)
+
+**Verification:** `pnpm exec playwright test tests/smoke/https-host.spec.js` — 11/11 pass on production.
+
+## 2026-06-22 — Download tests: auto-scan critical pages for download links
+
+**What was built and why:** Switched download smoke tests from a per-page allowlist with `minCount` floors to an auto-scan across all `CRITICAL_PAGES`. New PDF-toggle blocks on any critical page are verified automatically without updating test config.
+
+**Files modified:**
+
+- `app/public/wp-content/tests/helpers/paths.js` — replaced `DOWNLOAD_FILE_PAGES` with `DOWNLOAD_SCAN_CHECKS` (derived from `DOWNLOAD_CHECKS`)
+- `app/public/wp-content/tests/smoke/downloads.spec.js` — loops `CRITICAL_PAGES`, skips pages with no download links, verifies every match
+- `app/public/wp-content/README.md` — documents auto-scan behavior
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Behavior:**
+
+- Scans each critical page for PDF-toggle, episode video, and coloring-book download selectors
+- Pages with no matching links are skipped (7 skipped on production today)
+- Every link found must return HTTP 200 with the expected file `content-type`
+
+**Verification:** `pnpm exec playwright test tests/smoke/downloads.spec.js` — 4 passed, 7 skipped on production.
+
+**Tradeoff:** Removing a download link no longer fails CI unless a page ends up with zero downloads entirely. Catches broken URLs for anything still linked on the page.
+
+## 2026-06-22 — Expand download URL smoke tests to News & media and Parents
+
+**What was built and why:** Extended the download smoke suite to cover every production page with PDF-toggle or download-card file links, including Learn article PDFs that were previously missed.
+
+**Files modified:**
+
+- `app/public/wp-content/tests/helpers/paths.js` — shared `DOWNLOAD_CHECKS` helpers; added News & media and Parents; Learn now includes PDF-toggle article PDFs
+- `app/public/wp-content/README.md` — updated download coverage table
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Coverage (production-backed):**
+
+| Page | Downloads verified |
+|------|-------------------|
+| Learn | 2 PDF-toggle PDFs, 4 episode MP4s, 2 coloring-book PDFs |
+| News & media | 3 PDF-toggle PDFs |
+| Partnerships | 1 PDF-toggle PDF |
+| Parents | 2 PDF-toggle PDFs (EN/ES parent guide) |
+
+**Verification:** `pnpm exec playwright test tests/smoke/downloads.spec.js` passes on production (`4/4`).
+
+**What the next logical step would be:** Add educational-content download coverage when `#download-educational-content` has live links on production.
+
+## 2026-06-22 — Download URL smoke tests for PDFs and media files
+
+**What was built and why:** Added read-only smoke checks that verify key download links on production return real files, so CI catches broken upload URLs, wrong file types, or missing downloadable assets even when the page itself still renders.
+
+**Files created or modified:**
+
+- `app/public/wp-content/tests/helpers/downloads.js` — shared helpers to collect download links and verify file-like HTTP responses
+- `app/public/wp-content/tests/smoke/downloads.spec.js` — checks Learn and Partnerships download URLs
+- `app/public/wp-content/tests/helpers/paths.js` — `DOWNLOAD_FILE_PAGES` config
+- `app/public/wp-content/README.md` — download test command and behavior notes
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Patterns or conventions followed from the codebase:**
+
+- Reused `gotoExpectOk()` and JSON test attachments like the other smoke suites
+- Kept page coverage config-driven in `paths.js`, similar to SEO, blocks, and links
+- Extended existing download-card / PDF-toggle selectors already used by analytics tests instead of inventing new ones
+
+**Problems encountered and how they were fixed:**
+
+- Learn currently has no live links in `#download-educational-content`, so the suite targets the download sections that actually render on production today: episode videos, coloring-book PDFs, and Partnerships PDF downloads
+- Some download URLs are off-origin (`bbs-downloads.janet-spellman.workers.dev`), so the helper preserves absolute URLs for cross-origin requests instead of forcing same-origin paths
+
+**Verification:** `pnpm exec playwright test tests/smoke/downloads.spec.js` passes on production (`2/2`). Verified file responses include `application/pdf` for PDFs and `video/mp4` for episode downloads.
+
+**TODOs:** Add educational-content PDF download coverage when that section has live production links to validate.
+
+**What the next logical step would be:** Expand file checks to additional downloadable assets if more PDF-toggle or download-card sections are added to other key pages.
+
+## 2026-06-22 — SEO smoke tests (title, canonical, meta, robots, sitemap)
+
+**What was built and why:** Added read-only SEO checks on all critical pages plus `/robots.txt` and XML sitemap so CI catches missing titles, canonicals, meta descriptions, or broken crawl files.
+
+**Files created or modified:**
+
+- `app/public/wp-content/tests/helpers/seo.js` — `assertPageSeo`, `assertRobotsTxt`, `assertSitemap`, canonical URL helper
+- `app/public/wp-content/tests/smoke/seo.spec.js` — 11 page tests + robots.txt + sitemap
+- `app/public/wp-content/tests/helpers/paths.js` — `SEO_CHECK_PAGES` (= `CRITICAL_PAGES`)
+- `app/public/wp-content/README.md` — SEO essentials table and run command
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Patterns or conventions followed from the codebase:**
+
+- Reused `gotoExpectOk()` and JSON test attachments (same as block-presence / security specs)
+- `request.get` for robots.txt and sitemap (no browser needed)
+- All in One SEO: `/sitemap.xml` primary; fallbacks `/sitemap_index.xml`, `/wp-sitemap.xml`
+
+**Verification:** 12/13 pass against production. **Advisors** (`/advisors/`) fails: no `<meta name="description">` — add one in WordPress (All in One SEO) to clear.
+
+**TODOs:** Add `Sitemap:` line to robots.txt in AIOSEO (optional; sitemap is checked separately).
+
+**What the next logical step would be:** Fix Advisors meta description in WP admin, or expand security hygiene (`xmlrpc.php`, `readme.html`).
+
+## 2026-06-21 — Block presence smoke: Contact, Donate, Team
+
+**What was built and why:** Extended block-presence checks to Contact, Donate, and Team so CI catches missing forms, donate CTA, or team bio cards even when pages still return 200.
+
+**Files modified:**
+
+- `app/public/wp-content/tests/helpers/paths.js` — added Contact, Donate, Team to `BLOCK_PRESENCE_PAGES`
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Selectors (production-backed):**
+
+| Page | Check |
+|------|--------|
+| Contact | `form.forminator-custom-form` |
+| Donate | `a[href*="paypal.com/donate"]` |
+| Team | `article.wp-block-custom-bio-card` (min 3) |
+
+**Verification:** 5/5 block-presence tests pass against production.
+
+## 2026-06-21 — Smoke tests for block presence on Learn and Evidence
+
+**What was built and why:** Added a focused smoke suite to catch editor/content regressions where key page-specific blocks disappear even though the page still returns 200 and has the core layout.
+
+**Files created or modified:**
+
+- `app/public/wp-content/tests/smoke/blocks.spec.js` — page-specific content block presence checks
+- `app/public/wp-content/tests/helpers/paths.js` — `BLOCK_PRESENCE_PAGES` config for Learn and Evidence
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Patterns or conventions followed from the codebase:**
+
+- Reused `gotoExpectOk()` from existing smoke/video tests
+- Kept selectors production-backed and lightweight, similar to `CRITICAL_PAGES` / `LINK_CHECK_PAGES`
+- Used JSON test attachments for debugging, same style as other Playwright specs
+
+**Problems encountered and how they were fixed:**
+
+- Initial Evidence selector used `.pdf-toggle-block`, which appears in fetched HTML but not the rendered DOM on production. Updated the test to use the live block marker `article.wp-block-custom-research-article`.
+
+**TODOs:** Expand block-presence checks to remaining critical pages (e.g. Parents, Advisors, Partnerships) when stable selectors are identified.
+
+**What the next logical step would be:** Add SEO / crawl smoke (`robots.txt`, canonical, meta description) or expand security hygiene paths (`xmlrpc.php`, `readme.html`).
 
 ## 2026-06-21 — Document wp-config 500 as acceptable in security test
 
