@@ -104,8 +104,19 @@ pnpm exec playwright install chromium   # first time only, local browsers
 pnpm test                        # all suites
 pnpm exec playwright test tests/a11y/axe.spec.js   # a11y only
 pnpm exec playwright test tests/smoke/security.spec.js   # security hygiene
+pnpm exec playwright test tests/smoke/seo.spec.js   # SEO essentials
 pnpm exec playwright show-report # open HTML report after a run
 ```
+
+**SEO essentials** (`tests/smoke/seo.spec.js`) — read-only checks on all critical pages plus crawl files:
+
+| Check | Pass when |
+|-------|-----------|
+| `<title>` | Non-empty, not a WordPress error page |
+| `<link rel="canonical">` | Present and matches `PLAYWRIGHT_BASE_URL` + path |
+| `<meta name="description">` | Present, at least 50 characters |
+| `/robots.txt` | HTTP **200**, non-empty body (`Sitemap:` line optional — noted in report) |
+| XML sitemap | HTTP **200** at `/sitemap.xml` (fallbacks: `/sitemap_index.xml`, `/wp-sitemap.xml`) with valid `urlset` or `sitemapindex` |
 
 **Security hygiene** (`tests/smoke/security.spec.js`) — read-only oops detector:
 

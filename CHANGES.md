@@ -1,8 +1,28 @@
 # Change log
 
-# Change log
+## 2026-06-22 — SEO smoke tests (title, canonical, meta, robots, sitemap)
 
-# Change log
+**What was built and why:** Added read-only SEO checks on all critical pages plus `/robots.txt` and XML sitemap so CI catches missing titles, canonicals, meta descriptions, or broken crawl files.
+
+**Files created or modified:**
+
+- `app/public/wp-content/tests/helpers/seo.js` — `assertPageSeo`, `assertRobotsTxt`, `assertSitemap`, canonical URL helper
+- `app/public/wp-content/tests/smoke/seo.spec.js` — 11 page tests + robots.txt + sitemap
+- `app/public/wp-content/tests/helpers/paths.js` — `SEO_CHECK_PAGES` (= `CRITICAL_PAGES`)
+- `app/public/wp-content/README.md` — SEO essentials table and run command
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Patterns or conventions followed from the codebase:**
+
+- Reused `gotoExpectOk()` and JSON test attachments (same as block-presence / security specs)
+- `request.get` for robots.txt and sitemap (no browser needed)
+- All in One SEO: `/sitemap.xml` primary; fallbacks `/sitemap_index.xml`, `/wp-sitemap.xml`
+
+**Verification:** 12/13 pass against production. **Advisors** (`/advisors/`) fails: no `<meta name="description">` — add one in WordPress (All in One SEO) to clear.
+
+**TODOs:** Add `Sitemap:` line to robots.txt in AIOSEO (optional; sitemap is checked separately).
+
+**What the next logical step would be:** Fix Advisors meta description in WP admin, or expand security hygiene (`xmlrpc.php`, `readme.html`).
 
 ## 2026-06-21 — Block presence smoke: Contact, Donate, Team
 
