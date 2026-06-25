@@ -1,6 +1,6 @@
 # Be Bite Smart WP Content
 
-[![Playwright Analytics Tests](https://github.com/ghiblimagic/be-bite-smart/actions/workflows/playwright.yml/badge.svg)](https://github.com/ghiblimagic/be-bite-smart/actions/workflows/playwright.yml)
+![Playwright Analytics Tests](https://github.com/ghiblimagic/be-bite-smart/actions/workflows/playwright.yml/badge.svg?event=pull_request)
 
 > **Scope:** This repo contains non-sensitive theme, plugin, analytic and test logic only.
 > Sensitive server configuration files such as `wp-config.php` are not tracked
