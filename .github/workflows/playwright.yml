@@ -1,11 +1,56 @@
 name: Playwright Tests
 
+# Two triggers, intentionally non-overlapping (see `if:` on each job below):
+#   - pull_request: deploys the PR's branch to staging and runs the full test suite.
+#     This is the merge gate. Requires "test" as a required status check in
+#     branch protection for main, plus "require branches to be up to date."
+#   - push: fires when a PR is merged into main. Deploys directly to prod —
+#     does NOT redeploy to staging or re-run tests, since branch protection
+#     already guarantees this exact code passed tests during the PR run.
+
+# IMPORTANT: deploy-prod only runs because push (below) is scoped to
+# branches: [main]. That's the actual safety net — GitHub won't even
+# start this workflow for a push to any other branch.
+#
+# The if github.event_name == 'push' check inside the deploy-prod
+# job does NOT protect you here. It only tells push apart from
+# pull_request — it has no idea which branch was pushed to.
+#
+# If this trigger is ever loosened (e.g. push on all branches),
+# deploy-prod would fire on every push, not just merges to main.
+#
+# tl;dr: if you touch the trigger below, keep push scoped to main,
+# or deploy-prod loses its real safety net.
 on:
   pull_request:
     branches: [main]
+  push:
+    branches: [main]
 
 jobs:
+  deploy-staging:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to staging via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DREAMHOST_HOST }}
+          username: ${{ secrets.DREAMHOST_USER }}
+          key: ${{ secrets.DREAMHOST_STAGING_SSH_KEY }}
+          # The actual deploy command is irrelevant here — DREAMHOST_STAGING_SSH_KEY
+          # is restricted server-side via a forced `command=` in authorized_keys,
+          # so the real `cd ... && git pull` always runs from there, not from
+          # whatever's written below. This key can ONLY ever pull staging, on
+          # purpose — even if this workflow file were compromised, it couldn't
+          # be used to run arbitrary commands or touch prod.
+          # If staging's deploy path ever changes, update authorized_keys on
+          # the server — editing this line alone won't do anything.
+          script: echo "Deploy is enforced server-side via restricted SSH key"
+
   test:
+    if: github.event_name == 'pull_request'
+    needs: deploy-staging
     name: Playwright Tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -14,28 +59,29 @@ jobs:
     container:
       image: mcr.microsoft.com/playwright:v1.59.1-noble
       options: --user 1001 --ipc=host
-
     steps:
       - uses: actions/checkout@v4
-
       - uses: pnpm/action-setup@v4
         with:
           version: 9
-
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: "pnpm"
           cache-dependency-path: pnpm-lock.yaml
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
       - name: Run tests
         run: pnpm run test:ci
         env:
           CI: true
-
+          BASE_URL: https://staging.bebitesmart.org
+          # Staging sits behind HTTP Basic Auth (whole site, not just
+          # wp-admin) to keep it out of search engine indexes and away from
+          # random visitors/bots, since it holds a sanitized copy of real
+          # site content. Playwright needs these to get past that gate.
+          STAGING_AUTH_USER: ${{ secrets.STAGING_AUTH_USER }}
+          STAGING_AUTH_PASS: ${{ secrets.STAGING_AUTH_PASS }}
       - name: Upload HTML report
         uses: actions/upload-artifact@v4
         if: ${{ !cancelled() && hashFiles('playwright-report/**') != '' }}
@@ -43,3 +89,31 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 30
+
+  deploy-prod:
+    if: github.event_name == 'push'
+    # No `needs: test` here on purpose — this job only ever runs on a push
+    # event (i.e. a merge), at which point `test` never ran in this same
+    # workflow run (it's gated to pull_request only). A `needs: test`
+    # reference would cause GitHub to skip this job, since its dependency
+    # would never have run. Test-gating is handled by branch protection
+    # instead, not by this workflow file.
+    runs-on: ubuntu-latest
+    # `environment: production` requires manual approval (configured in
+    # Settings > Environments > production) before this job is allowed to
+    # run, even after merge. This is the human-in-the-loop check before
+    # anything touches the live site.
+    environment: production
+    steps:
+      - name: Deploy to production via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DREAMHOST_HOST }}
+          username: ${{ secrets.DREAMHOST_USER }}
+          key: ${{ secrets.DREAMHOST_PROD_SSH_KEY }}
+          # Same as staging: the real command is enforced server-side via a
+          # forced `command=` tied to this specific key in authorized_keys.
+          # This key can ONLY pull prod's repo — it has no other capability,
+          # and is a completely separate key from the staging one, so a
+          # compromised staging key can never be used against prod.
+          script: echo "Deploy is enforced server-side via restricted SSH key"
