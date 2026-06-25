@@ -3,39 +3,50 @@ name: Playwright Tests
 on:
   pull_request:
     branches: [main]
+  push:
+    branches: [main]
 
 jobs:
+  deploy-staging:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to staging via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DREAMHOST_HOST }}
+          username: ${{ secrets.DREAMHOST_USER }}
+          key: ${{ secrets.DREAMHOST_STAGING_SSH_KEY }}
+          script: cd /home/bbs_developer/staging.bebitesmart.org && git pull origin ${{ github.head_ref }}
+
   test:
+    if: github.event_name == 'pull_request'
+    needs: deploy-staging
     name: Playwright Tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    # Browsers + OS deps are pre-installed — avoids slow/hanging
-    # `playwright install --with-deps` on every run (apt + ~170MB download).
     container:
       image: mcr.microsoft.com/playwright:v1.59.1-noble
       options: --user 1001 --ipc=host
-
     steps:
       - uses: actions/checkout@v4
-
       - uses: pnpm/action-setup@v4
         with:
           version: 9
-
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: "pnpm"
           cache-dependency-path: pnpm-lock.yaml
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
       - name: Run tests
         run: pnpm run test:ci
         env:
           CI: true
-
+          BASE_URL: https://staging.bebitesmart.org
+          STAGING_AUTH_USER: ${{ secrets.STAGING_AUTH_USER }}
+          STAGING_AUTH_PASS: ${{ secrets.STAGING_AUTH_PASS }}
       - name: Upload HTML report
         uses: actions/upload-artifact@v4
         if: ${{ !cancelled() && hashFiles('playwright-report/**') != '' }}
@@ -43,3 +54,16 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 30
+
+  deploy-prod:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Deploy to production via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DREAMHOST_HOST }}
+          username: ${{ secrets.DREAMHOST_USER }}
+          key: ${{ secrets.DREAMHOST_PROD_SSH_KEY }}
+          script: cd /home/bbs_developer/bebitesmart.org && git pull origin main
