@@ -17,7 +17,7 @@ jobs:
           host: ${{ secrets.DREAMHOST_HOST }}
           username: ${{ secrets.DREAMHOST_USER }}
           key: ${{ secrets.DREAMHOST_STAGING_SSH_KEY }}
-          script: cd /home/bbs_developer/staging.bebitesmart.org && git pull origin ${{ github.head_ref }}
+          script: cd /home/bbs_developer/staging.bebitesmart.org/app/public/wp-content && git pull origin ${{ github.head_ref }}
 
   test:
     if: github.event_name == 'pull_request'
@@ -66,4 +66,4 @@ jobs:
           host: ${{ secrets.DREAMHOST_HOST }}
           username: ${{ secrets.DREAMHOST_USER }}
           key: ${{ secrets.DREAMHOST_PROD_SSH_KEY }}
-          script: cd /home/bbs_developer/bebitesmart.org && git pull origin main
+          script: cd /home/bbs_developer/bebitesmart.org/app/public/wp-content && git pull origin main
