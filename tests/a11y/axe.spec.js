@@ -13,7 +13,7 @@ test.describe("Accessibility (axe)", () => {
       await waitForA11yPageReady(page, path, A11Y_PAGE_READY_SELECTORS);
 
       const baseURL =
-        testInfo.project.use?.baseURL ?? "https://www.bebitesmart.org";
+        testInfo.project.use?.baseURL ?? "https://staging.bebitesmart.org";
       const url = new URL(path, baseURL).href;
       const report = await expectNoBlockingA11yViolations(page, label, {
         label,

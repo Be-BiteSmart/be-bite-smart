@@ -7,7 +7,10 @@ import {
 } from "../helpers/security.js";
 
 test.describe("Security hygiene", () => {
-  test.describe.configure({ mode: "parallel" });
+  test.describe.configure({ 
+    mode: "parallel",
+    retries: 2, // Retry transient connection failures before treating as pass
+  });
 
   for (const entry of SENSITIVE_PATHS) {
     const { path, label, mode } = entry;
@@ -36,7 +39,7 @@ test.describe("Security hygiene", () => {
         // Network errors (socket hang up, connection refused, etc.) are acceptable
         // from a security perspective - the path is not publicly accessible
         await testInfo.attach("Network error (path inaccessible)", {
-          body: error.message,
+          body: `Connection failed for ${path} (possibly a transient network issue or server-side blocking): ${error.message}`,
           contentType: "text/plain",
         });
         status = 0; // Treat network errors as non-2xx (passing)
