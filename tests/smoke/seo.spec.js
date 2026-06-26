@@ -13,7 +13,7 @@ test.describe("SEO essentials", () => {
       page,
     }, testInfo) => {
       const baseURL =
-        testInfo.project.use?.baseURL ?? "https://www.bebitesmart.org";
+        testInfo.project.use?.baseURL ?? "https://staging.bebitesmart.org";
 
       await gotoExpectOk(page, path);
 
