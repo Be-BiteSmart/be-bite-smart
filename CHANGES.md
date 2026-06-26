@@ -1,5 +1,31 @@
 # Change log
 
+## 2026-06-25 — Plausible event interception: videos/loading.spec.js
+
+**What was built and why:** Added Plausible event interception to video loading tests to prevent sending analytics events to the actual Plausible service during test runs. This ensures tests don't pollute production analytics data.
+
+**Files modified:**
+
+- `app/public/wp-content/tests/videos/loading.spec.js` — added `spyOnPlausible` import and calls before each video play button click (documentary and episode videos)
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Patterns or conventions followed from the codebase:**
+
+- Reused existing `spyOnPlausible` helper from analytics tests
+- Added interception before each click that triggers an event (same pattern as analytics/events.spec.js)
+- No changes to test logic or assertions - only added event interception
+
+**Tests affected:**
+
+- Documentary video watch button tests (Home and Education pages)
+- Documentary thumbnail play button tests (Home and Education pages)  
+- Episode video Watch Now tests (all languages)
+- Episode thumbnail click test
+
+**Verification:** Run `pnpm exec playwright test tests/videos/loading.spec.js` to verify video loading tests pass with Plausible interception.
+
+**Note:** The analytics/events.spec.js test suite already uses Plausible interception extensively as it's designed to test Plausible event behavior. All other smoke tests (downloads, links, blocks, etc.) are read-only and don't trigger Plausible events.
+
 ## 2026-06-25 — PDF Toggle Playwright tests: critical pages with validation
 
 **What was built and why:** Added comprehensive Playwright tests for the pdf-toggle block that check all critical pages for pdf-toggle elements, validate view PDF buttons and download links, and verify click functionality (iframe visibility and src loading).
