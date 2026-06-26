@@ -1,5 +1,39 @@
 # Change log
 
+## 2026-06-25 — PDF Toggle Playwright tests: critical pages with validation
+
+**What was built and why:** Added comprehensive Playwright tests for the pdf-toggle block that check all critical pages for pdf-toggle elements, validate view PDF buttons and download links, and verify click functionality (iframe visibility and src loading).
+
+**Files created or modified:**
+
+- `app/public/wp-content/tests/smoke/pdf-toggle.spec.js` — new test suite using CRITICAL_PAGES, pdf-toggle detection, view button validation (checks iframe data-src URLs, clicks to verify visibility and src loading), download link validation (checks href URLs), and edge case handling for pdf-toggle blocks without valid elements
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Patterns or conventions followed from the codebase:**
+
+- Reused `gotoExpectOk()` helper from existing smoke tests
+- Used CRITICAL_PAGES from paths.js (same as other smoke tests like blocks, links, seo)
+- Followed existing test structure with `test.describe()`, parameterized tests, and JSON test attachments
+- Used data-testid selectors matching the component's implementation (pdf-btn-en-{blockId}, pdf-btn-es-{blockId}, pdf-viewer-en-{blockId}, pdf-viewer-es-{blockId})
+- Skipped tests when no pdf-toggle is found (similar to download auto-scan behavior)
+
+**Behavior:**
+
+- Tests all CRITICAL_PAGES (11 pages: Home, Learn, Evidence, News & media, Partnerships, Contact, Donate, Parents, Legal, Advisors, Team)
+- For each page, checks if `.pdf-toggle-block` elements exist
+- If no pdf-toggle found, skips the test for that page
+- If pdf-toggle found, validates:
+  - View PDF buttons have valid iframe URLs (via data-src attribute)
+  - Clicks view PDF buttons to verify they work (checks iframe visibility and src attribute)
+  - Intercepts Plausible analytics events using spyOnPlausible() to prevent sending to actual service
+  - Download links have valid URLs (via href attribute)
+- Edge case: fails if pdf-toggle exists but has no valid view buttons OR download links
+- Attaches detailed JSON results for debugging (includes intercepted Plausible events)
+
+**Verification:** Run `pnpm exec playwright test tests/smoke/pdf-toggle.spec.js` to test all critical pages.
+
+**What the next logical step would be:** Monitor test results in CI to ensure pdf-toggle blocks across the site have valid URLs. Add new pages to CRITICAL_PAGES if they contain pdf-toggle blocks.
+
 ## 2026-06-22 — TESTING.md: document ruleset bypass for production-first fixes
 
 **What was built and why:** Documented the chicken-and-egg case where CI tests production but the fix is only in the PR—repo admins can bypass `main` rulesets, merge, deploy, then re-run Playwright.
