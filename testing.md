@@ -24,7 +24,7 @@ These tests **do not change anything** on the site. They only visit pages and re
 
 ## Test count
 
-**110 automated checks** across 11 test files (as of the current suite). They are grouped below.
+**121 automated checks** across 12 test files (as of the current suite). They are grouped below.
 
 | Group | Tests | What it covers |
 |-------|------:|----------------|
@@ -36,10 +36,11 @@ These tests **do not change anything** on the site. They only visit pages and re
 | **Smoke — HTTPS & host** | 11 | HTTP/`www` redirects (production only; **skipped** on local/staging) |
 | **Smoke — security** | 12 | Sensitive files and paths must not be public |
 | **Smoke — WordPress API** | 4 | REST API health + key page slugs |
+| **Smoke — PDF toggle** | 11 | PDF view buttons and download links validation (pages with no PDF toggles are **skipped**) |
 | **Accessibility** | 11 | One scan per main page (WCAG moderate and above) |
 | **Analytics** | 14 | Plausible events on plays, downloads, PDFs, language switch |
 | **Videos** | 6 | Vimeo embeds on Home and Learn |
-| **Total** | **110** | |
+| **Total** | **121** | |
 
 Some checks **skip** when they do not apply (e.g. a page with no download buttons). Skipped is not a failure.
 
@@ -57,6 +58,7 @@ Some checks **skip** when they do not apply (e.g. a page with no download button
 | **SEO** | 13 | Title, description, and canonical URL set correctly? | All 11 main pages + sitemap |
 | **HTTPS & host** | 11 | Does `http` and non-`www` redirect to `https://www.bebitesmart.org`? | Home + Learn (production only) |
 | **Security** | 12 | Are sensitive server files hidden from the public? | Server paths (not page content) |
+| **PDF toggle** | 11 | Do PDF view buttons work and download links have valid URLs? | All 11 main pages (skipped if no PDF toggles) |
 | **Accessibility** | 11 | WCAG accessibility rules (moderate and above) | All 11 main pages |
 | **Analytics** | 14 | Do Plausible events fire on clicks/plays/downloads? | Learn, Home, News, Evidence, Partnerships |
 | **WordPress API** | 4 | Can WordPress still serve page data behind the scenes? | API + Learn, Evidence, Contact slugs |
@@ -360,6 +362,28 @@ PLAYWRIGHT_BASE_URL=http://bebitesmart.local pnpm test
 ```
 
 HTTPS/host tests skip automatically when the base URL is not production.
+
+### Tests that target production
+
+Most tests can run against any environment (local, staging, or production) by setting `PLAYWRIGHT_BASE_URL`. However, some tests **intentionally target production** and skip on other environments:
+
+| Test suite | Why it targets production | How it skips on non-production |
+|-----------|--------------------------|--------------------------------|
+| **Security hygiene** (`security.spec.js`) | Verifies real server-level security posture (sensitive paths, config files, bot-blocking rules) which may differ between environments. Production is the authoritative source for security validation. | No automatic skip - runs against whatever `PLAYWRIGHT_BASE_URL` is set to. Set to production to verify live security. |
+| **HTTPS and canonical host** (`https-host.spec.js`) | Validates DNS and hosting infrastructure (HTTP→HTTPS redirects, non-www→www redirects) which are production-specific configuration. Staging/local may not have the same redirect rules. | Skips automatically via `shouldRunHostChecks()` when `baseURL` is not `https://www.bebitesmart.org` |
+
+**Why security tests target production:**
+- Security posture (bot-blocking, IP bans, .htaccess rules) may differ between environments
+- Production is the only environment that reflects the real security configuration users face
+- Network-level blocking (like the bot-blocking rule that caused "socket hang up" errors) is production-specific
+- The test includes retry logic to handle transient network failures while still validating security
+
+**Why HTTPS/host tests target production:**
+- DNS and SSL configuration are production infrastructure settings
+- Redirect rules (http://, non-www) are typically only configured on the production domain
+- Staging environments often use different domains or lack proper redirect setup
+
+**Future developers:** When adding new tests, consider whether they need to validate production-specific infrastructure. If so, document the reason here and implement a skip mechanism for non-production environments.
 
 ### Configuration
 

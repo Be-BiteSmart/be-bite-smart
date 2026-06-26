@@ -1,5 +1,27 @@
 # Change log
 
+## 2026-06-25 — Document production-targeting tests in testing.md
+
+**What was built and why:** Added documentation to testing.md explaining which tests intentionally target production and why. This helps future developers understand the security and infrastructure validation rationale.
+
+**Files modified:**
+
+- `app/public/wp-content/testing.md` — added "Tests that target production" section with table and explanations for security and HTTPS/host tests
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Patterns or conventions followed from the codebase:**
+
+- Documented test behavior and rationale in testing.md for team-wide understanding
+- Explained why certain tests need production-specific validation
+- Provided guidance for future developers adding new production-targeting tests
+
+**Tests documented:**
+
+- **Security hygiene** (`security.spec.js`) - Validates server-level security posture (bot-blocking, IP bans, .htaccess rules) which may differ between environments
+- **HTTPS and canonical host** (`https-host.spec.js`) - Validates DNS and hosting infrastructure (HTTP→HTTPS redirects, non-www→www redirects) which are production-specific
+
+**Verification:** Review the new "Tests that target production" section in testing.md for clarity and completeness.
+
 ## 2026-06-25 — Fix fallback URLs to use staging instead of production
 
 **What was built and why:** Fixed hardcoded production URLs in test fallbacks to use staging. This ensures tests default to staging environment when baseURL is not configured, preventing accidental production hits during local development.
