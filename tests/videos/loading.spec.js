@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { gotoExpectOk, EDUCATION_PATH } from "../analytics/helpers/plausible.js";
+import { gotoExpectOk, EDUCATION_PATH, spyOnPlausible } from "../analytics/helpers/plausible.js";
 import {
   assertVimeoPlayerLoads,
   episodeLangSegments,
@@ -21,6 +21,9 @@ test.describe("Documentary video (video-quote block)", () => {
       const siteLang = (await block.getAttribute("data-site-lang")) || "en";
       const trigger = block.locator(".video-quote-watch-button");
 
+      // Intercept Plausible events to prevent sending to actual service
+      await spyOnPlausible(page);
+
       await assertVimeoPlayerLoads(page, block, trigger, {
         vimeoId,
         lang: siteLang,
@@ -39,6 +42,9 @@ test.describe("Documentary video (video-quote block)", () => {
       const vimeoId = await block.getAttribute("data-vimeo-id");
       const siteLang = (await block.getAttribute("data-site-lang")) || "en";
       const trigger = block.locator(".play-button");
+
+      // Intercept Plausible events to prevent sending to actual service
+      await spyOnPlausible(page);
 
       await assertVimeoPlayerLoads(page, block, trigger, {
         vimeoId,
@@ -103,6 +109,9 @@ test.describe("Episode videos (education page)", () => {
         await segment.click();
         await expect(segment).toHaveClass(/active/);
 
+        // Intercept Plausible events to prevent sending to actual service
+        await spyOnPlausible(page);
+
         const iframe = await assertVimeoPlayerLoads(
           page,
           episode,
@@ -140,6 +149,9 @@ test.describe("Episode videos (education page)", () => {
         .first()
         .getAttribute("data-lang")) || "en";
     const vimeoId = videoIds[defaultLang] || videoIds.en || Object.values(videoIds)[0];
+
+    // Intercept Plausible events to prevent sending to actual service
+    await spyOnPlausible(page);
 
     await assertVimeoPlayerLoads(page, episode, episode.locator(".play-button"), {
       vimeoId,
