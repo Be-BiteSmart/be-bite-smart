@@ -55,7 +55,7 @@ jobs:
           username: ${{ secrets.DREAMHOST_USER }}
           key: ${{ secrets.DREAMHOST_STAGING_SYNC_SSH_KEY }}
           # The sync script is enforced server-side via a forced `command=` in
-          # authorized_keys, so the real /home/USER/SYNCTOSTAGING.sh always runs
+          # authorized_keys, so the real /home/USER/sync-staging-db.sh always runs
           # from there, not from whatever's written below. This key can ONLY run
           # the sync script — even if this workflow file were compromised, it
           # couldn't be used to run arbitrary commands or touch prod.
