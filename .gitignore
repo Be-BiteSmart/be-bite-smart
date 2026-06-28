@@ -38,3 +38,6 @@ themes/twentytwentyfive-child/node_modules/
 !readme-images/
 !readme-images/**
 
+!server-scripts/
+!server-scripts/**
+

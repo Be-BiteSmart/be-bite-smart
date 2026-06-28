@@ -31,6 +31,7 @@ jobs:
   deploy-staging:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    environment: staging
     steps:
       - name: Deploy to staging via SSH
         uses: appleboy/ssh-action@v1
@@ -47,6 +48,18 @@ jobs:
           # If staging's deploy path ever changes, update authorized_keys on
           # the server — editing this line alone won't do anything.
           script: echo "Deploy is enforced server-side via restricted SSH key"
+      - name: Sync production to staging
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DREAMHOST_HOST }}
+          username: ${{ secrets.DREAMHOST_USER }}
+          key: ${{ secrets.DREAMHOST_STAGING_SYNC_SSH_KEY }}
+          # The sync script is enforced server-side via a forced `command=` in
+          # authorized_keys, so the real /home/USER/SYNCTOSTAGING.sh always runs
+          # from there, not from whatever's written below. This key can ONLY run
+          # the sync script — even if this workflow file were compromised, it
+          # couldn't be used to run arbitrary commands or touch prod.
+          script: echo "Sync is enforced server-side via restricted SSH key"
 
   test:
     if: github.event_name == 'pull_request'
