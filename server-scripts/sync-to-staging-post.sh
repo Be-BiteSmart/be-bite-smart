@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# SYNCTOSTAGING-post.sh
+# sync-to-staging-post.sh
 # Post-sync cleanup script that deactivates Wordfence on staging only.
 # This runs after every staging refresh to ensure Wordfence never interferes
 # with staging operations or inherits production's security state.

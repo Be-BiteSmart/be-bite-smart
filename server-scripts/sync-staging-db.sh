@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# SYNCTOSTAGING.sh
+# sync-staging-db.sh
 # Syncs production database and media files to staging, excluding Wordfence security state.
 # This ensures staging never inherits production's lockouts, blocklists, or enforcement settings.
 #
-# Usage: ./SYNCTOSTAGING.sh
+# Usage: .sync-staging-db.sh
 # Location: /home/USER/ on DreamHost server
 # Trigger: GitHub Actions workflow (pull_request to main) via restricted SSH key
 
@@ -16,7 +16,7 @@ PROD_URL_PATTERN='https?://(www\.)?SITENAME\.org'
 STAGING_URL="https://staging.SITENAME.org"
 TMP_DIR="/home/USER/tmp"
 DUMP_FILE="$TMP_DIR/prod-dump-$(date +%s).sql"
-LOCK_FILE="/home/USER/SYNCTOSTAGING.sh.lock"
+LOCK_FILE="/home/USER/sync-staging-db.lock"
 
 # Wordfence tables to exclude (using prefix_wp_ prefix from wp-config.php)
 # These tables contain lockout state, blocklists, enforcement settings, and plugin config
@@ -24,7 +24,7 @@ LOCK_FILE="/home/USER/SYNCTOSTAGING.sh.lock"
 # IMPORTANT: This list must be reviewed and updated if Wordfence is ever updated or
 # reinstalled. Plugin updates can add new tables or change the schema, which would
 # cause this exclusion list to drift out of date. The post-sync deactivation step
-# (SYNCTOSTAGING-post.sh) is the primary safety mechanism; this table exclusion
+# (sync-to-staging-post.sh) is the primary safety mechanism; this table exclusion
 # is a secondary defense only.
 WORDFENCE_TABLES=(
   "prefix_wp_wfBlockedIPLog"
@@ -85,6 +85,6 @@ rsync -a --delete "$PROD_PATH/wp-content/uploads/" "$STAGING_PATH/wp-content/upl
 
 # 5. Run post-sync cleanup (deactivate Wordfence on staging)
 echo "Running post-sync cleanup..."
-/home/USER/SYNCTOSTAGING-post.sh
+/home/USER/sync-to-staging-post.sh
 
 echo "Staging synced from prod at $(date)"
