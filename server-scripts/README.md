@@ -2,6 +2,34 @@
 
 This directory contains scripts that run on the DreamHost server to manage staging sync and post-sync cleanup.
 
+## Quick Start: What You Actually Need to Know
+
+**If you're inheriting this repo, read this section and skip the rest unless you hit a problem or want the full reasoning.**
+
+### What's already set up (you shouldn't need to touch this)
+- Two scripts live on the DreamHost server (`sync-staging-db.sh`, `sync-to-staging-post.sh`), already deployed, `chmod 700`'d, with placeholders filled in
+- Two separate, narrowly-scoped SSH keys already exist and are wired into `~/.ssh/authorized_keys` on the server:
+  - `staging-deploy` — can only run `git pull` on staging
+  - `staging-sync-deploy` — can only run the sync script
+- GitHub Actions (`deploy-staging` job in `playwright-tests.yml`) automatically syncs staging from production and deploys the latest code on every PR — this is the trigger for the Playwright test suite
+- All staging-specific secrets (`DREAMHOST_STAGING_SSH_KEY`, `DREAMHOST_STAGING_SYNC_SSH_KEY`, `STAGING_AUTH_PASS`, `STAGING_AUTH_USER`) are scoped to GitHub's `staging` environment; production's key is scoped to `production`, which also requires manual approval before deploying
+- Wordfence is configured to stay deactivated on staging after every sync (so CI and manual logins never get rate-limited or locked out), while staying fully active and untouched on production
+- There is **no scheduled/cron sync** — this was tried and deliberately removed (see Step 6 and the Residual Risks section for why)
+
+### What you'd need to do manually, and when
+| Situation | What to do |
+|---|---|
+| You want to test a plugin update against real production data | SSH in and run `./sync-staging-db.sh` manually — see Step 6 below for the full walkthrough |
+| Wordfence gets updated and adds new DB tables | Update the `WORDFENCE_TABLES` array in `sync-staging-db.sh` — see Step 5 and the "Wordfence table exclusion drift" risk below |
+| You're setting this up fresh for a *different* repo/site (not just inheriting this one) | Follow Steps 1–4 in order — they cover initial deployment, key generation, and GitHub configuration from scratch |
+| An SSH key is suspected to be compromised | Rotate it — there's no automatic rotation schedule, so this is a manual, on-demand action (see Residual Risks) |
+| Something about the sync is failing silently or you're not sure why | Check the Troubleshooting section, then the Testing and Validation Status section — several things here were reasoned through but not yet exercised under real failure conditions as of the last review |
+
+### What this is *not* yet
+This setup has been reviewed at the design level (see the Security Review section for the full back-and-forth) but **has not had a live validation run** — lock file behavior under real concurrent conditions, the actual exit-status propagation through `appleboy/ssh-action`, and a few other things are still pending a real test. If you're the first person running this for real, do the manual test run described in Testing and Validation Status before trusting the automated path blindly.
+
+---
+
 ## Files
 
 - `sync-staging-db.sh` - Main sync script that copies production database and media to staging, excluding Wordfence tables
@@ -56,7 +84,7 @@ rm /home/USER/staging-deploy-wrapper.sh
 
 Generate a new SSH key pair locally (not on the server — the private key should never touch the server):
 ```bash
-ssh-keygen -t ed25519 -f ~/.ssh/staging-sync-deploy -C "staging-sync-deploy@bebitesmart.org"
+ssh-keygen -t ed25519 -f ~/.ssh/staging-sync-deploy -C "staging-sync-deploy"
 ```
 
 Leave the passphrase empty (press Enter twice) — a passphrase-protected key can't be unlocked non-interactively by GitHub Actions.
@@ -133,21 +161,35 @@ WORDFENCE_TABLES=(
 
 You can check your table prefix in `wp-config.php` on the server.
 
-### 6. Daily cron job (independent of GitHub Actions)
+### 6. Manually triggering a sync (e.g. before testing plugin updates)
 
-In addition to the CI-triggered sync (Step 4), the sync also runs automatically once a day via a cron job on the DreamHost server. This is a second, independent invocation path — separate from the GitHub Actions `staging-sync-deploy` SSH key, and not gated by any PR or branch protection rule.
+There's no scheduled/automatic sync outside of CI. A daily cron job was considered and rejected — see rationale below — in favor of running the sync on-demand whenever fresh staging data is actually needed.
 
-**Cron entry:**
+**Why not a daily cron:**
+- Plugin-update testing on staging is occasional, not daily. A nightly sync would frequently be stale by the time anyone actually used staging (e.g. testing at 2pm against a midnight snapshot), so it didn't actually serve the "fresh data right before I test" need it was meant for.
+- Every sync run is a full production DB export + import + media rsync — real load on a shared-hosting box. Running that unconditionally every night, regardless of whether anyone used staging that day, wasn't worth the resource cost for an occasional use case.
+- It introduced a lock-file overlap risk with the CI-triggered sync (a PR-triggered run and the midnight cron colliding) that didn't exist before, and added an invocation path with no audit trail — a 3am cron failure is invisible unless someone happens to check the server directly.
+- Removing it simplifies the model back to two clear, visible triggers: CI-triggered (on every PR) and manually-triggered (on demand), both observable, neither silent.
+
+**How to manually sync staging before testing plugin updates:**
+
+If you want to test a plugin update (or any other change) against a fresh copy of production data:
+
+```bash
+ssh USER@DOMAIN.org
+cd /home/USER
+./sync-staging-db.sh
 ```
-# sync prod and staging - daily at midnight
-0 0 * * * bash /home/USER/sync-staging-db.sh
-```
 
-Add this via `crontab -e` on the DreamHost server. Replace `USER` with your actual DreamHost username.
+This runs the full sync — production DB export (Wordfence tables excluded), import to staging, URL rewrite, media rsync, and the post-sync Wordfence deactivation — exactly as it would run from CI, just invoked directly instead of through the `staging-sync-deploy` SSH key.
 
-**Why this matters for the security model:** every safety mechanism documented in this README still applies regardless of *how* the sync is triggered, since they all live inside `sync-staging-db.sh` and `sync-to-staging-post.sh` themselves — the lock file, Wordfence table exclusion, and fail-closed environment check protect a cron-triggered run exactly the same way they protect a CI-triggered run. The one thing worth being aware of is **overlap risk**: if a CI-triggered sync (from a PR) happens to be running at the same moment the midnight cron fires, the lock file is what prevents both from running concurrently — the second invocation should see the lock and exit rather than race against the first. Worth confirming this behavior during the pending live-validation pass (see Testing and Validation Status), since it's now a real scenario rather than a theoretical one.
+Once it completes, staging will reflect current production content with Wordfence deactivated, so you can:
+1. Log into staging's `wp-admin` (no login lockout risk, since Wordfence is deactivated by the post-sync step)
+2. Update the plugin(s) you want to test
+3. Click around / run your usual manual checks (or trigger the Playwright suite against staging manually if you want automated coverage too)
+4. If something breaks, staging is disposable — just re-run the sync above to reset it back to a clean copy of production, then try again
 
-**Operational note:** because this path runs daily regardless of whether any code change occurred, the production database is being exported and imported into staging once a day even on days with zero deploys. Worth keeping in mind for anything sensitive to staging being freshly overwritten on a fixed schedule (e.g. if someone is mid-investigation on staging and the midnight sync wipes their in-progress state).
+**Note:** this manual sync uses the same script, same lock file, and same safety mechanisms as the CI-triggered path — there's nothing different about doing it by hand. If a CI sync happens to be running at the same time (e.g. someone just opened a PR), the lock file will cause your manual run to wait/fail rather than race against it; just re-run it once the CI sync finishes.
 
 ## How It Works
 
@@ -188,7 +230,7 @@ Add this via `crontab -e` on the DreamHost server. Replace `USER` with your actu
 To test the sync process manually without triggering via GitHub Actions:
 
 ```bash
-ssh USER@bebitesmart.org
+ssh USER@DOMAIN.org
 cd /home/USER
 ./sync-staging-db.sh
 ```
@@ -227,7 +269,7 @@ This sync process moves production WordPress data (including the database and me
 1. **Preventing security state inheritance:** Ensuring staging doesn't inherit production's Wordfence lockout state, blocklists, or enforcement settings in ways that block legitimate testing or CI access
 2. **Credential scope containment:** Ensuring the credentials that perform this sync can't be abused beyond their intended scope if leaked (compromised GitHub secret, leaked CI log, etc.)
 
-**Note on invocation paths:** the sync runs via two independent triggers — the GitHub Actions `staging-sync-deploy` SSH key (Step 4) and a daily cron job on the server itself (Step 6). The credential-scope analysis below applies to the SSH-key path; the cron path has no equivalent credential exposure (it runs locally as the server's own user, not via a leakable secret) but introduces its own considerations — see the new residual risk entry below.
+**Note on invocation paths:** the sync runs via two intentional triggers — the GitHub Actions `staging-sync-deploy` SSH key (Step 4, on every PR) and manual SSH invocation by a developer (Step 6, for ad-hoc testing such as plugin updates). A daily cron trigger was considered and rejected during this review — see Step 6 for the rationale — so there is no unattended/scheduled invocation path to account for in the credential-scope analysis below.
 
 **Scope:** This review covers the staging sync mechanism (Step 1). The production WAF bypass for CI (Step 2 - custom-header approach for Playwright security suite) is tracked separately and was not part of this review.
 
@@ -280,11 +322,8 @@ The following risks are knowingly accepted as part of this design:
 - **Policy:** Rotate keys only if compromise is suspected or on manual audit
 - **Acceptance:** This is the current operational policy; may be revisited if regulatory requirements change
 
-**Cron-triggered sync overlapping with CI-triggered sync**
-- **Risk:** The daily cron job (Step 6) and the GitHub Actions-triggered sync are independent invocation paths with no coordination between them beyond the shared lock file. If a PR-triggered sync is in progress at exactly midnight, the cron-triggered run should be blocked by the lock — but this hasn't yet been validated under real concurrent conditions. There's also no GitHub-side audit trail for cron-triggered runs (no workflow log, no exit-status visibility in CI), unlike the SSH-key path.
-- **Mitigation:** Shared lock file is intended to serialize both paths regardless of trigger source
-- **Owner/Trigger:** Confirm lock-file behavior under actual overlapping conditions during live validation; if cron-triggered runs need their own visibility (e.g. logging to a file, alerting on failure), that's not currently implemented
-- **Acceptance:** Acceptable for now given low overlap probability (a single midnight window vs. PR-triggered runs at arbitrary times), but worth monitoring once live
+**(Resolved, not residual) Daily cron job removed**
+A daily cron-triggered sync was implemented and then removed during this review. It was rejected because plugin-update testing on staging is occasional rather than daily, making an unconditional nightly sync frequently stale by the time it was actually used, while still incurring full DB export/import/rsync load every night on shared hosting. It also introduced a lock-file overlap risk with CI-triggered syncs and a third invocation path with no audit trail. Manual SSH invocation (Step 6) replaces it — fresher when it matters (run right before testing), no unconditional resource cost, and no overlap risk to reason about. This is listed here rather than removed entirely from the document, so a future reader doesn't reintroduce the same cron job without knowing it was already tried and deliberately reverted.
 
 ### GitHub Actions Secret Exposure Surface
 
@@ -330,6 +369,5 @@ The concerns and resolutions in this review were reasoned through and documented
 - Actual Wordfence table exclusion behavior on the production database
 - Fail-closed environment check behavior with various failure modes
 - End-to-end confirmation that `environment: staging` on the `deploy-staging` job correctly resolves all four staging-scoped secrets (this is now reflected in the workflow file, but hasn't yet been confirmed by an actual successful run)
-- Lock-file behavior when the daily cron job (Step 6) and a CI-triggered sync genuinely overlap — not yet tested in practice
 
 **Action:** Run a manual test sync via SSH (`/home/USER/sync-staging-db.sh`) and verify all expected behaviors before relying on the automated GitHub Actions trigger.
