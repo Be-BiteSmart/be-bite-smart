@@ -20,5 +20,12 @@ export default defineConfig({
     headless: true,
     userAgent:
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    // Use Basic Auth for staging
+    httpCredentials: (process.env.PLAYWRIGHT_BASE_URL ?? process.env.BASE_URL ?? "").includes("staging.")
+      ? {
+          username: process.env.STAGING_AUTH_USER ?? "",
+          password: process.env.STAGING_AUTH_PASS ?? "",
+        }
+      : undefined,
   },
 });
