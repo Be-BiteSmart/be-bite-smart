@@ -27,11 +27,24 @@ export function canonicalUrl(path) {
 /**
  * Follow redirects and assert the final URL is the canonical HTTPS www origin.
  */
-export async function assertResolvesToCanonical(request, entryOrigin, path) {
+export async function assertResolvesToCanonical(request, entryOrigin, path, baseURL) {
   const startUrl = new URL(path, entryOrigin).toString();
   const expected = canonicalUrl(path);
+  let url = startUrl;
 
-  const response = await request.get(startUrl, {
+  // If accessing staging, inject Basic Auth credentials
+  if (baseURL?.includes("staging.")) {
+    const username = process.env.STAGING_AUTH_USER;
+    const password = process.env.STAGING_AUTH_PASS;
+    if (username && password) {
+      const urlObj = new URL(url, baseURL);
+      urlObj.username = username;
+      urlObj.password = password;
+      url = urlObj.toString();
+    }
+  }
+
+  const response = await request.get(url, {
     maxRedirects: 10,
     failOnStatusCode: false,
   });
@@ -55,10 +68,23 @@ export async function assertResolvesToCanonical(request, entryOrigin, path) {
 /**
  * HTTP entry points must redirect to HTTPS on the first hop.
  */
-export async function assertHttpsFirstRedirect(request, entryOrigin, path) {
+export async function assertHttpsFirstRedirect(request, entryOrigin, path, baseURL) {
   const startUrl = new URL(path, entryOrigin).toString();
+  let url = startUrl;
 
-  const response = await request.get(startUrl, {
+  // If accessing staging, inject Basic Auth credentials
+  if (baseURL?.includes("staging.")) {
+    const username = process.env.STAGING_AUTH_USER;
+    const password = process.env.STAGING_AUTH_PASS;
+    if (username && password) {
+      const urlObj = new URL(url, baseURL);
+      urlObj.username = username;
+      urlObj.password = password;
+      url = urlObj.toString();
+    }
+  }
+
+  const response = await request.get(url, {
     maxRedirects: 0,
     failOnStatusCode: false,
   });

@@ -159,10 +159,11 @@ jobs:
 **Note:** The script content (`echo "..."`) is a no-op because the forced command in `authorized_keys` overrides any client-side command. The SSH connection itself triggers the sync script, and its exit status is returned to GitHub Actions.
 
 **Why this approach:**
-- The `staging-deploy` key remains restricted to git pull only (forced command)
+- The `staging-deploy` key remains restricted to running deploy-staging-branch.sh (forced command)
 - The new `staging-sync-deploy` key is restricted to only running the sync script (forced command)
 - If either key leaks, the blast radius is limited to that specific operation
 - The forced command's exit status is returned to the SSH client, so GitHub Actions fails if the script fails
+- deploy-staging-branch.sh validates branch names against a strict allowlist before git operations to prevent injection attacks
 - The sync script's fail-closed environment check protects the Wordfence deactivation step (not the DB export/import itself)
 - Both keys are scoped to the `staging` GitHub environment, alongside `STAGING_AUTH_PASS`/`STAGING_AUTH_USER`, for an additional layer of access control and audit logging beyond what the forced-command restriction already provides server-side
 
@@ -308,7 +309,8 @@ This sync process moves production WordPress data (including the database and me
 
 | Concern | Status | Resolution |
 |---------|--------|------------|
-| **Key privilege escalation** (git-pull → full sync) | Fixed | Split into two separate keys: `staging-deploy` (git pull only) and `staging-sync-deploy` (sync script only). This limits blast radius if either key leaks. |
+| **Key privilege escalation** (git-pull → full sync) | Fixed | Split into two separate keys: `staging-deploy` (deploy-staging-branch.sh only) and `staging-sync-deploy` (sync script only). This limits blast radius if either key leaks. |
+| **PR branch deployment not supported** | Fixed | Created deploy-staging-branch.sh to checkout and pull specific branches, updated workflow to pass branch name via SSH. Branch names validated against strict allowlist before git operations. |
 | **wfConfig exclusion ambiguity** | Fixed | Explicitly framed table exclusion as secondary safety measure, with post-sync deactivation as primary control. Added warning comment that table list must be reviewed if Wordfence is updated. |
 | **Fail-closed environment check** | Fixed | Documented explicitly that empty/error results from URL check default to aborting (not deactivating). Script checks for empty string before regex match. |
 | **Wrapper script permissions** | Resolved | Wrapper script deprecated due to privilege escalation risk. Added cleanup step to remove it from server if previously uploaded. |

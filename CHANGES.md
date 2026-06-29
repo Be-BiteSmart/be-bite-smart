@@ -1,5 +1,43 @@
 # Change log
 
+## 2026-06-29 — PR Branch Deployment to Staging + Playwright Basic Auth Fix
+
+**What was built and why:**
+- Updated GitHub Actions workflow to deploy PR branches to staging (not just main), so CSS and code changes from feature branches can be tested before merge
+- Created `deploy-staging-branch.sh` script to checkout and pull specific branches on staging with strict allowlist validation
+- Fixed Playwright tests to use Basic Auth credentials when accessing staging (HTTP 401 errors were blocking tests)
+- Updated multiple test helpers and test files to inject staging credentials for `request.get()` calls
+
+**Files created:**
+- `app/public/wp-content/server-scripts/templates/deploy-staging-branch.sh` - Script that checks out and pulls a specific branch on staging with security validation
+
+**Files modified:**
+- `app/public/wp-content/.github/workflows/playwright.yml` - Reordered steps (sync before deploy), renamed deploy step, added branch name passing via `github.head_ref`, updated comment about deploy-staging-branch.sh
+- `app/public/wp-content/playwright.config.js` - Added `httpCredentials` configuration for staging Basic Auth
+- `app/public/wp-content/tests/smoke/rest-api.spec.js` - Added Basic Auth injection for staging in REST API tests
+- `app/public/wp-content/tests/helpers/seo.js` - Added `baseURL` parameter and Basic Auth injection for `assertRobotsTxt` and `fetchSitemap`
+- `app/public/wp-content/tests/smoke/seo.spec.js` - Updated to pass `baseURL` to SEO helper functions
+- `app/public/wp-content/tests/helpers/downloads.js` - Added Basic Auth injection for download link tests
+- `app/public/wp-content/tests/helpers/host.js` - Added `baseURL` parameter and Basic Auth injection for host check functions
+- `app/public/wp-content/tests/smoke/https-host.spec.js` - Updated to pass `baseURL` to host helper functions
+- `app/public/wp-content/server-scripts/README.md` - Updated files list to include deploy-staging-branch.sh, updated deployment steps to include the new script
+
+**Patterns followed:**
+- Security-first approach: deploy-staging-branch.sh uses strict regex allowlist validation for branch names before git operations
+- Consistent Basic Auth injection pattern across all test helpers using `request.get()`
+- Environment detection via `baseURL?.includes("staging.")` to conditionally apply credentials
+- URL construction with `new URL()` and username/password properties for credential injection
+
+**Problems encountered and how they were fixed:**
+- **Issue:** CSS changes from PR branches weren't reaching staging because the workflow always pulled from `main`
+  - **Fix:** Created deploy-staging-branch.sh to checkout and pull specific branches, updated workflow to pass branch name via `github.head_ref`
+- **Issue:** Playwright tests failing with HTTP 401 when accessing staging
+  - **Fix:** Added `httpCredentials` to Playwright config for page navigation, and manual credential injection for `request.get()` calls in test helpers
+- **Issue:** Multiple test files using `request.get()` needed Basic Auth support
+  - **Fix:** Updated all affected helper functions (seo.js, downloads.js, host.js) to accept `baseURL` parameter and inject credentials when accessing staging
+
+**What the next logical step would be:** Deploy deploy-staging-branch.sh to DreamHost server and update the `staging-deploy` SSH key's forced command in `authorized_keys` to point to this script instead of a bare `git pull`. The workflow changes are already in place and will pass the branch name via SSH.
+
 ## 2026-06-28 — Prevent Wordfence config/lockout state from syncing to staging
 
 **What was built and why:** Created server-side scripts to prevent Wordfence's security state (lockouts, blocklists, enforcement settings, and plugin config) from syncing from production to staging. Staging should get content/DB clones from production but never inherit Wordfence's active security state, which could block legitimate staging access or interfere with testing.
