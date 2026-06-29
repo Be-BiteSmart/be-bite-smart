@@ -14,7 +14,8 @@ test.describe("Download URLs return files", () => {
       baseURL,
     }, testInfo) => {
       test.setTimeout(120_000);
-      await gotoExpectOk(page, path);
+      const baseURL = testInfo.project.use?.baseURL ?? "https://www.bebitesmart.org";
+      await gotoExpectOk(page, path, baseURL);
 
       const results = [];
 

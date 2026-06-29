@@ -276,7 +276,8 @@ export async function testEpisodeLanguage(page, testInfo, episode, lang) {
 }
 
 export async function testOutboundArticleClick(page, testInfo, url) {
-  await gotoExpectOk(page, url);
+  const baseURL = testInfo.project.use?.baseURL ?? "https://www.bebitesmart.org";
+  await gotoExpectOk(page, url, baseURL);
 
   // Acts like an event listener — stays active for the lifetime of the context,
   // intercepting every matching request after registration.
@@ -332,7 +333,8 @@ export async function testOutboundArticleClick(page, testInfo, url) {
 }
 
 export async function testMiniDocPlay(page, testInfo, url) {
-  await gotoExpectOk(page, url);
+  const baseURL = testInfo.project.use?.baseURL ?? "https://www.bebitesmart.org";
+  await gotoExpectOk(page, url, baseURL);
 
   const playButton = page.locator(".video-quote-watch-button");
   const watchCount = await playButton.count();

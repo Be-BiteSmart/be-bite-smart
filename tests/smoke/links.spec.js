@@ -15,8 +15,8 @@ test.describe("Internal links", () => {
       baseURL,
     }, testInfo) => {
       test.setTimeout(120_000);
-
-      await gotoExpectOk(page, path);
+      const baseURL = testInfo.project.use?.baseURL ?? "https://www.bebitesmart.org";
+      await gotoExpectOk(page, path, baseURL);
 
       const origin = new URL(baseURL).origin;
       const links = await collectInternalLinks(page, { origin, maxLinks });

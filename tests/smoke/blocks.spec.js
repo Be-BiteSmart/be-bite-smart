@@ -7,7 +7,8 @@ test.describe("Critical block presence", () => {
     test(`${label} (${path}) has expected content blocks`, async ({
       page,
     }, testInfo) => {
-      await gotoExpectOk(page, path);
+      const baseURL = testInfo.project.use?.baseURL ?? "https://www.bebitesmart.org";
+      await gotoExpectOk(page, path, baseURL);
 
       const results = [];
 

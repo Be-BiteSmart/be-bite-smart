@@ -15,7 +15,7 @@ test.describe("SEO essentials", () => {
       const baseURL =
         testInfo.project.use?.baseURL ?? "https://staging.bebitesmart.org";
 
-      await gotoExpectOk(page, path);
+      await gotoExpectOk(page, path, baseURL);
 
       const seo = await assertPageSeo(page, { path, label, baseURL });
 
