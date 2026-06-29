@@ -69,6 +69,7 @@ jobs:
     needs: deploy-staging
     name: Playwright Tests
     runs-on: ubuntu-latest
+    environment: staging    
     timeout-minutes: 30
     # Browsers + OS deps are pre-installed — avoids slow/hanging
     # `playwright install --with-deps` on every run (apt + ~170MB download).
