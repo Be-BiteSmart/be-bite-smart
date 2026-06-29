@@ -91,7 +91,7 @@ jobs:
         run: pnpm run test:ci
         env:
           CI: true
-          BASE_URL: https://staging.bebitesmart.org
+          PLAYWRIGHT_BASE_URL: https://staging.bebitesmart.org
           # Staging sits behind HTTP Basic Auth (whole site, not just
           # wp-admin) to keep it out of search engine indexes and away from
           # random visitors/bots, since it holds a sanitized copy of real
