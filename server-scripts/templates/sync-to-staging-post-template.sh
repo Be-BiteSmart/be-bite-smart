@@ -32,9 +32,16 @@ if [[ ! "$HTTP_HOST" =~ staging\. ]]; then
   exit 1
 fi
 
-echo "Confirmed staging environment. Deactivating Wordfence..."
-
-# Deactivate Wordfence plugin on staging
-wp plugin deactivate wordfence --path="$STAGING_PATH"
-
-echo "Wordfence deactivated on staging at $(date)"
+echo "Confirmed staging environment. Checking for Wordfence..."
+# Only deactivate Wordfence if it's actually installed on staging.
+# Staging intentionally does not run Wordfence day-to-day (it's heavy on
+# shared DreamHost hosting), so on a normal sync this is expected to be
+# absent and the script should exit cleanly, not fail the whole sync job.
+# If a future dev does install Wordfence on staging (e.g. to test plugin
+# updates), this still correctly deactivates it post-sync, same as before.
+if wp plugin is-installed wordfence --path="$STAGING_PATH"; then
+  wp plugin deactivate wordfence --path="$STAGING_PATH"
+  echo "Wordfence deactivated on staging at $(date)"
+else
+  echo "Wordfence not installed on staging — skipping deactivation (expected on shared hosting)."
+fi
