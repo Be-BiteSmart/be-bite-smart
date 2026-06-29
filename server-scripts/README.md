@@ -7,11 +7,11 @@ This directory contains scripts that run on the DreamHost server to manage stagi
 **If you're inheriting this repo, read this section and skip the rest unless you hit a problem or want the full reasoning.**
 
 ### What's already set up (you shouldn't need to touch this)
-- Two scripts live on the DreamHost server (`sync-staging-db.sh`, `sync-to-staging-post.sh`), already deployed, `chmod 700`'d, with placeholders filled in
+- Three scripts live on the DreamHost server (`sync-staging-db.sh`, `sync-to-staging-post.sh`, `deploy-staging-branch.sh`), already deployed, `chmod 700`'d, with placeholders filled in
 - Two separate, narrowly-scoped SSH keys already exist and are wired into `~/.ssh/authorized_keys` on the server:
-  - `staging-deploy` — can only run `git pull` on staging
+  - `staging-deploy` — can only run `deploy-staging-branch.sh` (checks out and pulls a specific branch)
   - `staging-sync-deploy` — can only run the sync script
-- GitHub Actions (`deploy-staging` job in `playwright-tests.yml`) automatically syncs staging from production and deploys the latest code on every PR — this is the trigger for the Playwright test suite
+- GitHub Actions (`deploy-staging` job in `playwright-tests.yml`) automatically syncs staging from production and deploys the PR's branch to staging on every PR — this is the trigger for the Playwright test suite
 - All staging-specific secrets (`DREAMHOST_STAGING_SSH_KEY`, `DREAMHOST_STAGING_SYNC_SSH_KEY`, `STAGING_AUTH_PASS`, `STAGING_AUTH_USER`) are scoped to GitHub's `staging` environment; production's key is scoped to `production`, which also requires manual approval before deploying
 - Wordfence is configured to stay deactivated on staging after every sync (so CI and manual logins never get rate-limited or locked out), while staying fully active and untouched on production
 - **Wordfence is not installed on staging at all** (by design — see below), and the post-sync deactivation step checks for its presence before attempting to deactivate it, so a normal sync completes cleanly whether or not it's there
@@ -41,6 +41,7 @@ This setup has been reviewed at the design level (see the Security Review sectio
 
 - `sync-staging-db.sh` - Main sync script that copies production database and media to staging, excluding Wordfence tables
 - `sync-to-staging-post.sh` - Post-sync cleanup that deactivates Wordfence on staging only, if it's installed there
+- `deploy-staging-branch.sh` - Script that checks out and pulls a specific branch on staging (used for PR deployments)
 - `staging-deploy-wrapper.sh` - **Deprecated** - Wrapper script that combines git pull and sync. Not recommended due to privilege escalation risk. Use separate SSH keys instead (see Step 4).
 
 ## Deployment Instructions
@@ -49,10 +50,11 @@ These scripts live on the DreamHost server in `/home/USER/` (not in the git repo
 
 ### 1. Upload scripts to DreamHost
 
-Via SFTP or DreamHost File Manager, upload the sync scripts to:
+Via SFTP or DreamHost File Manager, upload the scripts to:
 ```
 /home/USER/sync-staging-db.sh
 /home/USER/sync-to-staging-post.sh
+/home/USER/deploy-staging-branch.sh
 ```
 
 Replace `USER` with your actual DreamHost username and `SITENAME.org` with your actual domain name in the scripts.
@@ -63,18 +65,20 @@ SSH into DreamHost and run:
 ```bash
 chmod +x /home/USER/sync-staging-db.sh
 chmod +x /home/USER/sync-to-staging-post.sh
+chmod +x /home/USER/deploy-staging-branch.sh
 ```
 
-**Permissions:** Both scripts should be `chmod 700` (owner read/write/execute only). Neither script needs to be readable, writable, or executable by any other user on the server — they handle production DB credentials and the Wordfence deactivation safety gate, so there's no reason for broader access.
+**Permissions:** All three scripts should be `chmod 700` (owner read/write/execute only). Neither script needs to be readable, writable, or executable by any other user on the server — they handle production DB credentials and the Wordfence deactivation safety gate, so there's no reason for broader access.
 
 ```bash
 chmod 700 /home/USER/sync-staging-db.sh
 chmod 700 /home/USER/sync-to-staging-post.sh
+chmod 700 /home/USER/deploy-staging-branch.sh
 ```
 
 ### 3. Configure placeholder values
 
-Edit both scripts on the server to replace placeholders:
+Edit all three scripts on the server to replace placeholders:
 - `USER` - Your DreamHost username
 - `SITENAME.org` - Your actual domain name (e.g., `bebitesmart.org`)
 
@@ -105,7 +109,7 @@ Replace `USER` with your actual DreamHost username.
 
 **Why forced command:** This restricts the key to only running the sync script. If the key leaks, an attacker cannot run arbitrary commands - they can only trigger the sync. The forced command's exit status is returned to the SSH client, so GitHub Actions will fail if the script fails.
 
-**No `cd` needed:** Unlike the `staging-deploy` key's command (which needs `cd /home/USER/staging.SITENAME.org/wp-content && git pull origin main`, since `git pull` is relative to the working directory), the sync key's command calls `sync-staging-db.sh` by absolute path. The script handles its own internal `cd`/absolute-pathing wherever it needs to operate (e.g. the WordPress root for `wp` CLI calls), so no `cd` belongs in the `authorized_keys` line itself.
+**No `cd` needed:** The `staging-deploy` key's command calls `deploy-staging-branch.sh` by absolute path, which handles its own internal `cd` to the staging directory. The sync key's command also calls `sync-staging-db.sh` by absolute path. Both scripts handle their own internal `cd`/absolute-pathing wherever they need to operate (e.g. the WordPress root for `wp` CLI calls), so no `cd` belongs in the `authorized_keys` line itself.
 
 **Careful when pasting the public key into `authorized_keys`:** each line must be exactly one `options ssh-ed25519 <key-blob> comment` — no duplicated `ssh-ed25519` prefix, no stray spaces, no line wrapping. A malformed line doesn't error loudly; it just gets silently skipped by SSH's key parser, which is much harder to notice than an outright failure. After editing, always confirm the file still parses as many keys as you expect:
 ```bash
