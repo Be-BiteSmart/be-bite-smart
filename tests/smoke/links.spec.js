@@ -15,8 +15,8 @@ test.describe("Internal links", () => {
       baseURL,
     }, testInfo) => {
       test.setTimeout(120_000);
-
-      await gotoExpectOk(page, path);
+     
+     await gotoExpectOk(page, path);
 
       const origin = new URL(baseURL).origin;
       const links = await collectInternalLinks(page, { origin, maxLinks });

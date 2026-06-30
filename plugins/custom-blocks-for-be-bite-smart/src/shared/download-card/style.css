@@ -39,11 +39,7 @@
 .ecd-header span {
   margin-bottom: 3px;
   font-size: var(--wp--preset--font-size--small) !important;
-  color: color-mix(
-    in srgb,
-    var(--wp--preset--color--accent-1) 90%,
-    black
-  ) !important;
+color: color-mix(in srgb, var(--wp--preset--color--accent-1) 80%, #000) !important;
 }
 .ecd-title {
   font-family: "Urbanist", sans-serif;

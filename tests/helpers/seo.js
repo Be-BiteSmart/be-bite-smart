@@ -89,8 +89,22 @@ export function parseRobotsTxt(body) {
   return { sitemapUrls };
 }
 
-export async function assertRobotsTxt(request) {
-  const response = await request.get("/robots.txt", { failOnStatusCode: false });
+export async function assertRobotsTxt(request, baseURL) {
+  let url = "/robots.txt";
+
+  // If accessing staging, inject Basic Auth credentials
+  if (baseURL?.includes("staging.")) {
+    const username = process.env.STAGING_AUTH_USER;
+    const password = process.env.STAGING_AUTH_PASS;
+    if (username && password) {
+      const urlObj = new URL(url, baseURL);
+      urlObj.username = username;
+      urlObj.password = password;
+      url = urlObj.toString();
+    }
+  }
+
+  const response = await request.get(url, { failOnStatusCode: false });
   const status = response.status();
   const body = await response.text();
 
@@ -113,11 +127,25 @@ export function isSitemapXml(body) {
 /**
  * Returns the first reachable sitemap path and its body.
  */
-export async function fetchSitemap(request) {
+export async function fetchSitemap(request, baseURL) {
   let lastStatus = 0;
 
   for (const path of SITEMAP_PATHS) {
-    const response = await request.get(path, { failOnStatusCode: false });
+    let url = path;
+
+    // If accessing staging, inject Basic Auth credentials
+    if (baseURL?.includes("staging.")) {
+      const username = process.env.STAGING_AUTH_USER;
+      const password = process.env.STAGING_AUTH_PASS;
+      if (username && password) {
+        const urlObj = new URL(url, baseURL);
+        urlObj.username = username;
+        urlObj.password = password;
+        url = urlObj.toString();
+      }
+    }
+
+    const response = await request.get(url, { failOnStatusCode: false });
     lastStatus = response.status();
     if (lastStatus !== 200) {
       continue;
@@ -132,8 +160,8 @@ export async function fetchSitemap(request) {
   return { path: SITEMAP_PATHS[0], status: lastStatus, body: "" };
 }
 
-export async function assertSitemap(request) {
-  const result = await fetchSitemap(request);
+export async function assertSitemap(request, baseURL) {
+  const result = await fetchSitemap(request, baseURL);
 
   expect(
     result.status,

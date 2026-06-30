@@ -18,6 +18,7 @@ function isValidUrl(urlString) {
 test.describe("PDF Toggle validation", () => {
   for (const { path, label } of CRITICAL_PAGES) {
     test(`${label} (${path}) - PDF toggle checks`, async ({ page }, testInfo) => {
+   
       await gotoExpectOk(page, path);
 
       const pdfToggleBlocks = page.locator(".pdf-toggle-block");

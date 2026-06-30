@@ -31,28 +31,45 @@ jobs:
   deploy-staging:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    environment: staging
     steps:
-      - name: Deploy to staging via SSH
+      - name: Sync production to staging
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DREAMHOST_HOST }}
+          username: ${{ secrets.DREAMHOST_USER }}
+          key: ${{ secrets.DREAMHOST_STAGING_SYNC_SSH_KEY }}
+          # The sync script is enforced server-side via a forced `command=` in
+          # authorized_keys, so the real /home/USER/sync-staging-db.sh always runs
+          # from there, not from whatever's written below. This key can ONLY run
+          # the sync script — even if this workflow file were compromised, it
+          # couldn't be used to run arbitrary commands or touch prod.
+          script: echo "Sync is enforced server-side via restricted SSH key"
+      - name: Deploy PR branch to staging via SSH
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.DREAMHOST_HOST }}
           username: ${{ secrets.DREAMHOST_USER }}
           key: ${{ secrets.DREAMHOST_STAGING_SSH_KEY }}
-          # The actual deploy command is irrelevant here — DREAMHOST_STAGING_SSH_KEY
-          # is restricted server-side via a forced `command=` in authorized_keys,
-          # so the real `cd ... && git pull` always runs from there, not from
-          # whatever's written below. This key can ONLY ever pull staging, on
-          # purpose — even if this workflow file were compromised, it couldn't
-          # be used to run arbitrary commands or touch prod.
-          # If staging's deploy path ever changes, update authorized_keys on
-          # the server — editing this line alone won't do anything.
-          script: echo "Deploy is enforced server-side via restricted SSH key"
+          # DREAMHOST_STAGING_SSH_KEY is restricted server-side via a forced
+          # `command=` in authorized_keys, pointing at deploy-staging-branch.sh
+          # (not a bare `git pull` — that was the old behavior, before this
+          # job supported deploying PR branches). This key can ONLY ever run
+          # that one script — even if this workflow file were compromised, it
+          # couldn't be used to run arbitrary commands or touch prod.
+          # If staging's deploy path ever changes, update authorized_keys and
+          # deploy-staging-branch.sh on the server — editing this line alone
+          # won't do anything.
+          # Branch name is passed via SSH as $SSH_ORIGINAL_COMMAND; the server
+          # script validates it against a strict allowlist before checkout.
+          script: ${{ github.head_ref }}
 
   test:
     if: github.event_name == 'pull_request'
     needs: deploy-staging
     name: Playwright Tests
     runs-on: ubuntu-latest
+    environment: staging    
     timeout-minutes: 30
     # Browsers + OS deps are pre-installed — avoids slow/hanging
     # `playwright install --with-deps` on every run (apt + ~170MB download).
@@ -75,7 +92,7 @@ jobs:
         run: pnpm run test:ci
         env:
           CI: true
-          BASE_URL: https://staging.bebitesmart.org
+          PLAYWRIGHT_BASE_URL: https://staging.bebitesmart.org
           # Staging sits behind HTTP Basic Auth (whole site, not just
           # wp-admin) to keep it out of search engine indexes and away from
           # random visitors/bots, since it holds a sanitized copy of real

@@ -1,5 +1,126 @@
 # Change log
 
+## 2026-06-29 — PR Branch Deployment to Staging + Playwright Basic Auth Fix
+
+**What was built and why:**
+- Updated GitHub Actions workflow to deploy PR branches to staging (not just main), so CSS and code changes from feature branches can be tested before merge
+- Created `deploy-staging-branch.sh` script to checkout and pull specific branches on staging with strict allowlist validation
+- Fixed Playwright tests to use Basic Auth credentials when accessing staging (HTTP 401 errors were blocking tests)
+- Updated multiple test helpers and test files to inject staging credentials for `request.get()` calls
+
+**Files created:**
+- `app/public/wp-content/server-scripts/templates/deploy-staging-branch.sh` - Script that checks out and pulls a specific branch on staging with security validation
+
+**Files modified:**
+- `app/public/wp-content/.github/workflows/playwright.yml` - Reordered steps (sync before deploy), renamed deploy step, added branch name passing via `github.head_ref`, updated comment about deploy-staging-branch.sh
+- `app/public/wp-content/playwright.config.js` - Added `httpCredentials` configuration for staging Basic Auth
+- `app/public/wp-content/tests/smoke/rest-api.spec.js` - Added Basic Auth injection for staging in REST API tests
+- `app/public/wp-content/tests/helpers/seo.js` - Added `baseURL` parameter and Basic Auth injection for `assertRobotsTxt` and `fetchSitemap`
+- `app/public/wp-content/tests/smoke/seo.spec.js` - Updated to pass `baseURL` to SEO helper functions
+- `app/public/wp-content/tests/helpers/downloads.js` - Added Basic Auth injection for download link tests
+- `app/public/wp-content/tests/helpers/host.js` - Added `baseURL` parameter and Basic Auth injection for host check functions
+- `app/public/wp-content/tests/smoke/https-host.spec.js` - Updated to pass `baseURL` to host helper functions
+- `app/public/wp-content/server-scripts/README.md` - Updated files list to include deploy-staging-branch.sh, updated deployment steps to include the new script
+
+**Patterns followed:**
+- Security-first approach: deploy-staging-branch.sh uses strict regex allowlist validation for branch names before git operations
+- Consistent Basic Auth injection pattern across all test helpers using `request.get()`
+- Environment detection via `baseURL?.includes("staging.")` to conditionally apply credentials
+- URL construction with `new URL()` and username/password properties for credential injection
+
+**Problems encountered and how they were fixed:**
+- **Issue:** CSS changes from PR branches weren't reaching staging because the workflow always pulled from `main`
+  - **Fix:** Created deploy-staging-branch.sh to checkout and pull specific branches, updated workflow to pass branch name via `github.head_ref`
+- **Issue:** Playwright tests failing with HTTP 401 when accessing staging
+  - **Fix:** Added `httpCredentials` to Playwright config for page navigation, and manual credential injection for `request.get()` calls in test helpers
+- **Issue:** Multiple test files using `request.get()` needed Basic Auth support
+  - **Fix:** Updated all affected helper functions (seo.js, downloads.js, host.js) to accept `baseURL` parameter and inject credentials when accessing staging
+
+**What the next logical step would be:** Deploy deploy-staging-branch.sh to DreamHost server and update the `staging-deploy` SSH key's forced command in `authorized_keys` to point to this script instead of a bare `git pull`. The workflow changes are already in place and will pass the branch name via SSH.
+
+## 2026-06-28 — Prevent Wordfence config/lockout state from syncing to staging
+
+**What was built and why:** Created server-side scripts to prevent Wordfence's security state (lockouts, blocklists, enforcement settings, and plugin config) from syncing from production to staging. Staging should get content/DB clones from production but never inherit Wordfence's active security state, which could block legitimate staging access or interfere with testing.
+
+**Files created:**
+
+- `app/public/wp-content/server-scripts/SYNCTOSTAGING.sh` — main sync script that exports production DB (excluding Wordfence tables), imports to staging, rewrites URLs, syncs media files, and triggers post-sync cleanup
+- `app/public/wp-content/server-scripts/SYNCTOSTAGING-post.sh` — post-sync script that deactivates Wordfence on staging only (gated by hostname check)
+- `app/public/wp-content/server-scripts/staging-deploy-wrapper.sh` — wrapper script called by the staging-deploy SSH key that runs both git pull and the full sync
+- `app/public/wp-content/server-scripts/README.md` — deployment instructions and troubleshooting guide
+
+**Files modified:**
+
+- `app/public/wp-content/.gitignore` — added server-scripts/ directory to tracked files
+- `app/public/wp-content/CHANGES.md` — this entry
+
+**Patterns or conventions followed from the codebase:**
+
+- Server scripts live outside the git repo on DreamHost (documented in README)
+- Used existing table prefix `bbs_wp_` from wp-config.php for Wordfence table exclusions
+- Added safety gates (lock file, environment check, SSH key restrictions) following security best practices
+- Documented deployment steps clearly since these scripts require manual server setup
+
+**Wordfence tables excluded from sync:**
+
+- `bbs_wp_wfBlockedIPLog` — blocked IP log
+- `bbs_wp_wfBlocks` — current block rules
+- `bbs_wp_wfCrawlers` — crawler detection data
+- `bbs_wp_wfHits` — traffic hits log
+- `bbs_wp_wfHoover` — hoover data
+- `bbs_wp_wfIssues` — security issues
+- `bbs_wp_wfLockedOut` — locked out users
+- `bbs_wp_wfLogins` — login attempts log
+- `bbs_wp_wfReverseCache` — reverse cache
+- `bbs_wp_wfStatus` — plugin status
+- `bbs_wp_wfNotifications` — notifications
+- `bbs_wp_wfConfig` — plugin settings (including custom blocking rules)
+
+**Safety features:**
+
+- Lock file prevents overlapping sync runs
+- Cleanup trap removes temporary SQL files even on failure
+- Stale file cleanup removes dump files older than 1 day (cannot delete current run's file due to -mtime +1)
+- Post-sync script checks hostname with fail-closed logic (aborts on empty string, error, or non-staging URL)
+- Separate SSH key for sync operations prevents privilege escalation (staging-deploy key remains git pull only)
+- SSH key restrictions in authorized_keys limit what each key can do
+- Table exclusion is secondary safety measure; post-sync deactivation is primary control
+
+**Security improvement (post-review):**
+
+Initial design used a wrapper script to expand the existing staging-deploy SSH key's capabilities, which would have been a privilege escalation risk. Updated approach uses a separate SSH key (`staging-sync-deploy`) with a forced command to run the sync script. This restricts the key to only running the sync script (not arbitrary commands) while still returning the script's exit status to GitHub Actions for proper failure detection. The staging-deploy key remains unchanged (forced command for git pull only). If either key leaks, the blast radius is limited to that specific operation.
+
+**Additional clarifications:**
+
+- The fail-closed environment check in SYNCTOSTAGING-post.sh protects the Wordfence deactivation step specifically, not the DB export/import itself
+- The sync script paths are hardcoded server-side, making misconfiguration unlikely
+- Deprecated staging-deploy-wrapper.sh should be removed from server if previously uploaded
+- The sync key uses a forced command (not unrestricted access) to maintain security boundary while preserving observability
+
+**Security review documentation:**
+
+Added a comprehensive "Security Review" section to `server-scripts/README.md` documenting:
+- Problem statement and scope (what the system protects against)
+- Concerns and resolutions table
+- Reasoning for key design decisions
+- Residual risks and accepted tradeoffs (Wordfence table drift, SSH key leakage with accurate acceptance rationale noting staging as destructive target, secret rotation policy)
+- GitHub Actions secret exposure surface (documented current configuration: staging-related secrets migrated to environment-level (staging environment) for better defense-in-depth, branch protection rules in place for main (PR required, status checks, force push blocked), important distinction that branch protection protects workflow YAML but not server-side authorized_keys configuration)
+- Testing and validation status (design-level review only, pending live validation)
+- Scope note (Step 1 staging sync only; Step 2 production WAF bypass tracked separately)
+
+This provides a complete audit trail for future reference and makes the security review legible to someone reading it in a year who wasn't part of these conversations.
+
+**Deployment required:**
+
+These scripts must be manually uploaded to DreamHost at `/home/USER/` and made executable. The GitHub Actions workflow has been updated to trigger the sync script after git pull using the new `DREAMHOST_STAGING_SYNC_SSH_KEY` secret. The deploy-staging job now uses the `staging` environment to access environment-level secrets. See `server-scripts/README.md` for full deployment instructions.
+
+**Verification:** After deployment, manually run `/home/USER/SYNCTOSTAGING.sh` via SSH and verify:
+- Wordfence tables are excluded from the export
+- Database imports successfully to staging
+- Wordfence is deactivated on staging after sync completes
+
+**What the next logical step would be:** Deploy the scripts to DreamHost following the instructions in `server-scripts/README.md`, then create a separate SSH key for sync operations and add it to the GitHub staging environment as `DREAMHOST_STAGING_SYNC_SSH_KEY`. The staging-deploy key remains unchanged (git pull only).
+
 ## 2026-06-25 — Document production-targeting tests in testing.md
 
 **What was built and why:** Added documentation to testing.md explaining which tests intentionally target production and why. This helps future developers understand the security and infrastructure validation rationale.

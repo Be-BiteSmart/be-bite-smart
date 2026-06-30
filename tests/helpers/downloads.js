@@ -26,8 +26,22 @@ export async function collectDownloadLinks(page, selector) {
   );
 }
 
-async function tryHeadThenGet(request, target) {
-  const head = await request.fetch(target, {
+async function tryHeadThenGet(request, target, baseURL) {
+  let url = target;
+
+  // If accessing staging, inject Basic Auth credentials
+  if (baseURL?.includes("staging.")) {
+    const username = process.env.STAGING_AUTH_USER;
+    const password = process.env.STAGING_AUTH_PASS;
+    if (username && password) {
+      const urlObj = new URL(target, baseURL);
+      urlObj.username = username;
+      urlObj.password = password;
+      url = urlObj.toString();
+    }
+  }
+
+  const head = await request.fetch(url, {
     method: "HEAD",
     failOnStatusCode: false,
     maxRedirects: 10,
@@ -37,7 +51,7 @@ async function tryHeadThenGet(request, target) {
     return { response: head, method: "HEAD" };
   }
 
-  const get = await request.get(target, {
+  const get = await request.get(url, {
     failOnStatusCode: false,
     maxRedirects: 10,
   });
@@ -53,7 +67,7 @@ export async function assertDownloadResponse(
   { baseURL, expectedMimePrefixes, label },
 ) {
   const target = requestTargetForHref(href, baseURL);
-  const { response, method } = await tryHeadThenGet(request, target);
+  const { response, method } = await tryHeadThenGet(request, target, baseURL);
   const status = response.status();
   const contentType = response.headers()["content-type"] ?? "";
   const contentLength = response.headers()["content-length"] ?? "";

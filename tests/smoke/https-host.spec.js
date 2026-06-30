@@ -36,10 +36,13 @@ test.describe("HTTPS and canonical host", () => {
       test(`${entry.label} ${label} (${path}) resolves to canonical HTTPS www`, async ({
         request,
       }, testInfo) => {
+        const baseURL =
+          testInfo.project.use?.baseURL ?? CANONICAL_ORIGIN;
         const result = await assertResolvesToCanonical(
           request,
           entry.url,
           path,
+          baseURL,
         );
 
         await testInfo.attach(`${entry.label} ${path} redirect`, {
@@ -55,10 +58,13 @@ test.describe("HTTPS and canonical host", () => {
       test(`${entry.label} ${label} (${path}) first redirect upgrades to HTTPS`, async ({
         request,
       }, testInfo) => {
+        const baseURL =
+          testInfo.project.use?.baseURL ?? CANONICAL_ORIGIN;
         const result = await assertHttpsFirstRedirect(
           request,
           entry.url,
           path,
+          baseURL,
         );
 
         await testInfo.attach(`${entry.label} ${path} first hop`, {

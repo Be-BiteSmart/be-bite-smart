@@ -27,7 +27,9 @@ test.describe("SEO essentials", () => {
   }
 
   test("robots.txt is reachable", async ({ request }, testInfo) => {
-    const robots = await assertRobotsTxt(request);
+    const baseURL =
+      testInfo.project.use?.baseURL ?? "https://staging.bebitesmart.org";
+    const robots = await assertRobotsTxt(request, baseURL);
 
     await testInfo.attach("robots.txt", {
       body: robots.body,
@@ -44,7 +46,9 @@ test.describe("SEO essentials", () => {
   });
 
   test("XML sitemap is reachable", async ({ request }, testInfo) => {
-    const sitemap = await assertSitemap(request);
+    const baseURL =
+      testInfo.project.use?.baseURL ?? "https://staging.bebitesmart.org";
+    const sitemap = await assertSitemap(request, baseURL);
 
     await testInfo.attach("sitemap", {
       body: sitemap.body.slice(0, 4000),
