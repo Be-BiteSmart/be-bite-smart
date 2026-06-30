@@ -10,6 +10,9 @@ console.log('[DEBUG] Resolved baseURL:', process.env.PLAYWRIGHT_BASE_URL ?? proc
 console.log('[DEBUG] httpCredentials will be set:', (process.env.PLAYWRIGHT_BASE_URL ?? process.env.BASE_URL ?? "").includes("staging."));
 console.log('[DEBUG] STAGING_AUTH_USER present:', !!process.env.STAGING_AUTH_USER);
 console.log('[DEBUG] STAGING_AUTH_PASS present:', !!process.env.STAGING_AUTH_PASS);
+const pass = process.env.STAGING_AUTH_PASS ?? "";
+console.log('[DEBUG] STAGING_AUTH_PASS length:', pass.length);
+console.log('[DEBUG] STAGING_AUTH_PASS first/last char:', pass[0], pass[pass.length - 1]);
 
 
 
