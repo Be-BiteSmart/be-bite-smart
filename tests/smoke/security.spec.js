@@ -7,12 +7,34 @@ import {
 } from "../helpers/security.js";
 import { safeGet } from "../helpers/wordfence-safe-request.js";
 
+
+/**
+ * Security hygiene checks always run against PRODUCTION, regardless of what
+ * baseURL the rest of the suite resolves to for this run (staging during PRs,
+ * production on push to main). This is intentional, not an oversight:
+ *
+ * - These checks validate server/file-level hardening (.htaccess rules, file
+ *   presence, Wordfence-backed blocking) that's specific to production's
+ *   actual configuration, not staging's.
+ * - Staging intentionally does NOT run Wordfence (see server-scripts README),
+ *   so Wordfence-dependent checks (e.g. /.env via wordfence-safe-request)
+ *   would behave unpredictably or meaninglessly against staging.
+ * - A PR that changes staging's deploy branch should not change what this
+ *   suite checks — production's security posture is the thing being
+ *   monitored here, continuously, regardless of what's being tested in the PR.
+ */
+const PRODUCTION_URL = "https://www.bebitesmart.org";
+
+
+
 test.describe("Security hygiene", () => {
-  test.describe.configure({ 
+  test.use({ baseURL: PRODUCTION_URL });
+
+  test.describe.configure({
     mode: "default", // Serial execution required for safeGet's pacing to work
     retries: 0, // safeGet already handles retries with exponential backoff
   });
-
+  
   for (const entry of SENSITIVE_PATHS) {
     const { path, label, mode } = entry;
     const expectation =
