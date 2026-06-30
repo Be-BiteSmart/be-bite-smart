@@ -1,22 +1,8 @@
 import { expect } from "@playwright/test";
 
 /** Fail fast with a clear message instead of a long navigation timeout. */
-export async function gotoExpectOk(page, path, baseURL) {
-  let url = path;
-
-  // If accessing staging, inject Basic Auth credentials
-  if (baseURL?.includes("staging.")) {
-    const username = process.env.STAGING_AUTH_USER;
-    const password = process.env.STAGING_AUTH_PASS;
-    if (username && password) {
-      const urlObj = new URL(path, baseURL);
-      urlObj.username = username;
-      urlObj.password = password;
-      url = urlObj.toString();
-    }
-  }
-
-  const response = await page.goto(url, { waitUntil: "domcontentloaded" });
+export async function gotoExpectOk(page, path) {
+  const response = await page.goto(path, { waitUntil: "domcontentloaded" });
   const status = response?.status() ?? 0;
   expect(
     status,

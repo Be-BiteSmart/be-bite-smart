@@ -15,7 +15,7 @@ test.describe("Download URLs return files", () => {
     }, testInfo) => {
       test.setTimeout(120_000);
    
-      await gotoExpectOk(page, path, baseURL);
+    await gotoExpectOk(page, path);
 
       const results = [];
 
