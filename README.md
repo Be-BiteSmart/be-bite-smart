@@ -94,9 +94,15 @@ If the Plausible plugin also logs a generic **file download** goal for PDF click
 
 ### Playwright Tests
 
-Smoke, analytics, video, link, and accessibility tests. They run against production (`https://www.bebitesmart.org` by default) in GitHub Actions. Override the target with `PLAYWRIGHT_BASE_URL` for local or staging runs.
+### Playwright Tests
+
+Smoke, analytics, video, link, accessibility, and security tests. In GitHub Actions they run against **staging** (`https://staging.bebitesmart.org`) — a fresh copy of production data with the PR's branch deployed to it. Locally they default to production (`https://www.bebitesmart.org`). Override the target with `BASE_URL` or `PLAYWRIGHT_BASE_URL` for local or staging runs.
+
+**Security tests always run against production**, regardless of what environment the rest of the suite targets — security checks validate server/file-level hardening specific to production's actual configuration, and staging is intentionally configured differently (no Wordfence, different `.htaccess` state).
 
 **Non-technical overview:** see **[TESTING.md](./TESTING.md)** — what each test group checks, how to read results, and known issues in plain language.
+
+**Server-side infrastructure:** see **[server-scripts/README.md](./server-scripts/README.md)** — how the staging sync and PR branch deploy work, SSH key setup, troubleshooting, and the full security review.
 
 **Install and run** (from `app/public/wp-content`):
 
@@ -166,7 +172,14 @@ For pnpm install errors (`ERR_PNPM_NO_MATURE_MATCHING_VERSION`), see **Quick Sta
 
 ### Github Actions
 
-Workflow configuration for automated CI runs. Playwright tests run on **pull requests to `main`** (required before merge).
+Workflow configuration for automated CI runs. On every **pull request to `main`**, the workflow:
+1. Syncs production database and media to staging (fresh real-world data for every test run)
+2. Deploys the PR's specific branch to staging (not just `main` — the actual proposed changes)
+3. Runs the full Playwright test suite against staging as the merge gate
+
+On **merge to `main`**, the workflow deploys to production (requires manual approval).
+
+See **[server-scripts/README.md](./server-scripts/README.md)** for the full infrastructure documentation.
 
 `.github/workflows`
 
