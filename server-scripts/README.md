@@ -9,10 +9,11 @@ This directory contains scripts that run on the DreamHost server to manage stagi
 ### What's already set up (you shouldn't need to touch this)
 - Three scripts live on the DreamHost server (`sync-staging-db.sh`, `sync-to-staging-post.sh`, `deploy-staging-branch.sh`), already deployed, `chmod 700`'d, with placeholders filled in
 - Two separate, narrowly-scoped SSH keys already exist and are wired into `~/.ssh/authorized_keys` on the server:
-  - `staging-deploy` — can only run `deploy-staging-branch.sh` (checks out and pulls a specific branch)
+  - `staging-deploy` — can only run `deploy-staging-branch.sh` (checks out and pulls the PR's specific branch)
   - `staging-sync-deploy` — can only run the sync script
-- GitHub Actions (`deploy-staging` job in `playwright-tests.yml`) automatically syncs staging from production and deploys the PR's branch to staging on every PR — this is the trigger for the Playwright test suite
+- GitHub Actions (`deploy-staging` job in `playwright-tests.yml`) automatically syncs staging from production first, then deploys the PR's branch to staging, on every PR — this is the trigger for the Playwright test suite
 - All staging-specific secrets (`DREAMHOST_STAGING_SSH_KEY`, `DREAMHOST_STAGING_SYNC_SSH_KEY`, `STAGING_AUTH_PASS`, `STAGING_AUTH_USER`) are scoped to GitHub's `staging` environment; production's key is scoped to `production`, which also requires manual approval before deploying
+- **Both the `deploy-staging` job and the `test` job declare `environment: staging`** — this is required for secrets like `STAGING_AUTH_USER`/`STAGING_AUTH_PASS` to resolve in the test runner, not just the deploy step
 - Wordfence is configured to stay deactivated on staging after every sync (so CI and manual logins never get rate-limited or locked out), while staying fully active and untouched on production
 - **Wordfence is not installed on staging at all** (by design — see below), and the post-sync deactivation step checks for its presence before attempting to deactivate it, so a normal sync completes cleanly whether or not it's there
 - There is **no scheduled/cron sync** — this was tried and deliberately removed (see Step 6 and the Residual Risks section for why)
@@ -33,7 +34,7 @@ This used to cause the post-sync cleanup step to **fail outright** (`wp plugin d
 | Something about the sync is failing silently or you're not sure why | Check the Troubleshooting section below |
 
 ### What this is now
-This setup has been reviewed at the design level (see the Security Review section for the full back-and-forth) **and has had a live validation run** — the full sync path (SSH auth via both keys, DB export/import, media rsync, and post-sync Wordfence handling) has been exercised end-to-end via the actual GitHub Actions trigger, including the specific case of Wordfence being absent from staging. See Testing and Validation Status for what's been confirmed.
+This setup has been reviewed at the design level (see the Security Review section for the full back-and-forth) **and has had a live validation run** — the full sync path (SSH auth via both keys, DB export/import, media rsync, post-sync Wordfence handling, branch-aware deploy, and Playwright test suite auth) has been exercised end-to-end via the actual GitHub Actions trigger, including multiple real failure modes found and fixed. See Testing and Validation Status for what's been confirmed.
 
 ---
 
@@ -41,7 +42,7 @@ This setup has been reviewed at the design level (see the Security Review sectio
 
 - `sync-staging-db.sh` - Main sync script that copies production database and media to staging, excluding Wordfence tables
 - `sync-to-staging-post.sh` - Post-sync cleanup that deactivates Wordfence on staging only, if it's installed there
-- `deploy-staging-branch.sh` - Script that checks out and pulls a specific branch on staging (used for PR deployments)
+- `deploy-staging-branch.sh` - Checks out and pulls a specific branch on staging (used for PR deployments; validates branch name against strict allowlist before any git operations)
 - `staging-deploy-wrapper.sh` - **Deprecated** - Wrapper script that combines git pull and sync. Not recommended due to privilege escalation risk. Use separate SSH keys instead (see Step 4).
 
 ## Deployment Instructions
@@ -59,22 +60,22 @@ Via SFTP or DreamHost File Manager, upload the scripts to:
 
 Replace `USER` with your actual DreamHost username and `SITENAME.org` with your actual domain name in the scripts.
 
+**Critical: line endings must be Unix (LF), not Windows (CRLF).** If you edit these scripts on Windows (including some SFTP clients, Notepad, or certain editors that auto-convert line endings), the scripts will fail with `bad interpreter: No such file or directory` when the server tries to run them — the `\r` in `#!/bin/bash\r` makes the shebang unreadable to the Linux kernel. If this happens, fix it on the server with:
+```bash
+sed -i 's/\r$//' /home/USER/scriptname.sh
+```
+Then verify with `cat -A /home/USER/scriptname.sh | head -3` — lines should end in `$`, not `^M$`.
+
 ### 2. Make scripts executable
 
 SSH into DreamHost and run:
-```bash
-chmod +x /home/USER/sync-staging-db.sh
-chmod +x /home/USER/sync-to-staging-post.sh
-chmod +x /home/USER/deploy-staging-branch.sh
-```
-
-**Permissions:** All three scripts should be `chmod 700` (owner read/write/execute only). Neither script needs to be readable, writable, or executable by any other user on the server — they handle production DB credentials and the Wordfence deactivation safety gate, so there's no reason for broader access.
-
 ```bash
 chmod 700 /home/USER/sync-staging-db.sh
 chmod 700 /home/USER/sync-to-staging-post.sh
 chmod 700 /home/USER/deploy-staging-branch.sh
 ```
+
+`chmod 700` means owner read/write/execute only — no broader access needed, and narrower permissions reduce risk if the server is ever shared or misconfigured.
 
 ### 3. Configure placeholder values
 
@@ -82,56 +83,60 @@ Edit all three scripts on the server to replace placeholders:
 - `USER` - Your DreamHost username
 - `SITENAME.org` - Your actual domain name (e.g., `bebitesmart.org`)
 
-**Cleanup:** If you previously uploaded `staging-deploy-wrapper.sh` to the server during an earlier deployment attempt, remove it (don't just lock down its permissions — delete it, so it can never be accidentally wired back into the forced-command path):
+
+### 4. Set up SSH keys
+
+Two separate, narrowly-scoped SSH keys handle the two deploy steps. Each key's forced command restricts it to exactly one script — if a key leaks, the blast radius is limited to that one operation.
+
+#### Step 4a: Generate keys
+
+Generate each key pair locally (not on the server — private keys should never touch the server):
+
 ```bash
-rm /home/USER/staging-deploy-wrapper.sh
-```
-
-### 4. Create a separate SSH key for sync operations (recommended)
-
-**Security note:** Modifying the existing `staging-deploy` key to run the full sync would be a privilege escalation. If that key leaks (compromised GitHub secret, leaked CI log), an attacker could trigger production DB exports and staging syncs. Instead, create a separate key with restricted scope.
-
-#### Step 4a: Generate a new SSH key for sync operations
-
-Generate a new SSH key pair locally (not on the server — the private key should never touch the server):
-```bash
+# Key for the sync script
 ssh-keygen -t ed25519 -f ~/.ssh/staging-sync-deploy -C "staging-sync-deploy"
+
+# Key for branch-aware deploy
+ssh-keygen -t ed25519 -f ~/.ssh/staging-deploy -C "staging-deploy"
 ```
 
-Leave the passphrase empty (press Enter twice) — a passphrase-protected key can't be unlocked non-interactively by GitHub Actions.
+Leave passphrases empty (press Enter twice) — passphrase-protected keys can't be unlocked non-interactively by GitHub Actions.
 
-Add the **public** key (`~/.ssh/staging-sync-deploy.pub`) to `~/.ssh/authorized_keys` on DreamHost with a forced command:
+Add both public keys to `~/.ssh/authorized_keys` on DreamHost with forced commands:
+
 ```
 command="/home/USER/sync-staging-db.sh",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty ssh-ed25519 PUBLIC_KEY_HERE staging-sync-deploy
+command="/home/USER/deploy-staging-branch.sh",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty ssh-ed25519 PUBLIC_KEY_HERE staging-deploy
 ```
 
-Replace `USER` with your actual DreamHost username.
-
-**Why forced command:** This restricts the key to only running the sync script. If the key leaks, an attacker cannot run arbitrary commands - they can only trigger the sync. The forced command's exit status is returned to the SSH client, so GitHub Actions will fail if the script fails.
-
-**No `cd` needed:** The `staging-deploy` key's command calls `deploy-staging-branch.sh` by absolute path, which handles its own internal `cd` to the staging directory. The sync key's command also calls `sync-staging-db.sh` by absolute path. Both scripts handle their own internal `cd`/absolute-pathing wherever they need to operate (e.g. the WordPress root for `wp` CLI calls), so no `cd` belongs in the `authorized_keys` line itself.
-
-**Careful when pasting the public key into `authorized_keys`:** each line must be exactly one `options ssh-ed25519 <key-blob> comment` — no duplicated `ssh-ed25519` prefix, no stray spaces, no line wrapping. A malformed line doesn't error loudly; it just gets silently skipped by SSH's key parser, which is much harder to notice than an outright failure. After editing, always confirm the file still parses as many keys as you expect:
+**Careful when pasting public keys into `authorized_keys`:** each entry must be exactly one line — `options keytype key-blob comment` — with no duplicated key-type prefix, no stray spaces, and no line wrapping. A malformed line doesn't error loudly; SSH silently skips it, which is much harder to notice than an outright failure. Always verify the fingerprint count after editing:
 ```bash
 ssh-keygen -lf ~/.ssh/authorized_keys
 ```
-This should print one fingerprint per key line (4, in this setup: personal admin key, `staging-deploy`, `staging-sync-deploy`, `prod-deploy`). If the count is short, re-check the line you just edited rather than assuming the rest of the file is fine.
+This should print one fingerprint per key line (4, in this setup: personal admin key, `staging-deploy`, `staging-sync-deploy`, `prod-deploy`). If the count is short, re-check the line you just edited — don't assume the rest of the file is fine.
 
-#### Step 4b: Add the private key to GitHub Secrets
+**How the deploy key passes the branch name:** `deploy-staging-branch.sh` reads its target branch from `$SSH_ORIGINAL_COMMAND` — whatever the SSH client sends as its "script." The GitHub Actions workflow passes `${{ github.head_ref }}` (the PR's source branch) as that value. The script validates it against a strict allowlist (`^[a-zA-Z0-9_/-]+$`) before any git operation, so a leaked key can only trigger a checkout of a valid-looking branch name — not arbitrary shell commands.
 
-In GitHub repository settings, add the private key (`~/.ssh/staging-sync-deploy`, **not** the `.pub` file) as a new secret, scoped to the **staging environment** (Settings → Environments → staging → Environment secrets), not repository-level:
-- Name: `DREAMHOST_STAGING_SYNC_SSH_KEY`
-- Value: Contents of the private key file (`cat ~/.ssh/staging-sync-deploy`, full output including the `BEGIN`/`END` lines)
+#### Step 4b: Add private keys to GitHub Secrets
+
+Add each private key as a secret scoped to the **staging environment** (Settings → Environments → staging → Environment secrets), not repository-level:
+
+| Secret name | Value |
+|---|---|
+| `DREAMHOST_STAGING_SSH_KEY` | Contents of `~/.ssh/staging-deploy` (full output including `BEGIN`/`END` lines) |
+| `DREAMHOST_STAGING_SYNC_SSH_KEY` | Contents of `~/.ssh/staging-sync-deploy` (full output including `BEGIN`/`END` lines) |
+| `STAGING_AUTH_USER` | HTTP Basic Auth username for staging (check `staging.SITENAME.org/.htpasswd`) |
+| `STAGING_AUTH_PASS` | HTTP Basic Auth password for staging |
 
 **Repository-level vs. environment-level secrets of the same name don't merge — the environment-scoped one wins for any job declaring that environment, and silently shadows a same-named repo-level secret if one happens to exist.** If you're ever rotating a key and a job keeps authenticating with what looks like the old value even after updating "the secret," check whether you updated the copy in the right scope (Settings → Environments → staging, not the general Settings → Secrets and variables → Actions page) — these are two separate lists in the GitHub UI.
 
-Once confirmed working end-to-end, delete the local copy of the private key or restrict it to `chmod 600`.
+Once confirmed working end-to-end, delete the local copies of the private keys or restrict them to `chmod 600`.
 
 #### Step 4c: Update GitHub Actions workflow
 
-The `deploy-staging` job must declare `environment: staging` — this is what makes any environment-scoped secret (including `DREAMHOST_STAGING_SYNC_SSH_KEY`, `DREAMHOST_STAGING_SSH_KEY`, `STAGING_AUTH_PASS`, `STAGING_AUTH_USER`) resolve inside that job at all. Without it, `secrets.DREAMHOST_STAGING_SYNC_SSH_KEY` resolves to empty and the SSH step fails.
+Both the `deploy-staging` job and the `test` job must declare `environment: staging`. This is what makes environment-scoped secrets resolve inside those jobs at all — without it, secrets like `STAGING_AUTH_USER` resolve to empty/null with no error, causing 401s in the test runner that look like a credential problem but are actually a scope problem.
 
-Add a step in the `deploy-staging` job to trigger the sync after the git pull:
+The `deploy-staging` job runs sync first, then branch deploy:
 
 ```yaml
 jobs:
@@ -140,32 +145,37 @@ jobs:
     runs-on: ubuntu-latest
     environment: staging
     steps:
-      - name: Deploy to staging via SSH
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.DREAMHOST_HOST }}
-          username: ${{ secrets.DREAMHOST_USER }}
-          key: ${{ secrets.DREAMHOST_STAGING_SSH_KEY }}
-          script: echo "Deploy is enforced server-side via restricted SSH key"
       - name: Sync production to staging
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.DREAMHOST_HOST }}
           username: ${{ secrets.DREAMHOST_USER }}
           key: ${{ secrets.DREAMHOST_STAGING_SYNC_SSH_KEY }}
+          # Forced command server-side runs sync-staging-db.sh — this echo is never executed.
           script: echo "Sync is enforced server-side via restricted SSH key"
+      - name: Deploy PR branch to staging via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DREAMHOST_HOST }}
+          username: ${{ secrets.DREAMHOST_USER }}
+          key: ${{ secrets.DREAMHOST_STAGING_SSH_KEY }}
+          # The branch name is passed as the SSH command value; deploy-staging-branch.sh
+          # reads it via $SSH_ORIGINAL_COMMAND, validates it against a strict allowlist,
+          # then checks it out and pulls it. Forced command means this key can ONLY ever
+          # run that one script — even if this workflow file were compromised.
+          script: ${{ github.head_ref }}
+
+  test:
+    if: github.event_name == 'pull_request'
+    needs: deploy-staging
+    name: Playwright Tests
+    runs-on: ubuntu-latest
+    environment: staging        # Required — makes STAGING_AUTH_USER/PASS resolve
+    timeout-minutes: 30
+    # ... rest of test job unchanged
 ```
 
-**Note:** The script content (`echo "..."`) is a no-op because the forced command in `authorized_keys` overrides any client-side command. The SSH connection itself triggers the sync script, and its exit status is returned to GitHub Actions.
-
-**Why this approach:**
-- The `staging-deploy` key remains restricted to running deploy-staging-branch.sh (forced command)
-- The new `staging-sync-deploy` key is restricted to only running the sync script (forced command)
-- If either key leaks, the blast radius is limited to that specific operation
-- The forced command's exit status is returned to the SSH client, so GitHub Actions fails if the script fails
-- deploy-staging-branch.sh validates branch names against a strict allowlist before git operations to prevent injection attacks
-- The sync script's fail-closed environment check protects the Wordfence deactivation step (not the DB export/import itself)
-- Both keys are scoped to the `staging` GitHub environment, alongside `STAGING_AUTH_PASS`/`STAGING_AUTH_USER`, for an additional layer of access control and audit logging beyond what the forced-command restriction already provides server-side
+**Step order matters:** sync runs before deploy so that if a PR's code depends on fresh production data (a new plugin, a schema change), that data is already in place before the new code runs against it.
 
 ### 5. Verify Wordfence table prefix
 
@@ -193,8 +203,6 @@ There's no scheduled/automatic sync outside of CI. A daily cron job was consider
 
 **How to manually sync staging before testing plugin updates:**
 
-If you want to test a plugin update (or any other change) against a fresh copy of production data:
-
 ```bash
 ssh USER@DOMAIN.org
 cd /home/USER
@@ -209,36 +217,29 @@ Once it completes, staging will reflect current production content with Wordfenc
 3. Click around / run your usual manual checks (or trigger the Playwright suite against staging manually if you want automated coverage too)
 4. If something breaks, staging is disposable — just re-run the sync above to reset it back to a clean copy of production, then try again
 
-**Note:** this manual sync uses the same script, same lock file, and same safety mechanisms as the CI-triggered path — there's nothing different about doing it by hand. If a CI sync happens to be running at the same time (e.g. someone just opened a PR), the lock file will cause your manual run to wait/fail rather than race against it; just re-run it once the CI sync finishes.
+**Note:** this manual sync uses the same script, same lock file, and same safety mechanisms as the CI-triggered path. If a CI sync happens to be running at the same time (e.g. someone just opened a PR), the lock file will cause your manual run to wait/fail rather than race against it; just re-run it once the CI sync finishes.
 
 ## How It Works
 
 ### sync-staging-db.sh
 
-1. **Excludes Wordfence tables** from the production database export:
-   - `wfBlockedIPLog`, `wfBlocks`, `wfCrawlers`, `wfHits`, `wfHoover`
-   - `wfIssues`, `wfLockedOut`, `wfLogins`, `wfReverseCache`
-   - `wfStatus`, `wfNotifications`, `wfConfig`
-
-   **Important:** This table exclusion is a **secondary safety measure only**. If Wordfence is updated or reinstalled, new tables may be added that aren't excluded. The post-sync deactivation step (sync-to-staging-post.sh) is the primary control that ensures Wordfence is neutralized on staging.
-
+1. **Excludes Wordfence tables** from the production database export
 2. **Imports** the sanitized database to staging
-
 3. **Rewrites URLs** from production to staging using `wp search-replace`
-
 4. **Syncs media files** via rsync (mirrors exactly, removes staging-only files)
-
 5. **Runs post-sync cleanup** via `sync-to-staging-post.sh` (primary safety mechanism)
 
 ### sync-to-staging-post.sh
 
-1. **Checks environment** by verifying the site URL contains "staging"
-   - **Fail-closed behavior:** If the `wp option get siteurl` command fails, returns empty, or errors out, the script aborts immediately without deactivating Wordfence. This prevents accidental production deactivation if the environment check fails for any reason.
-2. **Checks whether Wordfence is installed** on staging (`wp plugin is-installed wordfence`) before attempting anything else with it
-   - Staging does not run Wordfence under normal circumstances (see "Why Wordfence isn't installed on staging" above), so on a typical sync this check correctly finds it absent and the script logs that and exits cleanly — this is the expected, healthy outcome, not an error condition
-   - If Wordfence *is* found (e.g. a dev installed it temporarily to test a Wordfence update), the script proceeds to deactivate it exactly as before
+1. **Checks environment** by verifying the site URL contains "staging" — fail-closed: if the check fails for any reason, aborts immediately
+2. **Checks whether Wordfence is installed** (`wp plugin is-installed wordfence`) — if absent (expected on staging), logs and exits cleanly; if present (e.g. temporarily installed for testing), proceeds to deactivate
 3. **Deactivates Wordfence**, only if step 2 found it installed
-4. **Aborts** if run against production (safety gate, independent of the above)
+
+### deploy-staging-branch.sh
+
+1. **Reads the target branch** from `$SSH_ORIGINAL_COMMAND` (set by the SSH client — in CI, this is `github.head_ref`)
+2. **Validates the branch name** against `^[a-zA-Z0-9_/-]+$` — rejects anything with shell metacharacters, path traversal, or injection vectors
+3. **Fetches, checks out, and pulls** the validated branch in staging's wp-content directory
 
 ## Safety Features
 
@@ -247,50 +248,48 @@ Once it completes, staging will reflect current production content with Wordfenc
 - **Stale file cleanup** removes dump files older than 1 day
 - **Environment check** in post-sync script prevents accidental production execution
 - **Plugin-presence check** in post-sync script prevents a missing optional plugin from failing the entire sync
+- **Branch name allowlist** in deploy script prevents injection attacks via SSH_ORIGINAL_COMMAND
 - **SSH key restrictions** in `authorized_keys` limit what each key can do
-
-## Testing
-
-To test the sync process manually without triggering via GitHub Actions:
-
-```bash
-ssh USER@DOMAIN.org
-cd /home/USER
-./sync-staging-db.sh
-```
-
-Monitor the output to ensure:
-- Wordfence tables are excluded from export
-- Database imports successfully
-- URL rewrites complete
-- Media files sync
-- Wordfence is deactivated on staging if present, or skipped cleanly with a log message if not installed
 
 ## Troubleshooting
 
 ### Sync fails with "Sync already running"
-A previous sync may have crashed without releasing the lock. First confirm no sync is actually in progress (`ps aux | grep sync-staging-db`, and check the lock file's age against how long a sync normally takes) before removing it — deleting an active lock could let two syncs race and leave staging's DB half-imported:
+A previous sync may have crashed without releasing the lock. First confirm no sync is actually in progress (`ps aux | grep sync-staging-db`, and check the lock file's age) before removing it:
 ```bash
-rm /home/USER/sync-staging-db.sh.lock
+rm /home/USER/sync-staging-db.lock
 ```
-If you find a differently-named lock file (e.g. from an earlier version of the script), confirm what lock filename the currently deployed script actually uses (`grep -r "lock" sync-staging-db.sh`) before assuming an orphaned one is safe to delete — it almost certainly is if the current script doesn't reference that filename, but worth the one check.
 
-### Sync (or the "Sync production to staging" GitHub Actions step) fails with an SSH handshake error
-`ssh: handshake failed: ssh: unable to authenticate, attempted methods [none publickey], no supported methods remain` means the server rejected every key offered — i.e. the connection never even got far enough to hit the forced command. This is an `authorized_keys` / secret problem, not a script problem. In order of likelihood:
+### SSH handshake fails (`no supported methods remain`)
+The server rejected every key offered — connection never reached the forced command. In order of likelihood:
 
-1. **Stale secret in the wrong scope.** Confirm you updated the secret in the scope the job actually reads from — `Settings → Environments → staging → Environment secrets`, not the repository-level secrets page. These are two independent lists; a same-named secret can exist in both, and the environment-scoped one always wins for a job declaring `environment: staging`. Updating the wrong one looks like it worked (no error on save) but leaves the job using the old value.
-2. **Malformed line in `authorized_keys`.** Run `ssh-keygen -lf ~/.ssh/authorized_keys` and confirm it prints one fingerprint per key you expect (4, in this setup). If the count is short, a line exists in the file as text but isn't parsing as a valid key — usually from a paste error (e.g. the new key got appended after the old prefix instead of replacing it, leaving something like `ssh-ed25519 ssh-ed25519 <blob>`). Re-paste that line cleanly rather than patching around the error, and re-check the fingerprint count.
-3. **Corrupted paste into the GitHub secret itself.** Since secrets can't be read back once saved, if 1 and 2 both check out, the next-most-likely cause is the private key text itself being truncated or malformed when pasted into the secret field (missing the `BEGIN`/`END` line, extra blank line, etc.). Cheapest fix is to just regenerate the keypair fresh and carefully re-paste both halves (public into `authorized_keys`, private into the environment secret) rather than trying to diagnose the exact corruption.
+1. **Stale secret in the wrong scope.** Confirm you updated the secret in `Settings → Environments → staging → Environment secrets`, not the repository-level secrets page. These are two independent lists; the environment-scoped one always wins for a job declaring `environment: staging`. Updating the wrong one looks like it worked but leaves the job using the old value.
+2. **Malformed line in `authorized_keys`.** Run `ssh-keygen -lf ~/.ssh/authorized_keys` and confirm it prints one fingerprint per key you expect (4, in this setup). If the count is short, a line exists in the file as text but isn't parsing as a valid key — usually from a paste error (e.g. the new key got appended after the old prefix instead of replacing it, leaving `ssh-ed25519 ssh-ed25519 <blob>`). Re-paste that line cleanly and re-check the fingerprint count.
+3. **Corrupted paste into the GitHub secret.** Since secrets can't be read back once saved, the cheapest fix is to regenerate the keypair fresh and carefully re-paste both halves rather than trying to diagnose the exact corruption.
+
+### Script fails with `bad interpreter: No such file or directory`
+The script has Windows-style line endings (CRLF). Fix it on the server:
+```bash
+sed -i 's/\r$//' /home/USER/scriptname.sh
+```
+Verify with `cat -A /home/USER/scriptname.sh | head -3` — lines should end in `$`, not `^M$`. Then re-confirm the script is still executable (`ls -l /home/USER/scriptname.sh`).
+
+### Deploy fails with `cd: /home/USER/deploy-staging-branch.sh: Not a directory`
+The `authorized_keys` forced command for the `staging-deploy` key has a stray `cd` prefix — e.g. `command="cd /home/USER/deploy-staging-branch.sh"` instead of `command="/home/USER/deploy-staging-branch.sh"`. Edit the line to remove the leading `cd `, keeping only the absolute script path.
+
+### Tests get 401 on staging even though secrets resolve as non-null
+Two distinct causes, both found in real testing:
+
+1. **Wrong secret scope.** The `test` job must declare `environment: staging` (same as `deploy-staging`) for `STAGING_AUTH_USER`/`STAGING_AUTH_PASS` to resolve. Without it, secrets resolve to null/empty with no visible error, and every request to staging gets 401. Add `environment: staging` to the `test` job.
+2. **Malformed secret value.** A secret can resolve as non-null (non-empty string present) but still be wrong — e.g. the username or password was mistyped, truncated, or contains characters that got mangled in transit. To diagnose: SSH into the server, check `cat /home/USER/staging.SITENAME.org/.htpasswd` to confirm the exact username, then test the credentials directly: `curl -u 'username:password' -o /dev/null -s -w "%{http_code}\n" https://staging.SITENAME.org/`. If `curl` returns 200 but Playwright still gets 401, the issue is in how Playwright sends the credentials (check `httpCredentials` config); if `curl` also gets 401, the credentials are wrong server-side — reset with `htpasswd -b /home/USER/staging.SITENAME.org/.htpasswd username newpassword` and update the GitHub secret to match.
 
 ### Wordfence still active on staging after sync
 Check that:
-1. `sync-to-staging-post.sh` is executable
+1. `sync-to-staging-post.sh` is executable (`ls -l ~/sync-to-staging-post.sh`)
 2. The site URL check passes (contains "staging")
-3. Wordfence plugin slug is correct (`wordfence`)
-4. Wordfence is actually installed on staging in the first place (`wp plugin is-installed wordfence --path=<staging path>`) — if it's not installed, there's nothing to deactivate, and the script's "skipping deactivation" log line is the correct, expected outcome rather than a problem to chase
+3. Wordfence is actually installed on staging (`wp plugin is-installed wordfence --path=<staging path>`) — if it's not installed, the "skipping deactivation" log line is the correct, expected outcome
 
 ### Tables not excluded
-Verify the table prefix in `WORDFENCE_TABLES` matches your actual WordPress table prefix.
+Verify the table prefix in `WORDFENCE_TABLES` matches your actual WordPress table prefix in `wp-config.php`.
 
 ## Security Review
 
@@ -299,77 +298,76 @@ Verify the table prefix in `WORDFENCE_TABLES` matches your actual WordPress tabl
 This sync process moves production WordPress data (including the database and media files) to a staging environment for testing. The staging environment is publicly reachable and used by CI (Playwright tests). The security review focused on:
 
 1. **Preventing security state inheritance:** Ensuring staging doesn't inherit production's Wordfence lockout state, blocklists, or enforcement settings in ways that block legitimate testing or CI access
-2. **Credential scope containment:** Ensuring the credentials that perform this sync can't be abused beyond their intended scope if leaked (compromised GitHub secret, leaked CI log, etc.)
+2. **Credential scope containment:** Ensuring the credentials that perform this sync can't be abused beyond their intended scope if leaked
 
-**Note on invocation paths:** the sync runs via two intentional triggers — the GitHub Actions `staging-sync-deploy` SSH key (Step 4, on every PR) and manual SSH invocation by a developer (Step 6, for ad-hoc testing such as plugin updates). A daily cron trigger was considered and rejected during this review — see Step 6 for the rationale — so there is no unattended/scheduled invocation path to account for in the credential-scope analysis below.
-
-**Scope:** This review covers the staging sync mechanism (Step 1). The production WAF bypass for CI (Step 2 - custom-header approach for Playwright security suite) is tracked separately and was not part of this review.
+**Note on invocation paths:** the sync runs via two intentional triggers — the GitHub Actions `staging-sync-deploy` SSH key (on every PR) and manual SSH invocation by a developer (Step 6, for ad-hoc testing). A daily cron trigger was considered and rejected — see Step 6 for the rationale.
 
 ### Concerns and Resolutions
 
 | Concern | Status | Resolution |
 |---------|--------|------------|
-| **Key privilege escalation** (git-pull → full sync) | Fixed | Split into two separate keys: `staging-deploy` (deploy-staging-branch.sh only) and `staging-sync-deploy` (sync script only). This limits blast radius if either key leaks. |
-| **PR branch deployment not supported** | Fixed | Created deploy-staging-branch.sh to checkout and pull specific branches, updated workflow to pass branch name via SSH. Branch names validated against strict allowlist before git operations. |
-| **wfConfig exclusion ambiguity** | Fixed | Explicitly framed table exclusion as secondary safety measure, with post-sync deactivation as primary control. Added warning comment that table list must be reviewed if Wordfence is updated. |
-| **Fail-closed environment check** | Fixed | Documented explicitly that empty/error results from URL check default to aborting (not deactivating). Script checks for empty string before regex match. |
-| **Wrapper script permissions** | Resolved | Wrapper script deprecated due to privilege escalation risk. Added cleanup step to remove it from server if previously uploaded. |
-| **CI no-op / observability** | Fixed | Used forced command with no-op script content. The forced command's exit status is returned to GitHub Actions, ensuring proper failure detection. |
-| **Sync key blast radius** | Fixed | Sync key uses forced command (`command="/home/USER/sync-staging-db.sh"`) to restrict to script-only execution, not arbitrary shell access. |
-| **Secret exposure scope** | Fixed | Staging-related secrets (`DREAMHOST_STAGING_SSH_KEY`, `DREAMHOST_STAGING_SYNC_SSH_KEY`, `STAGING_AUTH_PASS`, `STAGING_AUTH_USER`) migrated from repository-level to environment-level scoping (`staging` environment), confirmed live in the workflow file via `environment: staging` on the `deploy-staging` job. |
-| **Post-sync step fails entire sync when Wordfence isn't installed on staging** | Fixed | `sync-to-staging-post.sh` now checks `wp plugin is-installed wordfence` before attempting deactivation. Staging intentionally doesn't run Wordfence day-to-day (resource overhead on shared hosting); the script now treats "not installed" as the expected, successful case rather than an error, while still correctly deactivating it if a future dev installs it temporarily. |
+| **Key privilege escalation** (git-pull → full sync) | Fixed | Split into two separate keys: `staging-deploy` (deploy-staging-branch.sh only) and `staging-sync-deploy` (sync script only). Limits blast radius if either key leaks. |
+| **PR branch always deployed as `main`** | Fixed | Created `deploy-staging-branch.sh` to checkout and pull specific branches. Workflow passes `github.head_ref` as the SSH command value; script validates it against a strict allowlist before any git operation. |
+| **wfConfig exclusion ambiguity** | Fixed | Table exclusion explicitly framed as secondary safety measure; post-sync deactivation is primary control. |
+| **Fail-closed environment check** | Fixed | Script checks for empty string before regex match; any failure mode aborts rather than proceeding. |
+| **Wrapper script permissions** | Resolved | Wrapper script deprecated; cleanup step added to remove it from server. |
+| **CI no-op / observability** | Fixed | Forced command's exit status returned to GitHub Actions, ensuring proper failure detection. |
+| **Sync key blast radius** | Fixed | Sync key forced command restricts to script-only execution, not arbitrary shell. |
+| **Secret exposure scope** | Fixed | Staging secrets migrated to `staging` environment scope; production secrets to `production` environment scope. |
+| **Post-sync step fails when Wordfence not installed** | Fixed | `sync-to-staging-post.sh` now checks `wp plugin is-installed` before attempting deactivation; absent plugin is the expected, healthy outcome. |
+| **Test job couldn't resolve staging auth secrets** | Fixed | Added `environment: staging` to the `test` job — required for `STAGING_AUTH_USER`/`STAGING_AUTH_PASS` to resolve; without it they silently return null, causing 401 on every request. |
+| **Security tests running against staging instead of production** | Fixed | `security.spec.js` uses `test.use({ baseURL: PRODUCTION_URL })` to pin all security checks to production, independent of whatever `baseURL` the rest of the suite resolves to for a given run. Security checks validate server/file-level hardening specific to production's actual configuration. |
 
 ### Reasoning for Key Design Decisions
 
 **Why separate keys instead of expanding staging-deploy?**
-Expanding the existing key would be a privilege escalation. If that key leaked (compromised GitHub secret, leaked CI log), an attacker could trigger production DB exports and staging syncs. Separate keys limit the blast radius: staging-deploy can only pull code, staging-sync-deploy can only run the sync.
+Expanding the existing key would be a privilege escalation. Separate keys limit the blast radius: staging-deploy can only run deploy-staging-branch.sh, staging-sync-deploy can only run the sync.
+
+**Why pass the branch name via SSH rather than hardcoding it?**
+The forced command approach keeps the security boundary intact — a leaked key can only ever run `deploy-staging-branch.sh`, not arbitrary shell. The branch name comes in via `$SSH_ORIGINAL_COMMAND` (attacker-controlled input), so it's validated against `^[a-zA-Z0-9_/-]+$` before any git operation. This allowlist specifically rejects shell metacharacters (`;`, `&&`, backticks, `$()`) and path traversal (`..`). Worst case with a leaked key: an attacker can check out a valid-looking branch name from the repo — not arbitrary code execution.
 
 **Why forced command for sync key instead of unrestricted access?**
-Unrestricted SSH access would allow arbitrary command execution if the key leaked. A forced command restricts the key to only running the sync script while still returning the script's exit status to GitHub Actions for proper failure detection. This maintains the security boundary without sacrificing observability.
+Unrestricted SSH access would allow arbitrary command execution if the key leaked. A forced command restricts the key to only running the sync script while still returning the exit status to GitHub Actions for proper failure detection.
 
 **Why table exclusion as secondary, not primary?**
-Wordfence updates can add new tables that aren't in the exclusion list, causing it to drift out of date. The post-sync deactivation step is the reliable control that ensures Wordfence is neutralized on staging. Table exclusion is a secondary defense that requires manual review if Wordfence is updated.
+Wordfence updates can add new tables that aren't in the exclusion list. The post-sync deactivation step is the reliable control; table exclusion is a secondary defense that requires manual review if Wordfence is updated.
 
 **Why fail-closed environment check?**
-If the `wp option get siteurl` command fails, returns empty, or errors out, the script must abort rather than proceed. An inverted check or unexpected failure mode could accidentally deactivate Wordfence on production. The script explicitly checks for empty string before the regex match, ensuring it only proceeds when it can definitively confirm staging environment.
+If `wp option get siteurl` fails, returns empty, or errors out, the script must abort rather than proceed. An inverted check or unexpected failure could accidentally deactivate Wordfence on production.
 
-**Why check plugin presence before deactivating, instead of just installing Wordfence on staging to match production?**
-Both options were considered. Installing Wordfence on staging would make the two environments more symmetric, but Wordfence's continuous background scanning and traffic monitoring is meaningful overhead on a shared-hosting plan, for a box whose entire purpose is disposable testing. Adding a presence check keeps staging lightweight by default while still correctly handling the case where Wordfence *is* temporarily installed (e.g. specifically to test a Wordfence update before it reaches production) — the deactivation logic doesn't need to know which case it's in, it just checks and acts accordingly.
+**Why check plugin presence before deactivating, instead of installing Wordfence on staging?**
+Wordfence's continuous background scanning is meaningful overhead on a shared-hosting plan. The presence check keeps staging lightweight by default while still correctly handling the case where Wordfence is temporarily installed for testing.
 
 **Why migrate staging secrets to environment-level scoping?**
-Repository-level secrets are visible to every workflow and job in the repo by default. Environment-level secrets are only injected into jobs that explicitly declare that environment, which adds an audit trail (which job accessed which secret, when) and the option to layer on protection rules later (e.g. deployment branch restrictions). `DREAMHOST_HOST` and `DREAMHOST_USER` remain repository-level by design, since both `deploy-staging` and `deploy-prod` reference the same values — confirmed directly in the workflow file, not assumed.
+Repository-level secrets are visible to every workflow and job by default. Environment-level secrets are only injected into jobs that explicitly declare that environment, adding audit trail and access control. `DREAMHOST_HOST` and `DREAMHOST_USER` remain repository-level since both `deploy-staging` and `deploy-prod` reference the same values.
+
+**Why pin security tests to production, not staging?**
+Security checks validate server/file-level hardening (`.htaccess` rules, file presence, Wordfence-backed blocking) that's specific to production's actual configuration. Staging intentionally doesn't run Wordfence, so Wordfence-dependent checks would behave unpredictably against staging. A PR testing staging changes should not change what this suite monitors — production's security posture is the thing being checked, continuously.
 
 ### Residual Risks and Accepted Tradeoffs
 
-The following risks are knowingly accepted as part of this design:
-
 **Wordfence table exclusion drift**
-- **Risk:** Wordfence updates can add new tables that aren't in the exclusion list, causing it to drift out of date
-- **Mitigation:** Post-sync deactivation is the primary control; table exclusion is secondary defense
-- **Owner/Trigger:** Revisit the `WORDFENCE_TABLES` list whenever Wordfence is updated or reinstalled
-- **Acceptance:** This is an acceptable gap because deactivation provides the primary safety net
+- **Risk:** Wordfence updates can add new tables not in the exclusion list
+- **Mitigation:** Post-sync deactivation is the primary control; table exclusion is secondary
+- **Owner/Trigger:** Revisit `WORDFENCE_TABLES` whenever Wordfence is updated or reinstalled
 
 **SSH key leakage still allows script execution**
-- **Risk:** Both SSH keys, even with forced-command restrictions, still grant the ability to run their respective scripts on demand if leaked. The staging-sync-deploy key leaking means an attacker can trigger production DB exports and staging overwrites repeatedly.
-- **Mitigation:** Blast radius is limited to the specific operation (git pull or sync), not arbitrary shell access
-- **Acceptance:** This is an acceptable residual risk because the operations are scoped to staging as the destructive target and production as read-only source. Repeated triggering could DoS staging or interfere with concurrent use, but cannot modify production data. Keys are stored in GitHub Secrets with access logging, and the staging-environment keys are additionally scoped to the `staging` GitHub environment.
+- **Risk:** A leaked key can still trigger its specific script on demand
+- **Mitigation:** Blast radius is limited to one scoped operation; cannot modify production data
+- **Acceptance:** Acceptable given keys are stored in GitHub Secrets with access logging and environment scoping
 
 **No automated secret rotation**
-- **Risk:** SSH keys are not rotated on a scheduled cadence
 - **Policy:** Rotate keys only if compromise is suspected or on manual audit
-- **Acceptance:** This is the current operational policy; may be revisited if regulatory requirements change
 
 **Staging and production have asymmetric plugin sets (Wordfence specifically)**
-- **Risk:** Because Wordfence is intentionally not installed on staging, staging cannot catch Wordfence-specific issues (e.g. a Wordfence update that conflicts with another plugin) under normal testing
-- **Mitigation:** Wordfence can be installed on staging on-demand for the specific occasions where testing a Wordfence update matters; the post-sync script handles either state correctly
-- **Acceptance:** This is an acceptable gap given shared-hosting resource constraints — the cost of running Wordfence on staging continuously outweighs the benefit for an occasional testing need
+- **Risk:** Staging cannot catch Wordfence-specific issues under normal testing
+- **Mitigation:** Wordfence can be installed on staging on-demand; post-sync script handles either state
+- **Acceptance:** Cost of running Wordfence on staging continuously outweighs the benefit
 
 **(Resolved, not residual) Daily cron job removed**
-A daily cron-triggered sync was implemented and then removed during this review. It was rejected because plugin-update testing on staging is occasional rather than daily, making an unconditional nightly sync frequently stale by the time it was actually used, while still incurring full DB export/import/rsync load every night on shared hosting. It also introduced a lock-file overlap risk with CI-triggered syncs and a third invocation path with no audit trail. Manual SSH invocation (Step 6) replaces it — fresher when it matters (run right before testing), no unconditional resource cost, and no overlap risk to reason about. This is listed here rather than removed entirely from the document, so a future reader doesn't reintroduce the same cron job without knowing it was already tried and deliberately reverted.
+A daily cron-triggered sync was implemented and then removed. Rejected because plugin-update testing is occasional rather than daily, making an unconditional nightly sync frequently stale while incurring full resource cost. Manual SSH invocation (Step 6) replaces it — fresher when it matters, no unconditional resource cost, no overlap risk. Listed here so a future reader doesn't reintroduce it without knowing it was already tried and deliberately reverted.
 
 ### GitHub Actions Secret Exposure Surface
-
-**Current Configuration (confirmed live in `playwright-tests.yml` as of this review):**
 
 **Environment secrets — `production` environment:**
 - `DREAMHOST_PROD_SSH_KEY`
@@ -381,37 +379,32 @@ A daily cron-triggered sync was implemented and then removed during this review.
 - `STAGING_AUTH_USER`
 
 **Repository secrets:**
-- `DREAMHOST_HOST` — shared; referenced directly by both `deploy-staging` and `deploy-prod`
-- `DREAMHOST_USER` — shared; referenced directly by both `deploy-staging` and `deploy-prod`
+- `DREAMHOST_HOST` — shared; referenced by both `deploy-staging` and `deploy-prod`
+- `DREAMHOST_USER` — shared; referenced by both `deploy-staging` and `deploy-prod`
 
-**Observations:**
-- All staging-only and production-only secrets are now environment-scoped. Only the two values genuinely shared between staging and production (`DREAMHOST_HOST`, `DREAMHOST_USER`) remain repository-level, and that's confirmed by direct reference in both jobs rather than assumed.
-- The `production` environment requires manual approval before `deploy-prod` runs (configured in Settings → Environments → production) — a human-in-the-loop gate on top of the SSH key restrictions.
-- The `staging` environment currently has no equivalent approval requirement, which is intentional: `deploy-staging` needs to run automatically on every PR for CI to function. Adding a required-reviewer rule to the `staging` environment would block automated test runs and should be avoided.
-- Branch protection rules are in place for `main`:
-  - Pull request required before merging
-  - Status checks must pass ("Playwright Tests")
-  - Force pushes blocked
-  - Deletions restricted to bypass permissions
-- The workflow's trigger design (`push` scoped to `branches: [main]`) is the actual mechanism preventing `deploy-prod` from firing on arbitrary branches — the `if: github.event_name == 'push'` check inside the job only distinguishes event type, not branch, per the inline comments in the workflow file itself.
+**Important:** Both the `deploy-staging` job and the `test` job declare `environment: staging`. This is required for staging-scoped secrets to resolve in both jobs — omitting it from either job silently breaks secret resolution with no obvious error message.
 
-**Important distinction:** Branch protection rules and environment scoping protect the GitHub Actions workflow YAML and its secrets from unreviewed changes, but do NOT protect the server-side `authorized_keys` configuration. The forced-command binding is edited manually on the DreamHost server via SSH (Step 4b), outside of the git-tracked workflow file. Someone with server SSH access could loosen or remove the forced-command restriction without any PR process.
-
-**Recommendation:** The current configuration — environment-scoped secrets for everything staging- and production-specific, repository-level only for genuinely shared values, manual approval gating production, and branch protection gating merges — is a reasonable, defense-in-depth posture for this setup. Server-side configuration changes (authorized_keys, file permissions, script contents on the server itself) fall outside what GitHub-side controls can audit, and should be reviewed separately/manually on a periodic basis.
+**Important distinction:** Branch protection and environment scoping protect the GitHub Actions workflow and secrets from unreviewed changes, but do NOT protect the server-side `authorized_keys` configuration. The forced-command binding is edited manually on the DreamHost server via SSH, outside of git. Someone with server SSH access could loosen or remove forced-command restrictions without any PR process.
 
 ### Testing and Validation Status
 
-**Status:** Live-validated via real GitHub Actions runs
+**Status:** Live-validated via real GitHub Actions runs, including multiple real failure modes found and fixed
 
-This setup has moved past design-only review — the full path has been exercised for real, including failure modes that weren't anticipated at design time, all subsequently fixed:
+- **Forced-command exit-status propagation:** confirmed — failing forced commands surface correctly as failed Actions steps with real output in the log
+- **Wordfence table exclusion on production database:** confirmed working
+- **Sync → deploy step order:** confirmed — sync runs first, branch deploy second; both complete correctly in sequence
+- **Branch-aware deploy (deploy-staging-branch.sh):** confirmed — PR branch correctly checked out on staging; branch name passes allowlist validation and git operations succeed
+- **`environment: staging` resolving all staging-scoped secrets in both `deploy-staging` and `test` jobs:** confirmed end-to-end after fixing the missing `environment: staging` on the `test` job
+- **Playwright `httpCredentials` correctly authenticating against staging Basic Auth:** confirmed — centralized in `playwright.config.js` using `STAGING_AUTH_USER`/`STAGING_AUTH_PASS`; no per-request credential injection needed
+- **Security tests correctly pinned to production:** confirmed — `test.use({ baseURL: PRODUCTION_URL })` in `security.spec.js` overrides the shared `baseURL` for that suite only
+- **Fail-closed environment check:** confirmed in success path; abort path not yet deliberately tested against a forced failure
+- **Lock file behavior under concurrent runs:** not yet stress-tested; design is reasoned through but unobserved under real concurrent conditions
 
-- **Lock file behavior:** not yet stress-tested under deliberately overlapping concurrent runs; existing design (flock-based, non-blocking) is reasoned through but still worth a dedicated concurrent-run test if that scenario becomes a real concern
-- **Stale cleanup timing:** not yet specifically exercised against a long-running sync; current `-mtime +1` logic is reasoned through but unobserved under real long-duration conditions
-- **Forced-command exit-status propagation through `appleboy/ssh-action`:** confirmed working — a failing forced command (the original unguarded `wp plugin deactivate` against a missing plugin) correctly surfaced as a failed GitHub Actions step with the script's real output visible in the log, not swallowed or misreported
-- **Wordfence table exclusion behavior on the production database:** confirmed working — production export completed successfully excluding the configured tables
-- **Fail-closed environment check behavior:** confirmed working in the success path (correctly identified staging and proceeded); not yet deliberately tested against a forced failure (e.g. temporarily breaking the siteurl lookup) to confirm the abort path itself
-- **`environment: staging` resolving all four staging-scoped secrets end-to-end:** confirmed — after correcting a secret that had gone stale during key rotation (see below), a full run authenticated successfully with all four staging-scoped secrets
-- **New, found via live testing rather than anticipated at design time:** the post-sync script's unguarded `wp plugin deactivate wordfence` failed the entire sync (exit 1) the first time it ran for real, because Wordfence has never actually been installed on staging — see "Why Wordfence isn't installed on staging" above. Fixed by adding a presence check before attempting deactivation.
-- **New, found via live testing:** an `authorized_keys` line can be silently dropped by SSH's key parser (e.g. from a paste error introducing a duplicated `ssh-ed25519` prefix) without any error on the file itself — `grep`-based line counts will still show the line as present text, but `ssh-keygen -lf ~/.ssh/authorized_keys` will show fewer fingerprints than expected. This is now called out explicitly in Step 4a and the Troubleshooting section, since it's not an intuitive failure mode and cost significant debugging time to isolate.
-
-**Remaining before considering this fully battle-tested:** the two not-yet-exercised items above (concurrent lock contention, stale-cleanup timing under a long sync) are lower-priority, since they're edge cases rather than the main path — revisit if either scenario actually comes up in practice rather than testing them speculatively.
+**Found via live testing (not anticipated at design time):**
+- Unguarded `wp plugin deactivate wordfence` failed the entire sync on first real run (Wordfence not installed on staging). Fixed: presence check added.
+- Silently dropped `authorized_keys` line from paste error (duplicated `ssh-ed25519` prefix). `grep` showed the line present; `ssh-keygen -lf` showed fewer fingerprints. Now documented in Step 4a and Troubleshooting.
+- CRLF line endings on `deploy-staging-branch.sh` uploaded from a Windows-adjacent environment caused `bad interpreter` failure. Fixed server-side with `sed -i 's/\r$//'`. Now documented in Step 1 and Troubleshooting.
+- Stray `cd` prefix in `authorized_keys` forced command caused `cd: .../deploy-staging-branch.sh: Not a directory`. Fixed by removing `cd ` from the command string. Now documented in Troubleshooting.
+- `STAGING_AUTH_USER` secret malformed on entry into GitHub. Secret resolved as non-null but value was wrong; all requests got 401. Diagnosed via `curl` against the server directly; fixed by re-entering the secret correctly. Now documented in Troubleshooting.
+- `test` job missing `environment: staging` — `STAGING_AUTH_USER`/`STAGING_AUTH_PASS` resolved to null silently, causing 401 on every Playwright request. Fixed by adding `environment: staging` to the `test` job. Now documented in Step 4c and Troubleshooting.
+- Security tests pulled onto staging by the `baseURL` fix (was accidentally hitting production before due to env var name mismatch). Fixed by pinning security spec to production explicitly via `test.use()`. Now documented in Security Review.
