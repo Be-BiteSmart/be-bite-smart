@@ -94,8 +94,6 @@ If the Plausible plugin also logs a generic **file download** goal for PDF click
 
 ### Playwright Tests
 
-### Playwright Tests
-
 Smoke, analytics, video, link, accessibility, and security tests. In GitHub Actions they run against **staging** (`https://staging.bebitesmart.org`) — a fresh copy of production data with the PR's branch deployed to it. Locally they default to production (`https://www.bebitesmart.org`). Override the target with `BASE_URL` or `PLAYWRIGHT_BASE_URL` for local or staging runs.
 
 **Security tests always run against production**, regardless of what environment the rest of the suite targets — security checks validate server/file-level hardening specific to production's actual configuration, and staging is intentionally configured differently (no Wordfence, different `.htaccess` state).
