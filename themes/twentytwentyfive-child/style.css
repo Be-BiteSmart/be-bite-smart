@@ -39,10 +39,19 @@ hr.gradient-divider {
 strong {
   font-weight: 600;
 }
-/* Remove wordpress's default spacing --wp--preset--spacing--60 between the header and each page, was creating a weirdly large gap */
-
+/*
+ * The first div inside <main> wraps all page content.
+ * WordPress automatically applies --wp--preset--spacing--60 as top and bottom 
+ * padding to this div, which creates unnecessary whitespace between the header and page
+ * content, and between the page content and the footer.
+ *
+ * Remove the default padding so page templates define their own spacing.
+  *
+  * !important is required to override the core block styles.
+ */
 .wp-block-group.alignfull.has-global-padding:first-child {
   padding-top: 0 !important;
+  padding-bottom: 0 !important;   /*   padding-bottom & padding: 0 !important; to remove the bottom padding that the 1st div inside main gets added to it, which pushes down the footer oddly, which would lead to a huge gap between the content and main */
 }
 
 /* hide the "homepage" title visually, but keep it for accessibility 
