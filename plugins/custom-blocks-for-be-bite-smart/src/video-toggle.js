@@ -11,6 +11,36 @@ import {
 } from "./shared/languages";
 import { confirmLanguageRestart } from "./video-lang-restart-modal";
 
+/* ── Vimeo connection warm-up ──
+   Opens the DNS/TLS connection to Vimeo's CDNs before the click happens,
+   so only the actual video request is left once the iframe is inserted.
+   Fires once per page load, right before the first thumbnail (of however
+   many are on the page) scrolls within 200px of the viewport. */
+let vimeoWarmed = false;
+
+function warmUpVimeoOnce() {
+  if (vimeoWarmed) return;
+  vimeoWarmed = true;
+
+  ["https://player.vimeo.com", "https://i.vimeocdn.com", "https://f.vimeocdn.com"].forEach(
+    (url) => {
+      const link = document.createElement("link");
+      link.rel = "preconnect";
+      link.href = url;
+      document.head.appendChild(link);
+    },
+  );
+}
+
+const vimeoWarmUpObserver = new IntersectionObserver(
+  (entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) warmUpVimeoOnce();
+    });
+  },
+  { rootMargin: "200px" },
+);
+
 function buildVimeoPlayerSrc(vimeoId, lang) {
   const params = new URLSearchParams({ autoplay: "1" });
   const code = normalizeLangCode(lang);
@@ -104,6 +134,12 @@ document.addEventListener("DOMContentLoaded", function () {
       : defaultEpisodeLang(block, videos, siteLang);
     let playingLang = null;
     let isPlaying = false;
+
+    // Warm up Vimeo's connection once this thumbnail is close to view —
+    // one shared observer/flag handles every block on the page.
+    if (thumbnail) {
+      vimeoWarmUpObserver.observe(thumbnail);
+    }
 
     function setEpisodeLanguage(lang) {
       currentLang = normalizeLangCode(lang);
