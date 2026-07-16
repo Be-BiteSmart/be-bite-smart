@@ -172,13 +172,14 @@ add_action( 'init', 'press_release_register_block' );
 function custom_blocks_scripts() {
 
     $on_learn  = is_page( 'learn' );
+        $on_parents  = is_page( 'parents' );
     $on_news       = is_page( 'news-media' );
     $on_legal       = is_page( 'legal' );
     $on_partnerships     = is_page( 'partnerships' );
     $on_front      = is_front_page();
 
 
-       if ( $on_learn || $on_front ) {
+       if ( $on_learn || $on_front || $on_parents ) {
         $asset = include plugin_dir_path( __FILE__ ) . 'build/video-toggle.asset.php';
         wp_enqueue_style(
             'video-toggle',
