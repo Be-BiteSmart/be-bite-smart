@@ -1,6 +1,7 @@
 /**
  * video-toggle.js
  * Shared video logic for .video-episode-block and .video-quote-block.
+ * Cache bust: force rebuild for parents page support
  */
 
 import {
