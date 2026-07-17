@@ -185,9 +185,9 @@ function custom_blocks_scripts() {
             'video-toggle',
             plugins_url( 'build/video-toggle.css', __FILE__ ),
             array(),
-            $asset['version']
+            $asset['version'] . '.1'
         );
-        wp_enqueue_script( 'video-toggle', plugins_url( 'build/video-toggle.js', __FILE__ ), array(), $asset['version'], true );
+        wp_enqueue_script( 'video-toggle', plugins_url( 'build/video-toggle.js', __FILE__ ), array(), $asset['version'] . '.1', true );
         wp_localize_script(
             'video-toggle',
             'bitesmartLangRestartDialog',
