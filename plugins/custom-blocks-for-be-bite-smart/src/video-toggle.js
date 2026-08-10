@@ -96,7 +96,10 @@ function switchLiveTrack(player, langCode) {
   });
 }
 
-function buildVimeoPlayerSrc(vimeoId, lang) {
+function buildVimeoPlayerSrc(vimeoId, lang, { forceCaptions = false } = {}) {
+  // forceCaptions defaults to false to preserve episode-card's existing behavior
+  // (captions off on first play). Video-quote blocks explicitly pass true to enable
+  // captions from the start. This keeps the new feature isolated to video-quote.
   const params = new URLSearchParams({ autoplay: "1" });
   const code = normalizeLangCode(lang);
 
@@ -106,6 +109,10 @@ function buildVimeoPlayerSrc(vimeoId, lang) {
   } else if (code === "hi") {
     params.set("texttrack", "hi");
     params.set("audiotrack", "hi");
+  } else if (forceCaptions) {
+    // English has no alternate audio track to request, but quote blocks
+    // want captions on from the first play regardless of language.
+    params.set("texttrack", code);
   }
 
   return `https://player.vimeo.com/video/${vimeoId}?${params.toString()}`;
@@ -241,7 +248,9 @@ document.addEventListener("DOMContentLoaded", function () {
       }
 
       const iframe = document.createElement("iframe");
-      iframe.src = buildVimeoPlayerSrc(vimeoId, currentLang);
+      iframe.src = buildVimeoPlayerSrc(vimeoId, currentLang, {
+        forceCaptions: isQuoteBlock,
+      });
       iframe.frameBorder = "0";
       iframe.allow = "autoplay; fullscreen; picture-in-picture";
       iframe.allowFullscreen = true;
