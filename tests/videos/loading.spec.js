@@ -54,6 +54,120 @@ test.describe("Documentary video (video-quote block)", () => {
       });
     });
   }
+
+  test(`${EDUCATION_PATH} switching to Spanish before pressing play uses Spanish captions/audio`, async ({
+    page,
+  }, testInfo) => {
+    await gotoExpectOk(page, EDUCATION_PATH);
+
+    const block = page.locator(".video-quote-block").first();
+    await expect(block, `No video-quote block on ${EDUCATION_PATH}`).toBeVisible();
+
+    // Hindi isn't configured in TranslatePress on this site yet — Spanish is
+    // the only non-English language we can reliably test against for now.
+    const esSegment = block.locator(
+      '.lang-segment[data-lang="es"], .toggle-label[data-lang="es"]',
+    );
+    if ((await esSegment.count()) === 0) {
+      testInfo.skip();
+      return;
+    }
+
+    const vimeoId = await block.getAttribute("data-vimeo-id");
+
+    // Click Spanish BEFORE playing — this is the exact scenario that used to
+    // silently play English with no feedback when Spanish wasn't actually on
+    // the video. Clicking here only updates picker state; assertVimeoPlayerLoads
+    // below is what actually presses play.
+    await esSegment.first().click();
+    await expect(esSegment.first()).toHaveClass(/active/);
+
+    await spyOnPlausible(page);
+
+    await assertVimeoPlayerLoads(page, block, block.locator(".video-quote-watch-button"), {
+      vimeoId,
+      lang: "es",
+      forceCaptions: true,
+    });
+  });
+
+  test(`${EDUCATION_PATH} watch button text stays the same across language switches`, async ({
+    page,
+  }, testInfo) => {
+    await gotoExpectOk(page, EDUCATION_PATH);
+
+    const block = page.locator(".video-quote-block").first();
+    await expect(block, `No video-quote block on ${EDUCATION_PATH}`).toBeVisible();
+
+    const segments = episodeLangSegments(block);
+    const segmentCount = await segments.count();
+    if (segmentCount < 2) {
+      testInfo.skip();
+      return;
+    }
+
+    const watchButton = block.locator(".video-quote-watch-button");
+    const originalText = (await watchButton.textContent())?.trim();
+    expect(originalText, "watch button has no text").toBeTruthy();
+
+    // The watch button text is now a static, site-language string — it must
+    // never swap based on which language pill is selected (that per-language
+    // watch-label behavior was deliberately removed).
+    for (let i = 0; i < segmentCount; i++) {
+      await segments.nth(i).click();
+      await expect(segments.nth(i)).toHaveClass(/active/);
+      await expect(watchButton).toHaveText(originalText);
+    }
+  });
+
+  test(`${EDUCATION_PATH} switching language while playing keeps the same video loaded`, async ({
+    page,
+  }, testInfo) => {
+    await gotoExpectOk(page, EDUCATION_PATH);
+
+    const block = page.locator(".video-quote-block").first();
+    await expect(block, `No video-quote block on ${EDUCATION_PATH}`).toBeVisible();
+
+    const segments = episodeLangSegments(block);
+    const segmentCount = await segments.count();
+    if (segmentCount < 2) {
+      testInfo.skip();
+      return;
+    }
+
+    const vimeoId = await block.getAttribute("data-vimeo-id");
+    const siteLang = (await block.getAttribute("data-site-lang")) || "en";
+
+    await spyOnPlausible(page);
+
+    const iframe = await assertVimeoPlayerLoads(
+      page,
+      block,
+      block.locator(".video-quote-watch-button"),
+      { vimeoId, lang: siteLang, forceCaptions: true },
+    );
+    const srcBeforeSwitch = await iframe.getAttribute("src");
+
+    const activeLang = await block
+      .locator(".lang-segment.active, .toggle-label.active")
+      .first()
+      .getAttribute("data-lang");
+    const otherSegment = block
+      .locator(
+        `.lang-segment[data-lang]:not([data-lang="${activeLang}"]), .toggle-label[data-lang]:not([data-lang="${activeLang}"])`,
+      )
+      .first();
+
+    await otherSegment.click();
+    await expect(otherSegment).toHaveClass(/active/);
+
+    // video-quote switches subtitle/audio tracks live via the Vimeo Player
+    // SDK — unlike episode-card, it never loads a different video. The
+    // iframe's src attribute (and the iframe element itself) must stay
+    // exactly as it was; the SDK calls don't touch it at all.
+    await expect(iframe).toHaveAttribute("src", srcBeforeSwitch);
+    await expect(block.locator(".video-player iframe")).toHaveCount(1);
+  });
 });
 
 test.describe("Episode videos (education page)", () => {

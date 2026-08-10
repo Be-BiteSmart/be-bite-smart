@@ -24,7 +24,7 @@ These tests **do not change anything** on the site. They only visit pages and re
 
 ## Test count
 
-**121 automated checks** across 12 test files (as of the current suite). They are grouped below.
+**124 automated checks** across 12 test files (as of the current suite). They are grouped below.
 
 | Group | Tests | What it covers |
 |-------|------:|----------------|
@@ -39,8 +39,8 @@ These tests **do not change anything** on the site. They only visit pages and re
 | **Smoke — PDF toggle** | 11 | PDF view buttons and download links validation (pages with no PDF toggles are **skipped**) |
 | **Accessibility** | 11 | One scan per main page (WCAG moderate and above) |
 | **Analytics** | 14 | Plausible events on plays, downloads, PDFs, language switch |
-| **Videos** | 6 | Vimeo embeds on Home and Learn |
-| **Total** | **121** | |
+| **Videos** | 9 | Vimeo embeds on Home and Learn, plus video-quote's language-picker behavior on Learn (some **skipped** until a video-quote block there has 2+ languages checked) |
+| **Total** | **124** | |
 
 Some checks **skip** when they do not apply (e.g. a page with no download buttons). Skipped is not a failure.
 
@@ -54,7 +54,7 @@ Some checks **skip** when they do not apply (e.g. a page with no download button
 | **Key content blocks** | 6 | Are expected sections still on the page (videos, forms, team bios, etc.)? | Learn, Evidence, Contact, Donate, Team, Advisors |
 | **Broken links** | 11 | Do links on the page go somewhere that works? | All 11 main pages |
 | **Downloads** | 11 | Do Download links return real PDF or video files? | Any main page that has them |
-| **Videos** | 6 | Do Watch buttons load the Vimeo player? | Home, Learn |
+| **Videos** | 9 | Do Watch buttons load the Vimeo player, and does video-quote's language picker behave correctly (no reload, watch-button text stays put, pre-play language selection actually applies)? | Home, Learn |
 | **SEO** | 13 | Title, description, and canonical URL set correctly? | All 11 main pages + sitemap |
 | **HTTPS & host** | 11 | Does `http` and non-`www` redirect to `https://www.bebitesmart.org`? | Home + Learn (production only) |
 | **Security** | 12 | Are sensitive server files hidden from the public? | Server paths (not page content) |
@@ -148,11 +148,18 @@ Pages with no downloads are skipped.
 
 ---
 
-### Videos (`videos`) — 6 tests
+### Videos (`videos`) — 9 tests
 
-Clicks Watch / play buttons and confirms the Vimeo embed appears with the correct video.
+Clicks Watch / play buttons and confirms the Vimeo embed appears with the correct video (4 tests, Home + Learn).
 
-**Typical failure:** Vimeo ID changed, block removed, or JavaScript error on the page.
+Three more tests check video-quote's (Documentary Video block) language-picker behavior specifically, on Learn:
+- Selecting Spanish *before* pressing play actually plays with Spanish captions/audio, instead of silently falling back to English with no feedback.
+- The Watch button's text never changes when a different language pill is clicked (it always shows one static, site-language string).
+- Switching languages *while already playing* swaps the track live — the same Vimeo embed stays loaded, it never reloads into a different video.
+
+These three **skip** until a video-quote block on Learn has 2 or more languages checked in its "Available Languages" panel (only Spanish is checkable for real right now — Hindi isn't set up in TranslatePress on this site yet). Skipping is not a failure; it just means there's nothing to exercise yet.
+
+**Typical failure:** Vimeo ID changed, block removed, JavaScript error on the page, or (for the three language-picker tests) a regression in the live subtitle/audio-track-switching behavior.
 
 ---
 
@@ -353,7 +360,7 @@ From `app/public/wp-content`:
 ```bash
 pnpm install --frozen-lockfile
 pnpm exec playwright install chromium   # first time only
-pnpm test                             # all 121 tests
+pnpm test                             # all 124 tests
 pnpm exec playwright test --list      # print full list and count
 ```
 
