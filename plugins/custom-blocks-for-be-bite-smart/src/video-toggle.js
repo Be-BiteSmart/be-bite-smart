@@ -41,6 +41,56 @@ const vimeoWarmUpObserver = new IntersectionObserver(
   { rootMargin: "200px" },
 );
 
+/* ── Vimeo Player SDK (lazy) ──
+   Only quote blocks need live in-place subtitle/audio switching, so the
+   SDK is loaded from Vimeo's CDN the first time one of those actually gets
+   played — not proactively for every page that includes this script.
+   Loading from the CDN (rather than a bundled npm version) also guarantees
+   newer SDK methods like selectAudioTrack() are available. */
+let vimeoSdkPromise = null;
+
+function ensureVimeoSdk() {
+  if (vimeoSdkPromise) return vimeoSdkPromise;
+
+  vimeoSdkPromise = new Promise((resolve, reject) => {
+    if (window.Vimeo?.Player) {
+      resolve(window.Vimeo);
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://player.vimeo.com/api/player.js";
+    script.async = true;
+    script.onload = () => resolve(window.Vimeo);
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+
+  return vimeoSdkPromise;
+}
+
+/* Live-swap the subtitle/audio track on an already-playing quote-block
+   embed, instead of reloading the video. English has no alternate track
+   to enable — just clear captions and revert to the original audio. */
+function switchLiveTrack(player, langCode) {
+  if (langCode === "en") {
+    player.disableTextTrack().catch(() => {});
+    player.selectDefaultAudioTrack().catch((err) => {
+      console.warn("Could not reset to default audio track", err);
+    });
+    return;
+  }
+
+  player.enableTextTrack(langCode).catch((err) => {
+    console.warn(`No ${langCode} subtitle track on this video`, err);
+    // Later: surface a visitor-facing "track unavailable" message here.
+  });
+
+  player.selectAudioTrack(langCode).catch((err) => {
+    console.warn(`No ${langCode} audio track on this video`, err);
+    // Later: same as above.
+  });
+}
+
 function buildVimeoPlayerSrc(vimeoId, lang) {
   const params = new URLSearchParams({ autoplay: "1" });
   const code = normalizeLangCode(lang);
@@ -84,6 +134,19 @@ function defaultEpisodeLang(block, videos, siteLang) {
   }
 
   return codes[0];
+}
+
+/* Quote blocks don't have a videos map — the picker's own rendered
+   segments (built server-side from data-supported-langs) are the source
+   of truth for which languages this particular video actually supports. */
+function defaultQuoteLang(langSegments, siteLang) {
+  const codes = Array.from(langSegments).map((el) => el.dataset.lang);
+  if (!codes.length) {
+    return "en"; // no picker rendered => only English is supported
+  }
+
+  const normalizedSite = normalizeLangCode(siteLang);
+  return codes.includes(normalizedSite) ? normalizedSite : "en";
 }
 
 function updatePickerIndex(picker, segments, activeLang) {
@@ -130,10 +193,12 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     let currentLang = isQuoteBlock
-      ? siteLang
+      ? defaultQuoteLang(langSegments, siteLang)
       : defaultEpisodeLang(block, videos, siteLang);
     let playingLang = null;
     let isPlaying = false;
+    let player = null; // Vimeo.Player instance, quote blocks only
+    let pendingLangSwitch = null; // language picked before the SDK/player was ready
 
     // Warm up Vimeo's connection once this thumbnail is close to view —
     // one shared observer/flag handles every block on the page.
@@ -156,7 +221,7 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     }
 
-    if (!isQuoteBlock && langSegments.length) {
+    if (langSegments.length) {
       setEpisodeLanguage(currentLang);
     }
 
@@ -182,6 +247,21 @@ document.addEventListener("DOMContentLoaded", function () {
 
       if (!isQuoteBlock) {
         playingLang = currentLang;
+      } else if (langSegments.length) {
+        // Quote blocks with 2+ supported languages: wrap the iframe in a
+        // Vimeo.Player so later language clicks can swap tracks live
+        // instead of reloading.
+        ensureVimeoSdk()
+          .then((Vimeo) => {
+            player = new Vimeo.Player(iframe);
+            if (pendingLangSwitch) {
+              switchLiveTrack(player, pendingLangSwitch);
+              pendingLangSwitch = null;
+            }
+          })
+          .catch((err) => {
+            console.warn("Could not load the Vimeo Player SDK", err);
+          });
       }
     }
 
@@ -189,7 +269,19 @@ document.addEventListener("DOMContentLoaded", function () {
       const target = normalizeLangCode(lang);
 
       if (isQuoteBlock) {
-        setEpisodeLanguage(target);
+        setEpisodeLanguage(target); // active-class + button-text, no reload
+
+        if (isPlaying) {
+          if (player) {
+            switchLiveTrack(player, target);
+          } else {
+            // SDK/player instance isn't ready yet — apply once it is.
+            pendingLangSwitch = target;
+          }
+        }
+        // Not playing yet: currentLang is already updated, so the eventual
+        // loadVideo() -> buildVimeoPlayerSrc() call bakes in the right
+        // initial texttrack/audiotrack params.
         return;
       }
 

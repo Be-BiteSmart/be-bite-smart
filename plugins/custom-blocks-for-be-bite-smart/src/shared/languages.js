@@ -144,3 +144,8 @@ export function resolveVideosForBlock(block) {
   }
   return legacyVimeoIdsFromDataset(block.dataset);
 }
+
+/** Guarantee defaultCode (e.g. "en") is always present in a language-code list. */
+export function ensureDefaultLanguage(codes, defaultCode = "en") {
+  return codes.includes(defaultCode) ? codes : [defaultCode, ...codes];
+}

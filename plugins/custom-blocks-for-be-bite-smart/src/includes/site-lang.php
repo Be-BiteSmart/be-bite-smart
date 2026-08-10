@@ -141,6 +141,81 @@ function bitesmart_episode_vimeo_ids_from_attrs( $attrs ) {
 }
 
 /**
+ * Normalize a video-quote block's availableLanguages attribute: keep only
+ * known site-language codes, force 'en' present (it's always available),
+ * and order the result to match bitesmart_site_languages().
+ *
+ * @param mixed $raw Raw availableLanguages attribute value.
+ * @return array<int, string>
+ */
+function bitesmart_normalize_available_languages( $raw ) {
+    $raw   = is_array( $raw ) ? $raw : array();
+    $known = array_map(
+        function ( $lang ) {
+            return $lang['code'];
+        },
+        bitesmart_site_languages()
+    );
+
+    $codes = array_values( array_intersect( $known, $raw ) );
+    if ( ! in_array( 'en', $codes, true ) ) {
+        array_unshift( $codes, 'en' );
+    }
+
+    // Reorder to match bitesmart_site_languages() order.
+    return array_values( array_intersect( $known, $codes ) );
+}
+
+/**
+ * Build the .episode-lang-picker / .lang-segments / .lang-segment[data-lang]
+ * markup for a set of language codes. This is the PHP-side equivalent of
+ * renderLanguagePicker() in episode-helpers.js — used by video-quote, which
+ * is a dynamic (PHP-rendered) block with no JS save path of its own. Emits
+ * the exact same classes/structure so video-toggle.js's generic
+ * getLangPicker()/getLangSegments() helpers work unmodified.
+ *
+ * @param array<int, string> $codes       Language codes to show, in display order.
+ * @param string             $active_code Which code starts active.
+ * @return string HTML, or '' if fewer than 2 languages (matches episode-card behavior).
+ */
+function bitesmart_render_lang_picker_html( array $codes, $active_code = 'en' ) {
+    if ( count( $codes ) <= 1 ) {
+        return '';
+    }
+
+    $languages    = bitesmart_site_languages();
+    $found_index  = array_search( $active_code, $codes, true );
+    $active_index = false === $found_index ? 0 : $found_index;
+
+    ob_start();
+    ?>
+    <div class="episode-lang-picker" data-translate="no"
+         style="--lang-count: <?php echo (int) count( $codes ); ?>; --lang-index: <?php echo (int) $active_index; ?>;">
+        <div class="lang-segment-slider"></div>
+        <div class="lang-segments">
+            <?php foreach ( $codes as $code ) :
+                $meta  = null;
+                foreach ( $languages as $lang ) {
+                    if ( $lang['code'] === $code ) {
+                        $meta = $lang;
+                        break;
+                    }
+                }
+                $label = $meta['label'] ?? strtoupper( $code );
+                ?>
+                <button type="button"
+                        class="lang-segment<?php echo $code === $active_code ? ' active' : ''; ?>"
+                        data-lang="<?php echo esc_attr( $code ); ?>">
+                    <?php echo esc_html( $label ); ?>
+                </button>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <?php
+    return ob_get_clean();
+}
+
+/**
  * Watch-button labels keyed by language code for episode cards.
  *
  * @return array<string, string>

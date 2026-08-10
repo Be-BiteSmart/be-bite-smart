@@ -11,11 +11,7 @@ function render_video_quote_block( $attributes ) {
     $thumbnail_id = $attributes['thumbnailId'] ?? null;
 
     // ── Vimeo ID ──────────────────────────────────────────────────────────
-    $vimeo_id = '';
-    if ( $vimeo_url ) {
-        preg_match( '/vimeo\.com\/(\d+)/', $vimeo_url, $matches );
-        $vimeo_id = $matches[1] ?? '';
-    }
+    $vimeo_id = bitesmart_vimeo_id_from_url( $vimeo_url ) ?? '';
 
     // ── Thumbnail ─────────────────────────────────────────────────────────
     $thumbnail = '';
@@ -37,13 +33,16 @@ function render_video_quote_block( $attributes ) {
         );
     }
 
-    $site_lang = bitesmart_site_lang_code();
+    $site_lang            = bitesmart_site_lang_code();
+    $available_languages  = bitesmart_normalize_available_languages( $attributes['availableLanguages'] ?? array( 'en' ) );
+    $active_lang          = in_array( $site_lang, $available_languages, true ) ? $site_lang : 'en';
 
     ob_start(); ?>
     <article
         class="wp-block-custom-video-quote video-quote-block"
         data-vimeo-id="<?php echo esc_attr( $vimeo_id ); ?>"
         data-site-lang="<?php echo esc_attr( $site_lang ); ?>"
+        data-supported-langs="<?php echo esc_attr( wp_json_encode( $available_languages ) ); ?>"
     >
 
         <?php if ( $title ) : ?>
@@ -70,9 +69,18 @@ function render_video_quote_block( $attributes ) {
 
             <div class="video-quote-text-side">
 
-                <button class="video-quote-watch-button block-toggle-btn" type="button">
-                    <span>Watch the Mini-Documentary</span>
-                </button>
+                <?php if ( count( $available_languages ) > 1 ) : ?>
+                    <div class="video-quote-controls">
+                        <?php echo bitesmart_render_lang_picker_html( $available_languages, $active_lang ); ?>
+                        <button class="video-quote-watch-button block-toggle-btn" type="button">
+                            <span>Watch the Mini-Documentary</span>
+                        </button>
+                    </div>
+                <?php else : ?>
+                    <button class="video-quote-watch-button block-toggle-btn" type="button">
+                        <span>Watch the Mini-Documentary</span>
+                    </button>
+                <?php endif; ?>
 
                 <?php if ( $quote ) : ?>
                     <blockquote class="video-quote-blockquote">
