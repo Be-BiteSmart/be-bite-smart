@@ -25,14 +25,16 @@ function warmUpVimeoOnce() {
   if (vimeoWarmed) return;
   vimeoWarmed = true;
 
-  ["https://player.vimeo.com", "https://i.vimeocdn.com", "https://f.vimeocdn.com"].forEach(
-    (url) => {
-      const link = document.createElement("link");
-      link.rel = "preconnect";
-      link.href = url;
-      document.head.appendChild(link);
-    },
-  );
+  [
+    "https://player.vimeo.com",
+    "https://i.vimeocdn.com",
+    "https://f.vimeocdn.com",
+  ].forEach((url) => {
+    const link = document.createElement("link");
+    link.rel = "preconnect";
+    link.href = url;
+    document.head.appendChild(link);
+  });
 }
 
 const vimeoWarmUpObserver = new IntersectionObserver(
@@ -98,7 +100,9 @@ function switchLiveTrack(player, langCode) {
    same way they translate the rest of the block's copy. JS only picks which
    template applies and substitutes the {language} placeholder. */
 function langName(code) {
-  const el = document.querySelector(`.video-quote-lang-name[data-lang="${code}"]`);
+  const el = document.querySelector(
+    `.video-quote-lang-name[data-lang="${code}"]`,
+  );
   if (el) return el.textContent;
   // Fallback if the footer templates aren't on the page for some reason.
   return getSiteLanguages().find((lang) => lang.code === code)?.name ?? code;
@@ -106,8 +110,9 @@ function langName(code) {
 
 function getTrackNoteTemplate(kind) {
   return (
-    document.querySelector(`.video-quote-track-note-template[data-kind="${kind}"]`)
-      ?.textContent ?? null
+    document.querySelector(
+      `.video-quote-track-note-template[data-kind="${kind}"]`,
+    )?.textContent ?? null
   );
 }
 
@@ -123,11 +128,19 @@ function clearTrackNote(block) {
   }
 }
 
-function showTrackNote(block, targetLang, { audioOk, captionsOk, totalFailure }) {
+function showTrackNote(
+  block,
+  targetLang,
+  { audioOk, captionsOk, totalFailure },
+) {
   const el = getTrackNoteEl(block);
   if (!el) return;
 
-  const kind = totalFailure ? "total" : !audioOk ? "audio-missing" : "captions-missing";
+  const kind = totalFailure
+    ? "total"
+    : !audioOk
+      ? "audio-missing"
+      : "captions-missing";
   const name = langName(targetLang);
   const template = getTrackNoteTemplate(kind);
 
@@ -135,12 +148,14 @@ function showTrackNote(block, targetLang, { audioOk, captionsOk, totalFailure })
   // should always be present once bitesmart_video_quote_needs_track_note_templates()
   // has run for this page.
   const fallback = {
-    total: `${name} isn't available for this video yet — staying on the current language.`,
+    total: `${name} isn't available for this video yet.`,
     "audio-missing": `${name} captions are on, but dubbed audio isn't available yet for this video.`,
     "captions-missing": `${name} audio is on, but captions aren't available yet for this video.`,
   }[kind];
 
-  el.textContent = template ? applyLanguagePlaceholder(template, name) : fallback;
+  el.textContent = template
+    ? applyLanguagePlaceholder(template, name)
+    : fallback;
   el.classList.add("is-visible");
 }
 
@@ -269,7 +284,10 @@ document.addEventListener("DOMContentLoaded", function () {
       currentLang = normalizeLangCode(lang);
 
       langSegments.forEach((segment) => {
-        segment.classList.toggle("active", segment.dataset.lang === currentLang);
+        segment.classList.toggle(
+          "active",
+          segment.dataset.lang === currentLang,
+        );
       });
 
       updatePickerIndex(langPicker, langSegments, currentLang);
@@ -327,14 +345,24 @@ document.addEventListener("DOMContentLoaded", function () {
             // that isn't actually available" and correct the UI to match
             // what's really playing.
             const attemptedLang = currentLang;
-            switchLiveTrack(player, attemptedLang).then(({ audioOk, captionsOk }) => {
-              if (!audioOk && !captionsOk) {
-                setEpisodeLanguage("en");
-                showTrackNote(block, attemptedLang, { audioOk, captionsOk, totalFailure: true });
-              } else if (!audioOk || !captionsOk) {
-                showTrackNote(block, attemptedLang, { audioOk, captionsOk, totalFailure: false });
-              }
-            });
+            switchLiveTrack(player, attemptedLang).then(
+              ({ audioOk, captionsOk }) => {
+                if (!audioOk && !captionsOk) {
+                  setEpisodeLanguage("en");
+                  showTrackNote(block, attemptedLang, {
+                    audioOk,
+                    captionsOk,
+                    totalFailure: true,
+                  });
+                } else if (!audioOk || !captionsOk) {
+                  showTrackNote(block, attemptedLang, {
+                    audioOk,
+                    captionsOk,
+                    totalFailure: false,
+                  });
+                }
+              },
+            );
           })
           .catch((err) => {
             console.warn("Could not load the Vimeo Player SDK", err);
@@ -355,11 +383,19 @@ document.addEventListener("DOMContentLoaded", function () {
             if (!audioOk && !captionsOk) {
               // Total failure: roll back the UI to what's actually still playing.
               setEpisodeLanguage(previousLang);
-              showTrackNote(block, target, { audioOk, captionsOk, totalFailure: true });
+              showTrackNote(block, target, {
+                audioOk,
+                captionsOk,
+                totalFailure: true,
+              });
             } else if (!audioOk || !captionsOk) {
               // Partial success: a real switch happened, so stay on the new
               // language, but let the visitor know what's missing.
-              showTrackNote(block, target, { audioOk, captionsOk, totalFailure: false });
+              showTrackNote(block, target, {
+                audioOk,
+                captionsOk,
+                totalFailure: false,
+              });
             }
           });
         }
@@ -381,15 +417,17 @@ document.addEventListener("DOMContentLoaded", function () {
         return;
       }
 
-      confirmLanguageRestart(playingLang, target, triggerEl).then((confirmed) => {
-        if (!confirmed) {
-          setEpisodeLanguage(playingLang);
-          return;
-        }
+      confirmLanguageRestart(playingLang, target, triggerEl).then(
+        (confirmed) => {
+          if (!confirmed) {
+            setEpisodeLanguage(playingLang);
+            return;
+          }
 
-        setEpisodeLanguage(target);
-        loadVideo();
-      });
+          setEpisodeLanguage(target);
+          loadVideo();
+        },
+      );
     }
 
     if (langSegments.length) {
