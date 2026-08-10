@@ -420,10 +420,17 @@ document.addEventListener("DOMContentLoaded", function () {
       });
     }
 
+    // These three are all "start playback" triggers — once a video is
+    // already playing, clicking any of them again should do nothing rather
+    // than tear down and rebuild the iframe from scratch (loadVideo() always
+    // replaces videoPlayer's contents unconditionally). This is separate
+    // from the confirmed-language-restart path in handleLangSegmentClick(),
+    // which calls loadVideo() directly and deliberately still reloads.
     if (playButton) {
       playButton.addEventListener("click", function (e) {
         e.preventDefault();
         e.stopPropagation();
+        if (isPlaying) return;
         loadVideo();
       });
     }
@@ -431,6 +438,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (watchButton) {
       watchButton.addEventListener("click", function (e) {
         e.preventDefault();
+        if (isPlaying) return;
         loadVideo();
       });
     }
@@ -438,6 +446,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (thumbnail) {
       thumbnail.addEventListener("click", function (e) {
         e.preventDefault();
+        if (isPlaying) return;
         loadVideo();
       });
     }
