@@ -17,7 +17,6 @@ import {
   renderLanguagePicker,
   videosFromAttributes,
 } from "./episode-helpers";
-import { LangRestartDialogPanel } from "./lang-restart-dialog-panel";
 
 const EPISODE_ATTRIBUTES = {
   episodeNumber: { type: "string", default: "" },
@@ -311,10 +310,35 @@ function EpisodeCardEdit({ attributes, setAttributes }) {
       ),
     ),
 
+    // Language Switch Dialog: purely informational — the actual wording is
+    // edited site-wide on Settings > Video Languages, not per block. This
+    // panel exists so an admin who remembers editing it here (or is new to
+    // WordPress) knows where it moved to.
     wp.element.createElement(
       InspectorControls,
       null,
-      wp.element.createElement(LangRestartDialogPanel, null),
+      wp.element.createElement(
+        PanelBody,
+        { title: __("Language Switch Dialog", "custom-blocks"), initialOpen: false },
+        wp.element.createElement(
+          "p",
+          { className: "episode-field-hint" },
+          __(
+            "The confirmation dialog shown when a visitor switches language mid-video applies site-wide, not just to this block. To change its wording, go to ",
+            "custom-blocks",
+          ),
+          wp.element.createElement(
+            "a",
+            {
+              href: "options-general.php?page=bitesmart-video-languages",
+              target: "_blank",
+              rel: "noopener noreferrer",
+            },
+            __("Settings → Video Languages", "custom-blocks"),
+          ),
+          ".",
+        ),
+      ),
     ),
 
     wp.element.createElement(

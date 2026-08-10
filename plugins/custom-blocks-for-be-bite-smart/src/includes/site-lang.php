@@ -216,6 +216,38 @@ function bitesmart_normalize_available_languages( $raw ) {
 }
 
 /**
+ * Registers a wp_footer hook to print the shared, TranslatePress-
+ * translatable language-name templates (.video-quote-lang-name[data-lang])
+ * exactly once per page. Shared by video-quote's track-note messages and
+ * episode-card's language-restart dialog — both need "what is language X
+ * called" without hardcoding a per-language name dictionary.
+ */
+function bitesmart_needs_video_lang_name_templates() {
+    static $needed = false;
+    if ( $needed ) {
+        return;
+    }
+    $needed = true;
+    add_action( 'wp_footer', 'bitesmart_render_video_lang_name_templates' );
+}
+
+/**
+ * display:none is inline (not a stylesheet class) on every template block
+ * in this file so they're hidden from assistive tech and sighted users
+ * from the very first byte of HTML, with no dependency on a separate CSS
+ * file loading first.
+ */
+function bitesmart_render_video_lang_name_templates() {
+    ?>
+    <div class="video-lang-name-templates" aria-hidden="true" style="display:none;">
+        <?php foreach ( bitesmart_site_languages() as $lang ) : ?>
+            <span class="video-quote-lang-name" data-lang="<?php echo esc_attr( $lang['code'] ); ?>"><?php echo esc_html( $lang['name'] ); ?></span>
+        <?php endforeach; ?>
+    </div>
+    <?php
+}
+
+/**
  * Registers a wp_footer hook to print the video-quote track-note templates,
  * exactly once, only on pages that actually render a multi-language
  * video-quote block. Static guard prevents double-registration when
@@ -227,6 +259,7 @@ function bitesmart_video_quote_needs_track_note_templates() {
         return;
     }
     $needed = true;
+    bitesmart_needs_video_lang_name_templates();
     add_action( 'wp_footer', 'bitesmart_render_video_quote_track_note_templates' );
 }
 
@@ -237,21 +270,92 @@ function bitesmart_video_quote_needs_track_note_templates() {
  * String Translation interface picks them up the same way it already
  * handles the rest of this block's static copy — dynamic JS-built strings
  * aren't reliably translatable by TranslatePress, but static HTML is.
- *
- * display:none is inline (not a stylesheet class) so this is hidden from
- * assistive tech and sighted users from the very first byte of HTML, with
- * no dependency on a separate CSS file loading first.
  */
 function bitesmart_render_video_quote_track_note_templates() {
     ?>
     <div class="video-quote-track-note-templates" aria-hidden="true" style="display:none;">
-        <?php foreach ( bitesmart_site_languages() as $lang ) : ?>
-            <span class="video-quote-lang-name" data-lang="<?php echo esc_attr( $lang['code'] ); ?>"><?php echo esc_html( $lang['name'] ); ?></span>
-        <?php endforeach; ?>
-
         <span class="video-quote-track-note-template" data-kind="total"><?php esc_html_e( '{language} isn\'t available for this video yet.', 'custom-blocks' ); ?></span>
         <span class="video-quote-track-note-template" data-kind="audio-missing"><?php esc_html_e( '{language} captions are on, but dubbed audio isn\'t available yet for this video.', 'custom-blocks' ); ?></span>
         <span class="video-quote-track-note-template" data-kind="captions-missing"><?php esc_html_e( '{language} audio is on, but captions aren\'t available yet for this video.', 'custom-blocks' ); ?></span>
+    </div>
+    <?php
+}
+
+/**
+ * Registers a wp_footer hook to print the episode-card language-restart
+ * confirmation dialog's wording, exactly once, only on pages that render a
+ * multi-language episode-card block.
+ */
+function bitesmart_episode_needs_lang_restart_templates() {
+    static $needed = false;
+    if ( $needed ) {
+        return;
+    }
+    $needed = true;
+    bitesmart_needs_video_lang_name_templates();
+    add_action( 'wp_footer', 'bitesmart_render_lang_restart_dialog_templates' );
+}
+
+/**
+ * The dialog's base English wording. Also what Settings > Video Languages
+ * shows as each field's placeholder, so an admin editing there can see
+ * exactly what they're overriding.
+ *
+ * @return array{title: string, message: string, confirm: string, cancel: string}
+ */
+function bitesmart_lang_restart_dialog_defaults() {
+    return array(
+        'title'   => __( 'Change language?', 'custom-blocks' ),
+        'message' => __( 'The video will restart in {language}.', 'custom-blocks' ),
+        'confirm' => __( 'Switch to {language}', 'custom-blocks' ),
+        'cancel'  => __( 'Cancel', 'custom-blocks' ),
+    );
+}
+
+/**
+ * Merge the admin-entered overrides (Settings > Video Languages, option
+ * bitesmart_lang_restart_dialog_text) over the defaults — any field left
+ * blank on that page just keeps the default wording.
+ *
+ * @return array{title: string, message: string, confirm: string, cancel: string}
+ */
+function bitesmart_lang_restart_dialog_copy() {
+    $defaults  = bitesmart_lang_restart_dialog_defaults();
+    $overrides = get_option( 'bitesmart_lang_restart_dialog_text', array() );
+
+    $copy = array();
+    foreach ( $defaults as $key => $default ) {
+        $copy[ $key ] = ! empty( $overrides[ $key ] ) ? $overrides[ $key ] : $default;
+    }
+
+    return $copy;
+}
+
+/**
+ * Visually hidden, TranslatePress-translatable source of truth for the
+ * episode-card language-restart confirmation dialog (see
+ * video-lang-restart-modal.js). Always shows in the page's own site
+ * language (translated normally by TranslatePress) rather than whichever
+ * language happened to be playing — that's what makes this translatable at
+ * all, since TranslatePress translates per the visitor's chosen site
+ * language and has no way to show a fixed, language-locked variant
+ * independent of that.
+ *
+ * Wording itself (not its translation) can be overridden on Settings >
+ * Video Languages — the base text stays TranslatePress-translatable either
+ * way, since TP just translates whatever ends up in this rendered HTML,
+ * default or overridden. Changing the base text does mean any existing
+ * translations of the OLD wording become orphaned and need redoing —
+ * inherent to any editable-source-text setup, not specific to this one.
+ */
+function bitesmart_render_lang_restart_dialog_templates() {
+    $copy = bitesmart_lang_restart_dialog_copy();
+    ?>
+    <div class="lang-restart-dialog-templates" aria-hidden="true" style="display:none;">
+        <span class="lang-restart-dialog-title"><?php echo esc_html( $copy['title'] ); ?></span>
+        <span class="lang-restart-dialog-message"><?php echo esc_html( $copy['message'] ); ?></span>
+        <span class="lang-restart-dialog-confirm"><?php echo esc_html( $copy['confirm'] ); ?></span>
+        <span class="lang-restart-dialog-cancel"><?php echo esc_html( $copy['cancel'] ); ?></span>
     </div>
     <?php
 }
@@ -347,6 +451,10 @@ function bitesmart_episode_card_render( $block_content, $block ) {
     $attrs     = $block['attrs'] ?? array();
     $video_ids = bitesmart_episode_vimeo_ids_from_attrs( $attrs );
     $site_lang = bitesmart_site_lang_code();
+
+    if ( count( $video_ids ) > 1 ) {
+        bitesmart_episode_needs_lang_restart_templates();
+    }
 
     $replacements = array(
         'data-site-lang' => esc_attr( $site_lang ),

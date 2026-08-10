@@ -6,7 +6,7 @@
 import {
   applyLanguagePlaceholder,
   detectSiteLangFromDocument,
-  getSiteLanguages,
+  langName,
   normalizeLangCode,
   resolveVideosForBlock,
 } from "./shared/languages";
@@ -97,16 +97,9 @@ function switchLiveTrack(player, langCode) {
    printed once in the page footer (see bitesmart_render_video_quote_track_note_templates()
    in includes/site-lang.php) — never in JS — so admins can translate it the
    same way they translate the rest of the block's copy. JS only picks which
-   template applies and substitutes the {language} placeholder. */
-function langName(code) {
-  const el = document.querySelector(
-    `.video-quote-lang-name[data-lang="${code}"]`,
-  );
-  if (el) return el.textContent;
-  // Fallback if the footer templates aren't on the page for some reason.
-  return getSiteLanguages().find((lang) => lang.code === code)?.name ?? code;
-}
-
+   template applies and substitutes the {language} placeholder (langName()
+   itself now lives in shared/languages.js, shared with the language-restart
+   dialog). */
 function getTrackNoteTemplate(kind) {
   return (
     document.querySelector(
@@ -405,7 +398,7 @@ document.addEventListener("DOMContentLoaded", function () {
         return;
       }
 
-      confirmLanguageRestart(playingLang, target, triggerEl).then(
+      confirmLanguageRestart(target, triggerEl).then(
         (confirmed) => {
           if (!confirmed) {
             setEpisodeLanguage(playingLang);

@@ -143,3 +143,21 @@ export function ensureDefaultLanguage(codes, defaultCode = "en") {
 export function applyLanguagePlaceholder(template, languageName) {
   return String(template ?? "").replace(/\{language\}/gi, languageName);
 }
+
+/**
+ * Human-readable name for a language code. Prefers the hidden,
+ * TranslatePress-translatable .video-quote-lang-name templates printed by
+ * bitesmart_render_video_lang_name_templates() (includes/site-lang.php) —
+ * shared by video-toggle.js's track-note messages and
+ * video-lang-restart-modal.js's dialog — falling back to the (untranslated)
+ * site-languages list if those templates aren't on the page for some reason.
+ */
+export function langName(code) {
+  if (typeof document !== "undefined") {
+    const el = document.querySelector(
+      `.video-quote-lang-name[data-lang="${code}"]`,
+    );
+    if (el) return el.textContent;
+  }
+  return getSiteLanguages().find((lang) => lang.code === code)?.name ?? code;
+}

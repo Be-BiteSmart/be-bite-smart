@@ -9,7 +9,6 @@
 
 // Shared helpers (TranslatePress site language, etc.)
 require_once __DIR__ . '/src/includes/site-lang.php';
-require_once __DIR__ . '/src/includes/lang-restart-dialog.php';
 require_once __DIR__ . '/src/includes/video-language-settings.php';
 
 // -----------------------------
@@ -189,11 +188,6 @@ function custom_blocks_scripts() {
             $asset['version']
         );
         wp_enqueue_script( 'video-toggle', plugins_url( 'build/video-toggle.js', __FILE__ ), array(), $asset['version'], true );
-        wp_localize_script(
-            'video-toggle',
-            'bitesmartLangRestartDialog',
-            bitesmart_get_lang_restart_dialog()
-        );
     }
  
  
