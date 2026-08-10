@@ -27,6 +27,7 @@ test.describe("Documentary video (video-quote block)", () => {
       await assertVimeoPlayerLoads(page, block, trigger, {
         vimeoId,
         lang: siteLang,
+        forceCaptions: true,
       });
 
       await testInfo.attach(`${path} documentary iframe src`, {
@@ -49,6 +50,7 @@ test.describe("Documentary video (video-quote block)", () => {
       await assertVimeoPlayerLoads(page, block, trigger, {
         vimeoId,
         lang: siteLang,
+        forceCaptions: true,
       });
     });
   }
