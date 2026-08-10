@@ -12,10 +12,12 @@ import {
   PanelBody,
   TextControl,
   CheckboxControl,
+  Notice,
   Button,
 } from "@wordpress/components";
-import { __ } from "@wordpress/i18n";
+import { __, sprintf } from "@wordpress/i18n";
 import { ensureDefaultLanguage, getSiteLanguages } from "../shared/languages";
+import { useVimeoTrackCheck } from "../shared/vimeo-track-check";
 
 registerBlockType("custom/video-quote", {
   title: __("Documentary Video", "custom-blocks"),
@@ -38,10 +40,11 @@ registerBlockType("custom/video-quote", {
     availableLanguages: { type: "array", default: ["en"] },
   },
 
-  edit: ({ attributes, setAttributes }) => {
+  edit: ({ attributes, setAttributes, isSelected }) => {
     const blockProps = useBlockProps();
     const languages = getSiteLanguages();
     const availableLanguages = attributes.availableLanguages || ["en"];
+    const trackCheck = useVimeoTrackCheck(attributes.vimeoUrl, isSelected);
 
     const toggleLanguage = (code, checked) => {
       if (code === "en") return; // English is always available, locked on
@@ -54,6 +57,15 @@ registerBlockType("custom/video-quote", {
     return wp.element.createElement(
       "div",
       blockProps,
+
+      // Hidden offscreen Vimeo embed used only to check which caption/audio
+      // tracks this video actually has on Vimeo — never visible, only
+      // mounted while the block is selected (see useVimeoTrackCheck).
+      wp.element.createElement("div", {
+        ref: trackCheck.containerRef,
+        style: trackCheck.offscreenStyle,
+        "aria-hidden": "true",
+      }),
 
       // Inspector Controls
       wp.element.createElement(
@@ -147,19 +159,75 @@ registerBlockType("custom/video-quote", {
             "Check off which languages this video has subtitles and dubbed audio for on Vimeo.",
             "custom-blocks",
           ),
-          languages.map((lang) =>
-            wp.element.createElement(CheckboxControl, {
-              key: lang.code,
-              label: lang.name,
-              checked: availableLanguages.includes(lang.code),
-              disabled: lang.code === "en",
-              help:
-                lang.code === "en"
-                  ? __("English is always available.", "custom-blocks")
-                  : undefined,
-              onChange: (checked) => toggleLanguage(lang.code, checked),
-            }),
-          ),
+
+          trackCheck.status === "error" &&
+            wp.element.createElement(
+              Notice,
+              { status: "warning", isDismissible: false },
+              __(
+                "Couldn't check Vimeo for available languages.",
+                "custom-blocks",
+              ),
+            ),
+
+          languages.map((lang) => {
+            const isChecked = availableLanguages.includes(lang.code);
+            const skipValidation =
+              lang.code === "en" || trackCheck.status !== "ready";
+
+            let helpText =
+              lang.code === "en"
+                ? __("English is always available.", "custom-blocks")
+                : undefined;
+            let warning = null;
+
+            if (!skipValidation) {
+              const hasCaptions = trackCheck.captionLangs.includes(lang.code);
+              const hasAudio = trackCheck.audioLangs.includes(lang.code);
+
+              if (hasCaptions && hasAudio) {
+                helpText = __("✓ captions + audio on Vimeo", "custom-blocks");
+              } else if (hasCaptions) {
+                helpText = __(
+                  "⚠ captions only — no dubbed audio yet",
+                  "custom-blocks",
+                );
+              } else {
+                helpText = __("⚠ not found on Vimeo yet", "custom-blocks");
+              }
+
+              if (isChecked && !hasCaptions && !hasAudio) {
+                warning = wp.element.createElement(
+                  Notice,
+                  {
+                    status: "warning",
+                    isDismissible: false,
+                    key: `${lang.code}-warning`,
+                  },
+                  sprintf(
+                    __(
+                      '"%s" is checked, but Vimeo has no captions or audio track for it yet — visitors won\'t be able to switch to it.',
+                      "custom-blocks",
+                    ),
+                    lang.name,
+                  ),
+                );
+              }
+            }
+
+            return wp.element.createElement(
+              wp.element.Fragment,
+              { key: lang.code },
+              wp.element.createElement(CheckboxControl, {
+                label: lang.name,
+                checked: isChecked,
+                disabled: lang.code === "en",
+                help: helpText,
+                onChange: (checked) => toggleLanguage(lang.code, checked),
+              }),
+              warning,
+            );
+          }),
         ),
       ),
 

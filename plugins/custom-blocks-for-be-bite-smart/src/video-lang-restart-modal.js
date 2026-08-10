@@ -5,7 +5,7 @@
  */
 
 import "./video-lang-restart-modal.css";
-import { normalizeLangCode } from "./shared/languages";
+import { applyLanguagePlaceholder, normalizeLangCode } from "./shared/languages";
 
 const FALLBACK_DIALOG = {
   en: {
@@ -40,10 +40,6 @@ function getDialogConfig() {
     return window.bitesmartLangRestartDialog;
   }
   return FALLBACK_DIALOG;
-}
-
-function applyLanguagePlaceholder(template, languageName) {
-  return String(template ?? "").replace(/\{language\}/gi, languageName);
 }
 
 function buildDialogCopy(playingLang, targetLang) {

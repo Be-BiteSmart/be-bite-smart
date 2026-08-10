@@ -149,3 +149,8 @@ export function resolveVideosForBlock(block) {
 export function ensureDefaultLanguage(codes, defaultCode = "en") {
   return codes.includes(defaultCode) ? codes : [defaultCode, ...codes];
 }
+
+/** Replace {language} in a translated template string with a language name. */
+export function applyLanguagePlaceholder(template, languageName) {
+  return String(template ?? "").replace(/\{language\}/gi, languageName);
+}

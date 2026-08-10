@@ -167,6 +167,47 @@ function bitesmart_normalize_available_languages( $raw ) {
 }
 
 /**
+ * Registers a wp_footer hook to print the video-quote track-note templates,
+ * exactly once, only on pages that actually render a multi-language
+ * video-quote block. Static guard prevents double-registration when
+ * multiple video-quote blocks are on the same page.
+ */
+function bitesmart_video_quote_needs_track_note_templates() {
+    static $needed = false;
+    if ( $needed ) {
+        return;
+    }
+    $needed = true;
+    add_action( 'wp_footer', 'bitesmart_render_video_quote_track_note_templates' );
+}
+
+/**
+ * Visually hidden, TranslatePress-translatable source of truth for the
+ * video-quote live-track-switch note (see switchLiveTrack()/showTrackNote()
+ * in video-toggle.js). Real gettext calls (esc_html_e) so TranslatePress's
+ * String Translation interface picks them up the same way it already
+ * handles the rest of this block's static copy — dynamic JS-built strings
+ * aren't reliably translatable by TranslatePress, but static HTML is.
+ *
+ * display:none is inline (not a stylesheet class) so this is hidden from
+ * assistive tech and sighted users from the very first byte of HTML, with
+ * no dependency on a separate CSS file loading first.
+ */
+function bitesmart_render_video_quote_track_note_templates() {
+    ?>
+    <div class="video-quote-track-note-templates" aria-hidden="true" style="display:none;">
+        <?php foreach ( bitesmart_site_languages() as $lang ) : ?>
+            <span class="video-quote-lang-name" data-lang="<?php echo esc_attr( $lang['code'] ); ?>"><?php echo esc_html( $lang['name'] ); ?></span>
+        <?php endforeach; ?>
+
+        <span class="video-quote-track-note-template" data-kind="total"><?php esc_html_e( '{language} isn\'t available for this video yet — staying on the current language.', 'custom-blocks' ); ?></span>
+        <span class="video-quote-track-note-template" data-kind="audio-missing"><?php esc_html_e( '{language} captions are on, but dubbed audio isn\'t available yet for this video.', 'custom-blocks' ); ?></span>
+        <span class="video-quote-track-note-template" data-kind="captions-missing"><?php esc_html_e( '{language} audio is on, but captions aren\'t available yet for this video.', 'custom-blocks' ); ?></span>
+    </div>
+    <?php
+}
+
+/**
  * Build the .episode-lang-picker / .lang-segments / .lang-segment[data-lang]
  * markup for a set of language codes. This is the PHP-side equivalent of
  * renderLanguagePicker() in episode-helpers.js — used by video-quote, which

@@ -102,6 +102,22 @@
   margin-bottom: 0;
 }
 
+/* ── Track-unavailable note ──
+   Always present in the DOM (aria-live="polite"); only text/opacity change. */
+.video-quote-track-note {
+  min-height: 1.2em; /* avoids layout jump when text appears/disappears */
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--wp--preset--color--accent-1, #b45309);
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.video-quote-track-note.is-visible {
+  opacity: 1;
+}
+
 /* ── Watch button ── */
 .video-quote-watch-button {
   margin-top: 0.5rem !important;

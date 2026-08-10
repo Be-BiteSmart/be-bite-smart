@@ -70,8 +70,10 @@ function render_video_quote_block( $attributes ) {
             <div class="video-quote-text-side">
 
                 <?php if ( count( $available_languages ) > 1 ) : ?>
+                    <?php bitesmart_video_quote_needs_track_note_templates(); ?>
                     <div class="video-quote-controls">
                         <?php echo bitesmart_render_lang_picker_html( $available_languages, $active_lang ); ?>
+                        <p class="video-quote-track-note" role="status" aria-live="polite"></p>
                         <button class="video-quote-watch-button block-toggle-btn" type="button">
                             <span>Watch the Mini-Documentary</span>
                         </button>
