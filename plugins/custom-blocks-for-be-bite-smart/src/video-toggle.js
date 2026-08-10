@@ -8,7 +8,6 @@ import {
   detectSiteLangFromDocument,
   getSiteLanguages,
   normalizeLangCode,
-  parseJsonDataset,
   resolveVideosForBlock,
 } from "./shared/languages";
 import { ensureVimeoSdk } from "./shared/vimeo-sdk";
@@ -252,7 +251,6 @@ document.addEventListener("DOMContentLoaded", function () {
     const watchButton = block.querySelector(
       ".watch-now-button, .video-quote-watch-button",
     );
-    const buttonText = watchButton?.querySelector(".button-text");
 
     const langSegments = getLangSegments(block);
     const langPicker = getLangPicker(block);
@@ -261,11 +259,6 @@ document.addEventListener("DOMContentLoaded", function () {
       block.dataset.siteLang || detectSiteLangFromDocument(),
     );
     const videos = resolveVideosForBlock(block);
-    const watchLabels = parseJsonDataset(block.dataset.watchLabels, {
-      en: "Watch Now",
-      es: "Ver Ahora",
-      hi: "अभी देखें",
-    });
 
     let currentLang = isQuoteBlock
       ? defaultQuoteLang(langSegments, siteLang)
@@ -291,11 +284,6 @@ document.addEventListener("DOMContentLoaded", function () {
       });
 
       updatePickerIndex(langPicker, langSegments, currentLang);
-
-      if (buttonText) {
-        buttonText.textContent =
-          watchLabels[currentLang] ?? watchLabels.en ?? "Watch Now";
-      }
     }
 
     if (langSegments.length) {
@@ -375,7 +363,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
       if (isQuoteBlock) {
         const previousLang = currentLang;
-        setEpisodeLanguage(target); // optimistic: active-class + button-text, no reload
+        setEpisodeLanguage(target); // optimistic: active-class only, no reload
         clearTrackNote(block); // clear any stale note on every new attempt
 
         if (isPlaying && player) {

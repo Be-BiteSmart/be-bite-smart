@@ -4,21 +4,18 @@ export const DEFAULT_SITE_LANGUAGES = [
     code: "en",
     label: "EN",
     name: "English",
-    watchLabel: "Watch Now",
     analytics: "english",
   },
   {
     code: "es",
     label: "ES",
     name: "Spanish",
-    watchLabel: "Ver Ahora",
     analytics: "spanish",
   },
   {
     code: "hi",
     label: "HI",
     name: "Hindi",
-    watchLabel: "अभी देखें",
     analytics: "hindi",
   },
 ];
@@ -63,14 +60,6 @@ export function vimeoIdsByLang(urlsByLang) {
     }
   });
   return out;
-}
-
-export function watchLabelsMap(languages = getSiteLanguages()) {
-  const labels = {};
-  languages.forEach((lang) => {
-    labels[lang.code] = lang.watchLabel;
-  });
-  return labels;
 }
 
 /** Language codes that have a Vimeo URL, in site language order. */

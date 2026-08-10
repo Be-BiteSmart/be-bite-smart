@@ -1,32 +1,81 @@
 <?php
 
 /**
+ * Strip a full WP/TranslatePress locale (e.g. "es_ES", "hi_IN") down to its
+ * short primary subtag (e.g. "es", "hi") — no validation against a known-
+ * language list. Deliberately separate from bitesmart_normalize_lang_code(),
+ * which validates against bitesmart_site_languages() and would recurse
+ * infinitely if called from inside bitesmart_site_languages() itself.
+ */
+function bitesmart_short_lang_code( $full_code ) {
+    $full_code = strtolower( str_replace( '_', '-', (string) $full_code ) );
+    if ( $full_code === '' ) {
+        return 'en';
+    }
+    return explode( '-', $full_code )[0];
+}
+
+/**
  * Site languages for episode videos, download cards, etc.
  *
- * @return array<int, array{code: string, label: string, name: string, watch_label: string, analytics: string}>
+ * Sourced from TranslatePress's published languages when TP is active
+ * (see trp_get_languages() in translatepress-multilingual/includes/functions.php),
+ * so a new site language automatically becomes available for video content —
+ * no code change needed. The "bitesmart_video_languages" option (managed via
+ * Settings > Video Languages) supplies an optional "label" override only
+ * (the picker's short pill abbreviation) — it's never a gate; every
+ * TP-published language is included regardless of whether it has an
+ * override. Watch-button text is no longer per-language here — it's a
+ * plain static string translated normally by TranslatePress, the same way
+ * as any other on-page copy (see episode-card/index.js, video-quote.php).
+ *
+ * Falls back to a hardcoded en/es/hi set if TranslatePress isn't active, so
+ * the plugin keeps working out of the box.
+ *
+ * @return array<int, array{code: string, label: string, name: string, analytics: string}>
  */
 function bitesmart_site_languages() {
+    if ( function_exists( 'trp_get_languages' ) ) {
+        $overrides = get_option( 'bitesmart_video_languages', array() );
+        $languages = array();
+
+        foreach ( trp_get_languages() as $full_code => $name ) {
+            $short_code = bitesmart_short_lang_code( $full_code );
+            $override   = isset( $overrides[ $short_code ] ) ? $overrides[ $short_code ] : array();
+
+            $languages[] = array(
+                'code'       => $short_code,
+                'label'      => ! empty( $override['label'] ) ? $override['label'] : strtoupper( $short_code ),
+                'name'       => $name,
+                'analytics'  => sanitize_title( $name ),
+            );
+        }
+
+        if ( ! empty( $languages ) ) {
+            return apply_filters( 'bitesmart_site_languages', $languages );
+        }
+    }
+
+    // Fallback — TranslatePress inactive: keep the plugin fully functional
+    // out of the box with a hardcoded set.
     $languages = array(
         array(
-            'code'       => 'en',
-            'label'      => 'EN',
-            'name'       => 'English',
-            'watch_label' => 'Watch Now',
-            'analytics'  => 'english',
+            'code'      => 'en',
+            'label'     => 'EN',
+            'name'      => 'English',
+            'analytics' => 'english',
         ),
         array(
-            'code'       => 'es',
-            'label'      => 'ES',
-            'name'       => 'Spanish',
-            'watch_label' => 'Ver Ahora',
-            'analytics'  => 'spanish',
+            'code'      => 'es',
+            'label'     => 'ES',
+            'name'      => 'Spanish',
+            'analytics' => 'spanish',
         ),
         array(
-            'code'       => 'hi',
-            'label'      => 'HI',
-            'name'       => 'Hindi',
-            'watch_label' => 'अभी देखें',
-            'analytics'  => 'hindi',
+            'code'      => 'hi',
+            'label'     => 'HI',
+            'name'      => 'Hindi',
+            'analytics' => 'hindi',
         ),
     );
 
@@ -257,19 +306,6 @@ function bitesmart_render_lang_picker_html( array $codes, $active_code = 'en' ) 
 }
 
 /**
- * Watch-button labels keyed by language code for episode cards.
- *
- * @return array<string, string>
- */
-function bitesmart_episode_watch_labels() {
-    $labels = array();
-    foreach ( bitesmart_site_languages() as $lang ) {
-        $labels[ $lang['code'] ] = $lang['watch_label'];
-    }
-    return $labels;
-}
-
-/**
  * Alt text from a media library attachment ID (empty when unset).
  */
 function bitesmart_attachment_alt_text( $attachment_id ) {
@@ -297,7 +333,7 @@ function bitesmart_replace_img_alt_by_class( $html, $class_name, $alt ) {
 }
 
 /**
- * Inject runtime data on episode-card output (site lang, video map, watch labels).
+ * Inject runtime data on episode-card output (site lang, video map).
  */
 function bitesmart_episode_card_render( $block_content, $block ) {
     if ( ( $block['blockName'] ?? '' ) !== 'custom/episode-card' ) {
@@ -308,15 +344,13 @@ function bitesmart_episode_card_render( $block_content, $block ) {
         return $block_content;
     }
 
-    $attrs       = $block['attrs'] ?? array();
-    $video_ids   = bitesmart_episode_vimeo_ids_from_attrs( $attrs );
-    $site_lang   = bitesmart_site_lang_code();
-    $watch_labels = bitesmart_episode_watch_labels();
+    $attrs     = $block['attrs'] ?? array();
+    $video_ids = bitesmart_episode_vimeo_ids_from_attrs( $attrs );
+    $site_lang = bitesmart_site_lang_code();
 
     $replacements = array(
-        'data-site-lang'    => esc_attr( $site_lang ),
-        'data-videos'       => esc_attr( wp_json_encode( $video_ids ) ),
-        'data-watch-labels' => esc_attr( wp_json_encode( $watch_labels ) ),
+        'data-site-lang' => esc_attr( $site_lang ),
+        'data-videos'    => esc_attr( wp_json_encode( $video_ids ) ),
     );
 
     foreach ( $replacements as $attr => $value ) {
@@ -489,37 +523,43 @@ function bitesmart_complementary_landmark_labels( $block_content, $block ) {
 add_filter( 'render_block', 'bitesmart_complementary_landmark_labels', 10, 2 );
 
 /**
- * Editor: pass site language config into episode-card script.
+ * Editor: pass site language config into episode-card AND video-quote
+ * scripts, so both blocks' "Available Languages" checkboxes reflect
+ * bitesmart_site_languages() (TranslatePress-derived) instead of falling
+ * back to the hardcoded DEFAULT_SITE_LANGUAGES in shared/languages.js.
  */
-function bitesmart_localize_episode_card_editor() {
+function bitesmart_localize_video_language_editors() {
     if ( ! function_exists( 'generate_block_asset_handle' ) ) {
-        return;
-    }
-
-    $handle = generate_block_asset_handle( 'custom/episode-card', 'editorScript' );
-
-    if ( ! wp_script_is( $handle, 'registered' ) ) {
         return;
     }
 
     $languages = array();
     foreach ( bitesmart_site_languages() as $lang ) {
         $languages[] = array(
-            'code'        => $lang['code'],
-            'label'       => $lang['label'],
-            'name'        => $lang['name'],
-            'watchLabel'  => $lang['watch_label'],
-            'analytics'   => $lang['analytics'],
+            'code'      => $lang['code'],
+            'label'     => $lang['label'],
+            'name'      => $lang['name'],
+            'analytics' => $lang['analytics'],
         );
     }
 
-    wp_localize_script(
-        $handle,
-        'bitesmartLanguages',
-        array(
-            'languages' => $languages,
-        )
-    );
+    $block_names = array( 'custom/episode-card', 'custom/video-quote' );
+
+    foreach ( $block_names as $block_name ) {
+        $handle = generate_block_asset_handle( $block_name, 'editorScript' );
+
+        if ( ! wp_script_is( $handle, 'registered' ) ) {
+            continue;
+        }
+
+        wp_localize_script(
+            $handle,
+            'bitesmartLanguages',
+            array(
+                'languages' => $languages,
+            )
+        );
+    }
 }
 
-add_action( 'enqueue_block_editor_assets', 'bitesmart_localize_episode_card_editor', 20 );
+add_action( 'enqueue_block_editor_assets', 'bitesmart_localize_video_language_editors', 20 );

@@ -10,6 +10,7 @@
 // Shared helpers (TranslatePress site language, etc.)
 require_once __DIR__ . '/src/includes/site-lang.php';
 require_once __DIR__ . '/src/includes/lang-restart-dialog.php';
+require_once __DIR__ . '/src/includes/video-language-settings.php';
 
 // -----------------------------
 // Register all blocks

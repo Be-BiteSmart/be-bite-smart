@@ -47,9 +47,6 @@ function EpisodeCardSave({ attributes }) {
   const blockProps = useBlockProps.save();
   const urlsByLang = videosFromAttributes(attributes);
   const dataAttrs = episodeArticleDataAttributes(attributes);
-  const languages = getSiteLanguages();
-  const defaultWatch =
-    languages.find((lang) => lang.code === "en")?.watchLabel ?? "Watch Now";
 
   return wp.element.createElement(
     "article",
@@ -136,11 +133,7 @@ function EpisodeCardSave({ attributes }) {
                 className: "watch-now-button block-toggle-btn",
                 type: "button",
               },
-              wp.element.createElement(
-                "span",
-                { className: "button-text" },
-                defaultWatch,
-              ),
+              wp.element.createElement("span", null, __("Watch Now", "custom-blocks")),
             ),
           ),
         ),
