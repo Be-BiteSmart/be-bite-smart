@@ -69,11 +69,16 @@ function ensureVimeoSdk() {
 }
 
 /* Live-swap the subtitle/audio track on an already-playing quote-block
-   embed, instead of reloading the video. English has no alternate track
-   to enable — just clear captions and revert to the original audio. */
+   embed, instead of reloading the video. Only the audio side is special-
+   cased for English — it has no "alternate" track of its own, so we revert
+   to the original upload audio rather than selecting one by language code.
+   Captions work the same way for every language, English included: try to
+   enable an English caption track rather than turning captions off. */
 function switchLiveTrack(player, langCode) {
   if (langCode === "en") {
-    player.disableTextTrack().catch(() => {});
+    player.enableTextTrack("en").catch((err) => {
+      console.warn("No en subtitle track on this video", err);
+    });
     player.selectDefaultAudioTrack().catch((err) => {
       console.warn("Could not reset to default audio track", err);
     });
