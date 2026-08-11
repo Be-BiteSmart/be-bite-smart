@@ -1,7 +1,13 @@
 import { expect } from "@playwright/test";
 
-/** Mirrors buildVimeoPlayerSrc() in video-toggle.js */
-export function expectedVimeoPlayerSrc(vimeoId, lang) {
+/**
+ * Mirrors buildVimeoPlayerSrc() in video-toggle.js. forceCaptions matches
+ * that function's option of the same name: video-quote blocks pass
+ * forceCaptions: true (captions on from the first play, any language),
+ * episode-card blocks leave it false (unchanged legacy behavior — captions
+ * off by default in English).
+ */
+export function expectedVimeoPlayerSrc(vimeoId, lang, { forceCaptions = false } = {}) {
   const params = new URLSearchParams({ autoplay: "1" });
   const code = lang === "es" || lang === "hi" ? lang : "en";
 
@@ -11,6 +17,8 @@ export function expectedVimeoPlayerSrc(vimeoId, lang) {
   } else if (code === "hi") {
     params.set("texttrack", "hi");
     params.set("audiotrack", "hi");
+  } else if (forceCaptions) {
+    params.set("texttrack", code);
   }
 
   return `https://player.vimeo.com/video/${vimeoId}?${params.toString()}`;
@@ -35,6 +43,7 @@ export function parseVideosDataset(raw) {
 export async function assertVimeoPlayerLoads(page, container, trigger, {
   vimeoId,
   lang = "en",
+  forceCaptions = false,
 }) {
   expect(vimeoId, "block is missing a Vimeo ID").toBeTruthy();
 
@@ -46,7 +55,7 @@ export async function assertVimeoPlayerLoads(page, container, trigger, {
   await iframe.waitFor({ state: "visible" });
   await expect(iframe).toHaveAttribute(
     "src",
-    expectedVimeoPlayerSrc(vimeoId, lang),
+    expectedVimeoPlayerSrc(vimeoId, lang, { forceCaptions }),
   );
   await expect(container.locator(".video-thumbnail")).toHaveClass(/hidden/);
 

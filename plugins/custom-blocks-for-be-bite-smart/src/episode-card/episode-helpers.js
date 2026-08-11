@@ -4,7 +4,6 @@ import {
   getVimeoId,
   videosFromAttributes,
   vimeoIdsByLang,
-  watchLabelsMap,
 } from "../shared/languages";
 
 export function migrateEpisodeAttributes(attributes) {
@@ -59,11 +58,9 @@ export function renderLanguagePicker(wp, urlsByLang, { activeCode = "en" } = {})
 export function episodeArticleDataAttributes(attributes) {
   const urlsByLang = videosFromAttributes(attributes);
   const videoIds = vimeoIdsByLang(urlsByLang);
-  const labels = watchLabelsMap();
 
   return {
     "data-videos": JSON.stringify(videoIds),
-    "data-watch-labels": JSON.stringify(labels),
   };
 }
 

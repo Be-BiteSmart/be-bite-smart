@@ -24,7 +24,7 @@ These tests **do not change anything** on the site. They only visit pages and re
 
 ## Test count
 
-**121 automated checks** across 12 test files (as of the current suite). They are grouped below.
+**124 automated checks** across 12 test files (as of the current suite). They are grouped below.
 
 | Group | Tests | What it covers |
 |-------|------:|----------------|
@@ -39,8 +39,8 @@ These tests **do not change anything** on the site. They only visit pages and re
 | **Smoke — PDF toggle** | 11 | PDF view buttons and download links validation (pages with no PDF toggles are **skipped**) |
 | **Accessibility** | 11 | One scan per main page (WCAG moderate and above) |
 | **Analytics** | 14 | Plausible events on plays, downloads, PDFs, language switch |
-| **Videos** | 6 | Vimeo embeds on Home and Learn |
-| **Total** | **121** | |
+| **Videos** | 9 | Vimeo embeds on Home and Learn, plus video-quote's language-picker behavior on Learn (some **skipped** until a video-quote block there has 2+ languages checked) |
+| **Total** | **124** | |
 
 Some checks **skip** when they do not apply (e.g. a page with no download buttons). Skipped is not a failure.
 
@@ -54,7 +54,7 @@ Some checks **skip** when they do not apply (e.g. a page with no download button
 | **Key content blocks** | 6 | Are expected sections still on the page (videos, forms, team bios, etc.)? | Learn, Evidence, Contact, Donate, Team, Advisors |
 | **Broken links** | 11 | Do links on the page go somewhere that works? | All 11 main pages |
 | **Downloads** | 11 | Do Download links return real PDF or video files? | Any main page that has them |
-| **Videos** | 6 | Do Watch buttons load the Vimeo player? | Home, Learn |
+| **Videos** | 9 | Do Watch buttons load the Vimeo player, and does video-quote's language picker behave correctly (no reload, watch-button text stays put, pre-play language selection actually applies)? | Home, Learn |
 | **SEO** | 13 | Title, description, and canonical URL set correctly? | All 11 main pages + sitemap |
 | **HTTPS & host** | 11 | Does `http` and non-`www` redirect to `https://www.bebitesmart.org`? | Home + Learn (production only) |
 | **Security** | 12 | Are sensitive server files hidden from the public? | Server paths (not page content) |
@@ -148,11 +148,18 @@ Pages with no downloads are skipped.
 
 ---
 
-### Videos (`videos`) — 6 tests
+### Videos (`videos`) — 9 tests
 
-Clicks Watch / play buttons and confirms the Vimeo embed appears with the correct video.
+Clicks Watch / play buttons and confirms the Vimeo embed appears with the correct video (4 tests, Home + Learn).
 
-**Typical failure:** Vimeo ID changed, block removed, or JavaScript error on the page.
+Three more tests check video-quote's (Documentary Video block) language-picker behavior specifically, on Learn:
+- Selecting Spanish *before* pressing play actually plays with Spanish captions/audio, instead of silently falling back to English with no feedback.
+- The Watch button's text never changes when a different language pill is clicked (it always shows one static, site-language string).
+- Switching languages *while already playing* swaps the track live — the same Vimeo embed stays loaded, it never reloads into a different video.
+
+These three **skip** until a video-quote block on Learn has 2 or more languages checked in its "Available Languages" panel (only Spanish is checkable for real right now — Hindi isn't set up in TranslatePress on this site yet). Skipping is not a failure; it just means there's nothing to exercise yet.
+
+**Typical failure:** Vimeo ID changed, block removed, JavaScript error on the page, or (for the three language-picker tests) a regression in the live subtitle/audio-track-switching behavior.
 
 ---
 
@@ -177,6 +184,16 @@ Confirms visitors who type `http://bebitesmart.org` or `https://bebitesmart.org`
 Only runs against production—not local or staging copies.
 
 **Typical failure:** DNS or hosting redirect misconfiguration.
+
+---
+
+### PDF toggle (`pdf-toggle`) — 11 tests
+
+On each of the 11 main pages, finds any PDF-toggle blocks (the English/Spanish "view PDF" buttons that expand an inline viewer) and checks that the view buttons and their download links exist, are correctly paired (English button ↔ English viewer/link, Spanish ↔ Spanish), and point to valid URLs.
+
+Pages with no PDF-toggle blocks are skipped.
+
+**Typical failure:** A PDF-toggle block's view button or download link is missing, or the English/Spanish pairing between a button and its viewer/link is broken.
 
 ---
 
@@ -209,7 +226,7 @@ YouTube/Vimeo iframes are excluded from the scan.
 
 On **Advisors** and **Team**, the test waits for bio cards to appear in the page before scanning — so a cached or incomplete HTML response cannot produce a false pass.
 
-**Why can two CI runs disagree on the same URL?** Tests read the **live production site**, not your PR branch. The URL is always `https://www.bebitesmart.org/advisors/`, but the HTML can differ between runs:
+**Why can two CI runs disagree on the same URL?** ⚠️ *The explanation below describes an older deploy model and needs a maintainer to verify it against the current setup (see note after this section) — CI now deploys the PR's own branch to a staging site and tests run against that (`https://staging.bebitesmart.org/advisors/`), not `https://www.bebitesmart.org`. Whether staging still uses WP Super Cache the same way production does, and whether the same before/after-deploy staleness pattern applies there, hasn't been confirmed as of this update.* Historically the reasoning was:
 
 - **WP Super Cache** may serve an older page without newly added blocks (PR run: no bio cards → color-contrast passes; later run: bio cards with weak gray text → fails).
 - **Content or CSS deploys** between runs (e.g. affiliation color `#7b828e` failing, then plugin CSS `#6b7280` passing after deploy).
@@ -240,19 +257,19 @@ Confirms WordPress’s background API responds and that key pages (`learn`, `evi
 
 ## When tests run
 
-Tests run automatically on **pull requests targeting `main`** via GitHub Actions (`.github/workflows/playwright.yml`). They do not run on direct pushes to `main` (after merge, the PR run already validated the changes). By default they target the **live production site** (`https://www.bebitesmart.org`).
+Tests run automatically on **pull requests targeting `main`** via GitHub Actions (`.github/workflows/playwright.yml`). **`PLAYWRIGHT_BASE_URL` is explicitly set to `https://staging.bebitesmart.org` in that workflow — CI does not test production.** The `https://www.bebitesmart.org` default in `playwright.config.js` only applies when *nobody* sets `PLAYWRIGHT_BASE_URL`/`BASE_URL` — e.g. running `pnpm test` locally with no env var.
 
-### Merging when production must be updated first
+Per the workflow file's own comments, the actual flow is:
+1. **On `pull_request`** (`deploy-staging` job): the PR's own branch is deployed live to the staging server via a restricted SSH key, then (`test` job) the full Playwright suite runs against `https://staging.bebitesmart.org` — this is the merge gate.
+2. **On `push` to `main`** (i.e. after merge — `deploy-prod` job): production is deployed directly via a separate restricted SSH key. This job requires manual approval (GitHub **Settings > Environments > production**) before it's allowed to run. Tests are **not** re-run at this step — branch protection already guarantees this exact code passed on staging during the PR run.
 
-Sometimes a PR **fixes** a problem that CI is still reporting on the live site—for example, a CSS color change that only takes effect after DreamHost pulls `main` and WP Super Cache is cleared. The tests always hit **production**, not your branch, so the PR can stay red until deploy catches up.
+### ⚠️ Needs a maintainer update: "Merging when production must be updated first"
 
-**Repo admins** can use the GitHub **ruleset bypass** on `main` to merge anyway:
+The section that used to live here described manually SSH-ing into DreamHost to `git pull` and clear WP Super Cache when a PR fixed something CI was still failing on because production hadn't caught up yet, plus a ruleset-bypass merge procedure for that situation. That no longer matches the workflow above — PR tests run against a **freshly deployed copy of the PR's own branch on staging**, not stale production, so "wait for production to catch up" shouldn't apply the same way anymore. Left out rather than guessed at, since:
+- It's not clear from the workflow file alone whether staging can still lag behind a PR branch for some other reason (deploy step failing silently, caching on staging, etc.) — worth confirming with whoever owns the DreamHost side.
+- The README's ["Deploying to the server"](./README.md#deploying-to-the-server) section *also* still describes the old manual SSH `git pull` process, which the `deploy-prod` job now appears to automate — that section may need the same update, but that's the README's call, not made here.
 
-1. Open the pull request → **Merge** → choose **Bypass rules** (wording may be “Merge without waiting”).
-2. After merge, SSH to DreamHost and deploy: `cd bebitesmart.org/wp-content && git pull origin main && rm -rf cache/supercache/*`
-3. Re-run **Playwright Tests** on `main` (Actions tab) to confirm green.
-
-Use the bypass only when the failure is a known production lag (fix is in the PR, live site not updated yet)—not to ignore real regressions. See [README — Deploying to the server](./README.md#deploying-to-the-server) for full deploy steps.
+If a legitimate "PR is red for environment reasons, not a real regression" situation still comes up under the new setup, the right procedure should be re-documented here once confirmed.
 
 ```20:22:app/public/wp-content/package.json
   "scripts": {
@@ -314,6 +331,7 @@ app/public/wp-content/
     │   ├── blocks.spec.js
     │   ├── links.spec.js
     │   ├── downloads.spec.js
+    │   ├── pdf-toggle.spec.js
     │   ├── seo.spec.js
     │   ├── https-host.spec.js
     │   ├── security.spec.js
@@ -331,7 +349,8 @@ app/public/wp-content/
         ├── downloads.js
         ├── seo.js
         ├── host.js
-        └── security.js
+        ├── security.js
+        └── wordfence-safe-request.ts
 ```
 
 ### Run locally
@@ -341,7 +360,7 @@ From `app/public/wp-content`:
 ```bash
 pnpm install --frozen-lockfile
 pnpm exec playwright install chromium   # first time only
-pnpm test                             # all 110 tests
+pnpm test                             # all 124 tests
 pnpm exec playwright test --list      # print full list and count
 ```
 
@@ -355,11 +374,22 @@ pnpm exec playwright show-report      # open last HTML report
 
 ### Target a different site
 
-Set `PLAYWRIGHT_BASE_URL` (default: `https://www.bebitesmart.org`):
+Set `PLAYWRIGHT_BASE_URL` or `BASE_URL` (checked in that order; default:
+`https://www.bebitesmart.org`):
 
 ```bash
 PLAYWRIGHT_BASE_URL=http://bebitesmart.local pnpm test
+# or
+BASE_URL=https://bebitesmart.local pnpm test
 ```
+
+To target a Local (by Flywheel) site specifically, find its actual hostname in the
+Windows hosts file (`C:\Windows\System32\drivers\etc\hosts`, look for "Local Site"
+entries) rather than assuming the folder name matches — confirmed working with
+`https://bebitesmart.local`.
+
+If the base URL contains `staging.`, requests are sent with HTTP Basic Auth using
+`STAGING_AUTH_USER`/`STAGING_AUTH_PASS` (see `playwright.config.js`).
 
 HTTPS/host tests skip automatically when the base URL is not production.
 
@@ -383,16 +413,31 @@ Most tests can run against any environment (local, staging, or production) by se
 - Redirect rules (http://, non-www) are typically only configured on the production domain
 - Staging environments often use different domains or lack proper redirect setup
 
+**Note on CI specifically:** since the `pull_request` workflow sets `PLAYWRIGHT_BASE_URL` to
+`https://staging.bebitesmart.org` (see "When tests run" above), `https-host.spec.js` skips
+on every normal CI run — it only ever runs when someone points `PLAYWRIGHT_BASE_URL`/`BASE_URL`
+at production by hand. `security.spec.js` has no such skip, so during CI it's actually
+validating **staging's** security posture, not production's — the "Known production gaps"
+table under Security hygiene above reflects a real, separate production check, not something
+CI verifies on every PR.
+
 **Future developers:** When adding new tests, consider whether they need to validate production-specific infrastructure. If so, document the reason here and implement a skip mechanism for non-production environments.
 
 ### Configuration
 
-```18:23:app/public/wp-content/playwright.config.js
+```22:34:app/public/wp-content/playwright.config.js
   use: {
-    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? "https://www.bebitesmart.org",
+    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? process.env.BASE_URL ?? "https://www.bebitesmart.org",
     headless: true,
     userAgent:
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    // Use Basic Auth for staging
+    httpCredentials: (process.env.PLAYWRIGHT_BASE_URL ?? process.env.BASE_URL ?? "").includes("staging.")
+      ? {
+          username: process.env.STAGING_AUTH_USER ?? "",
+          password: process.env.STAGING_AUTH_PASS ?? "",
+        }
+      : undefined,
   },
 ```
 

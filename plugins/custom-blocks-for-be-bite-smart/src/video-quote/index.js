@@ -8,8 +8,14 @@ import {
   MediaUpload,
   MediaUploadCheck,
 } from "@wordpress/block-editor";
-import { PanelBody, TextControl, Button } from "@wordpress/components";
+import {
+  PanelBody,
+  TextControl,
+  CheckboxControl,
+  Button,
+} from "@wordpress/components";
 import { __ } from "@wordpress/i18n";
+import { ensureDefaultLanguage, getSiteLanguages } from "../shared/languages";
 
 registerBlockType("custom/video-quote", {
   title: __("Documentary Video", "custom-blocks"),
@@ -29,10 +35,21 @@ registerBlockType("custom/video-quote", {
     quote: { type: "string", default: "" },
     quoteSource: { type: "string", default: "" },
     note: { type: "string", default: "" },
+    availableLanguages: { type: "array", default: ["en"] },
   },
 
   edit: ({ attributes, setAttributes }) => {
     const blockProps = useBlockProps();
+    const languages = getSiteLanguages();
+    const availableLanguages = attributes.availableLanguages || ["en"];
+
+    const toggleLanguage = (code, checked) => {
+      if (code === "en") return; // English is always available, locked on
+      const next = checked
+        ? [...availableLanguages, code]
+        : availableLanguages.filter((c) => c !== code);
+      setAttributes({ availableLanguages: ensureDefaultLanguage(next) });
+    };
 
     return wp.element.createElement(
       "div",
@@ -114,6 +131,33 @@ registerBlockType("custom/video-quote", {
                         __("Upload Thumbnail", "custom-blocks"),
                       ),
                 ),
+            }),
+          ),
+        ),
+      ),
+
+      // Available Languages
+      wp.element.createElement(
+        InspectorControls,
+        null,
+        wp.element.createElement(
+          PanelBody,
+          { title: __("Available Languages", "custom-blocks") },
+          __(
+            "Check off which languages this video has subtitles and dubbed audio for on Vimeo.",
+            "custom-blocks",
+          ),
+          languages.map((lang) =>
+            wp.element.createElement(CheckboxControl, {
+              key: lang.code,
+              label: lang.name,
+              checked: availableLanguages.includes(lang.code),
+              disabled: lang.code === "en",
+              help:
+                lang.code === "en"
+                  ? __("English is always available.", "custom-blocks")
+                  : undefined,
+              onChange: (checked) => toggleLanguage(lang.code, checked),
             }),
           ),
         ),

@@ -4,21 +4,18 @@ export const DEFAULT_SITE_LANGUAGES = [
     code: "en",
     label: "EN",
     name: "English",
-    watchLabel: "Watch Now",
     analytics: "english",
   },
   {
     code: "es",
     label: "ES",
     name: "Spanish",
-    watchLabel: "Ver Ahora",
     analytics: "spanish",
   },
   {
     code: "hi",
     label: "HI",
     name: "Hindi",
-    watchLabel: "अभी देखें",
     analytics: "hindi",
   },
 ];
@@ -63,14 +60,6 @@ export function vimeoIdsByLang(urlsByLang) {
     }
   });
   return out;
-}
-
-export function watchLabelsMap(languages = getSiteLanguages()) {
-  const labels = {};
-  languages.forEach((lang) => {
-    labels[lang.code] = lang.watchLabel;
-  });
-  return labels;
 }
 
 /** Language codes that have a Vimeo URL, in site language order. */
@@ -143,4 +132,32 @@ export function resolveVideosForBlock(block) {
     return fromJson;
   }
   return legacyVimeoIdsFromDataset(block.dataset);
+}
+
+/** Guarantee defaultCode (e.g. "en") is always present in a language-code list. */
+export function ensureDefaultLanguage(codes, defaultCode = "en") {
+  return codes.includes(defaultCode) ? codes : [defaultCode, ...codes];
+}
+
+/** Replace {language} in a translated template string with a language name. */
+export function applyLanguagePlaceholder(template, languageName) {
+  return String(template ?? "").replace(/\{language\}/gi, languageName);
+}
+
+/**
+ * Human-readable name for a language code. Prefers the hidden,
+ * TranslatePress-translatable .video-quote-lang-name templates printed by
+ * bitesmart_render_video_lang_name_templates() (includes/site-lang.php) —
+ * shared by video-toggle.js's track-note messages and
+ * video-lang-restart-modal.js's dialog — falling back to the (untranslated)
+ * site-languages list if those templates aren't on the page for some reason.
+ */
+export function langName(code) {
+  if (typeof document !== "undefined") {
+    const el = document.querySelector(
+      `.video-quote-lang-name[data-lang="${code}"]`,
+    );
+    if (el) return el.textContent;
+  }
+  return getSiteLanguages().find((lang) => lang.code === code)?.name ?? code;
 }

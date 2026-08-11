@@ -1,69 +1,48 @@
 /**
  * Accessible confirm dialog when changing episode language during playback.
- * Dialog copy uses the language currently playing (not the segment clicked).
- * Wording is editable in the episode block sidebar (site-wide option).
+ *
+ * The dialog now always shows in the page's own site language (translated
+ * normally by TranslatePress), not whichever language happened to be
+ * playing — that's what makes it translatable via TranslatePress at all:
+ * TranslatePress translates a string per the visitor's chosen site
+ * language, it has no way to show a fixed, language-locked variant
+ * independent of that. Wording lives in a hidden, TranslatePress-
+ * translatable block printed once in the page footer (see
+ * bitesmart_render_lang_restart_dialog_templates() in includes/site-lang.php)
+ * — there's no more admin-editable dictionary/settings panel for this.
  */
 
 import "./video-lang-restart-modal.css";
-import { normalizeLangCode } from "./shared/languages";
+import { applyLanguagePlaceholder, langName, normalizeLangCode } from "./shared/languages";
 
-const FALLBACK_DIALOG = {
-  en: {
-    title: "Change language?",
-    message: "The video will restart in {language}.",
-    confirm: "Switch to {language}",
-    cancel: "Cancel",
-    targets: { en: "English", es: "Spanish", hi: "Hindi" },
-  },
-  es: {
-    title: "¿Cambiar idioma?",
-    message: "El video se reiniciará en {language}.",
-    confirm: "Cambiar a {language}",
-    cancel: "Cancelar",
-    targets: { en: "inglés", es: "español", hi: "hindi" },
-  },
-  hi: {
-    title: "भाषा बदलें?",
-    message: "वीडियो {language} में फिर से शुरू होगा।",
-    confirm: "{language} में बदलें",
-    cancel: "रद्द करें",
-    targets: { en: "अंग्रेज़ी", es: "स्पेनिश", hi: "हिंदी" },
-  },
+const FALLBACK_COPY = {
+  title: "Change language?",
+  message: "The video will restart in {language}.",
+  confirm: "Switch to {language}",
+  cancel: "Cancel",
 };
 
-function getDialogConfig() {
-  if (
-    typeof window !== "undefined" &&
-    window.bitesmartLangRestartDialog &&
-    typeof window.bitesmartLangRestartDialog === "object"
-  ) {
-    return window.bitesmartLangRestartDialog;
-  }
-  return FALLBACK_DIALOG;
+function getTemplateText(className) {
+  return (
+    document.querySelector(`.${className}`)?.textContent || null
+  );
 }
 
-function applyLanguagePlaceholder(template, languageName) {
-  return String(template ?? "").replace(/\{language\}/gi, languageName);
-}
+function buildDialogCopy(targetLang) {
+  const targetName = langName(normalizeLangCode(targetLang));
 
-function buildDialogCopy(playingLang, targetLang) {
-  const config = getDialogConfig();
-  const uiCode = normalizeLangCode(playingLang);
-  const targetCode = normalizeLangCode(targetLang);
-  const shell = config[uiCode] ?? config.en ?? FALLBACK_DIALOG.en;
-  const fallbackTargets =
-    FALLBACK_DIALOG[uiCode]?.targets ?? FALLBACK_DIALOG.en.targets;
-
-  const targetName =
-    shell.targets?.[targetCode] ??
-    fallbackTargets[targetCode] ??
-    targetCode;
+  const title = getTemplateText("lang-restart-dialog-title") ?? FALLBACK_COPY.title;
+  const messageTemplate =
+    getTemplateText("lang-restart-dialog-message") ?? FALLBACK_COPY.message;
+  const confirmTemplate =
+    getTemplateText("lang-restart-dialog-confirm") ?? FALLBACK_COPY.confirm;
+  const cancel = getTemplateText("lang-restart-dialog-cancel") ?? FALLBACK_COPY.cancel;
 
   return {
-    title: shell.title ?? FALLBACK_DIALOG.en.title,
-    message: applyLanguagePlaceholder(shell.message, targetName),
-    confirm: applyLanguagePlaceholder(shell.confirm, targetName),
-    cancel: shell.cancel ?? FALLBACK_DIALOG.en.cancel,
+    title,
+    message: applyLanguagePlaceholder(messageTemplate, targetName),
+    confirm: applyLanguagePlaceholder(confirmTemplate, targetName),
+    cancel,
   };
 }
 
@@ -192,19 +171,18 @@ function close(confirmed) {
 }
 
 /**
- * @param {string} playingLang Language currently playing (dialog UI language).
  * @param {string} targetLang Language code to switch to if confirmed.
  * @param {HTMLElement} [triggerEl] Control to restore focus to on close.
  * @returns {Promise<boolean>}
  */
-export function confirmLanguageRestart(playingLang, targetLang, triggerEl) {
+export function confirmLanguageRestart(targetLang, triggerEl) {
   ensureModal();
 
   if (finishPromise) {
     return Promise.resolve(false);
   }
 
-  const copy = buildDialogCopy(playingLang, targetLang);
+  const copy = buildDialogCopy(targetLang);
   titleEl.textContent = copy.title;
   messageEl.textContent = copy.message;
   cancelBtn.textContent = copy.cancel;
