@@ -1,9 +1,25 @@
 (function () {
+  function isMobilePdfFallback() {
+    return window.matchMedia && window.matchMedia("(max-width: 767px)").matches;
+  }
+
   function initToggles(buttonSelector, viewerSelector, groupPrefix) {
     document.querySelectorAll(buttonSelector).forEach(function (btn) {
       btn.addEventListener("click", function () {
         const targetId = btn.getAttribute("data-target");
         const groupId = btn.getAttribute("data-group");
+
+        if (isMobilePdfFallback()) {
+          const viewer = document.getElementById(targetId);
+          const iframe = viewer && viewer.querySelector("iframe[data-src]");
+          const pdfUrl = iframe ? iframe.getAttribute("data-src") : null;
+
+          if (pdfUrl) {
+            window.open(pdfUrl, "_blank", "noopener,noreferrer");
+          }
+          return;
+        }
+
         const isOpen = btn.getAttribute("data-expanded") === "true";
 
         // Close all buttons and viewers in the same group
