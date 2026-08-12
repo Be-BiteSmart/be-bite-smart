@@ -227,6 +227,13 @@
   margin-top: 0 !important; /* global adds 1rem; not wanted here */
 }
 
+/* Once playback starts, the button is a dead trigger (loadVideo() no-ops
+   while isPlaying) — hide it same as the thumbnail's .hidden treatment in
+   video-toggle.js, since the Vimeo iframe has its own play/pause controls. */
+.episode-controls .watch-now-button.hidden {
+  display: none !important;
+}
+
 /* ── Download Buttons ── */
 .download-buttons {
   display: flex;

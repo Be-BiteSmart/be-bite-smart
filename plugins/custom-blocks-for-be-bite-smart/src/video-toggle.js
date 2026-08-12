@@ -303,6 +303,7 @@ document.addEventListener("DOMContentLoaded", function () {
       videoPlayer.innerHTML = "";
       videoPlayer.appendChild(iframe);
       thumbnail.classList.add("hidden");
+      if (watchButton) watchButton.classList.add("hidden");
       isPlaying = true;
 
       if (!isQuoteBlock) {

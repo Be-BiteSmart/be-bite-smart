@@ -141,6 +141,15 @@ body:not(.block-editor-page)
   transform: translateY(0);
 }
 
+/* Once playback starts, the button is a dead trigger (loadVideo() no-ops
+   while isPlaying) — hide it same as the thumbnail's .hidden treatment in
+   video-toggle.js, since the Vimeo iframe has its own play/pause controls.
+   !important needed to beat the display:block rule above, which applies
+   regardless of language-picker presence. */
+.video-quote-watch-button.hidden {
+  display: none !important;
+}
+
 /* ── Blockquote ── */
 .video-quote-blockquote {
   border-left: 4px solid var(--wp--preset--color--accent-1);
