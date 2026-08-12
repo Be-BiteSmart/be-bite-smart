@@ -17,7 +17,7 @@ test.describe("Documentary video (video-quote block)", () => {
         `No video-quote block on ${path}`,
       ).toBeVisible();
 
-      const vimeoId = await block.getAttribute("data-vimeo-id");
+      const vimeoId = await block.getAttribute("data-quote-vimeo-id");
       const siteLang = (await block.getAttribute("data-site-lang")) || "en";
       const trigger = block.locator(".video-quote-watch-button");
 
@@ -40,7 +40,7 @@ test.describe("Documentary video (video-quote block)", () => {
       await gotoExpectOk(page, path);
 
       const block = page.locator(".video-quote-block").first();
-      const vimeoId = await block.getAttribute("data-vimeo-id");
+      const vimeoId = await block.getAttribute("data-quote-vimeo-id");
       const siteLang = (await block.getAttribute("data-site-lang")) || "en";
       const trigger = block.locator(".play-button");
 
@@ -73,7 +73,7 @@ test.describe("Documentary video (video-quote block)", () => {
       return;
     }
 
-    const vimeoId = await block.getAttribute("data-vimeo-id");
+    const vimeoId = await block.getAttribute("data-quote-vimeo-id");
 
     // Click Spanish BEFORE playing — this is the exact scenario that used to
     // silently play English with no feedback when Spanish wasn't actually on
@@ -135,7 +135,7 @@ test.describe("Documentary video (video-quote block)", () => {
       return;
     }
 
-    const vimeoId = await block.getAttribute("data-vimeo-id");
+    const vimeoId = await block.getAttribute("data-quote-vimeo-id");
     const siteLang = (await block.getAttribute("data-site-lang")) || "en";
 
     await spyOnPlausible(page);

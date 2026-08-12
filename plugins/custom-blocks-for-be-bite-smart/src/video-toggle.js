@@ -285,7 +285,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function loadVideo() {
       const vimeoId = isQuoteBlock
-        ? block.dataset.vimeoId
+        ? block.dataset.quoteVimeoId
         : videos[currentLang];
 
       if (!vimeoId) {
