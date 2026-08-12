@@ -40,7 +40,12 @@ function render_video_quote_block( $attributes ) {
     ob_start(); ?>
     <article
         class="wp-block-custom-video-quote video-quote-block"
-        data-vimeo-id="<?php echo esc_attr( $vimeo_id ); ?>"
+        <?php // "data-quote-vimeo-id", not "data-vimeo-id" — the latter is a
+        // reserved attribute Vimeo's player.js SDK auto-scans the whole DOM
+        // for and auto-embeds an extra iframe into, independent of our own
+        // new Vimeo.Player() calls. Caused a duplicate player to appear once
+        // the SDK loaded (video-toggle.js's ensureVimeoSdk() path). ?>
+        data-quote-vimeo-id="<?php echo esc_attr( $vimeo_id ); ?>"
         data-site-lang="<?php echo esc_attr( $site_lang ); ?>"
         data-supported-langs="<?php echo esc_attr( wp_json_encode( $available_languages ) ); ?>"
     >
