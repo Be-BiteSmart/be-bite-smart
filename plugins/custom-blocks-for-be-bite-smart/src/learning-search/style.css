@@ -1,0 +1,84 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Learning Hub Search Block
+   Card styling for individual results/browse items is inherited from
+   .wp-block-custom-qa-entry / .wp-block-custom-resource (see those blocks'
+   style.css) — this file only styles the search box and layout wrapper
+   around them.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.learning-search-block {
+  margin: 32px 0;
+}
+
+.learning-search-box {
+  margin-bottom: 32px;
+}
+
+.learning-search-label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.learning-search-input {
+  width: 100%;
+  max-width: 480px;
+  padding: 10px 14px;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.learning-search-status {
+  margin: 8px 0 0;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.learning-search-results {
+  display: grid;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.learning-search-results:empty {
+  margin-top: 0;
+}
+
+.learning-search-browse-heading {
+  margin-bottom: 16px;
+}
+
+.learning-search-browse-list {
+  display: grid;
+  gap: 16px;
+}
+
+.learning-search-empty {
+  color: #555;
+}
+
+.learning-search-pagination {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.learning-search-page-link {
+  font-weight: 600;
+}
+
+.learning-search-page-status {
+  color: #555;
+}
+
+.learning-search-editor-note {
+  font-style: italic;
+  color: #757575;
+}
+
+.learning-search-unconfigured {
+  color: #b32d2e;
+  font-style: italic;
+}

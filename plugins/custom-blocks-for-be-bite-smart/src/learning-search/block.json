@@ -1,0 +1,19 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "custom/learning-search",
+  "title": "Learning Hub Search",
+  "category": "widgets",
+  "icon": "search",
+  "textdomain": "custom-blocks",
+  "description": "Search box + paginated browse list of every Q&A Entry and Resource tagged with one Stage. Place once per Stage archive page.",
+  "attributes": {
+    "stageSlug": { "type": "string", "default": "" }
+  },
+  "supports": {
+    "html": false
+  },
+  "editorScript": "file:./index.js",
+  "viewScript": "file:./view.js",
+  "style": "file:./style-index.css"
+}

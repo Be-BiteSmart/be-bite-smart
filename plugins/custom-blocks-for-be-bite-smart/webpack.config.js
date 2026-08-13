@@ -20,6 +20,8 @@ module.exports = {
     "resource-display/index": "./src/resource-display/index.js",
     "qa-entry-fields/index": "./src/qa-entry-fields/index.js",
     "qa-entry-display/index": "./src/qa-entry-display/index.js",
+    "learning-search/index": "./src/learning-search/index.js",
+    "learning-search/view": "./src/learning-search/view.js",
     "hero/index": "./src/hero/index.js",
     "news-and-coverage/index": "./src/news-and-coverage/index.js",
     "pdf-toggle/index": "./src/pdf-toggle/index.js",

@@ -156,6 +156,24 @@ function qa_entry_register_block() {
 }
 add_action( 'init', 'qa_entry_register_block' );
 
+// -------------- Learning Hub Search Block ------------------------ //
+
+// custom/learning-search is placed once per Stage archive page (e.g.
+// /learning/stages/preschool/) — see [[be-bitesmart-content-hub-plan]] in
+// memory. It reuses render_qa_entry_block() / render_resource_block()
+// (registered just above) to build both its paginated "browse all" list
+// and the data its front-end Fuse.js search reads, so both plugins'
+// require order matters here: this file must load after
+// qa-entry-display.php and resource-display.php, which it does.
+require_once __DIR__ . '/src/learning-search/learning-search.php';
+
+function learning_search_register_block() {
+    register_block_type( __DIR__ . '/build/learning-search', array(
+        'render_callback' => 'render_learning_search_block',
+    ) );
+}
+add_action( 'init', 'learning_search_register_block' );
+
 // -----------------------------
 // static save blocks:
 // ----------------------------
