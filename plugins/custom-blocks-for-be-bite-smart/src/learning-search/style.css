@@ -20,13 +20,80 @@
   margin-bottom: 8px;
 }
 
-.learning-search-input {
+/* Magnifying-glass icon as a background-image (not a separate DOM element)
+   — simplest way to keep it fixed in place regardless of how much text is
+   typed: background images don't move with text flow the way an inline
+   icon element would, and extra-long input just scrolls under it. Left
+   padding reserves room so typed text starts after the icon instead of
+   overlapping it. Purely decorative (the input already has a proper
+   <label> in learning-search.php), so no separate alt text/aria treatment
+   needed. */
+.learning-search-input-wrap {
+  position: relative;
   width: 100%;
   max-width: 480px;
-  padding: 10px 14px;
+}
+
+.learning-search-input {
+  width: 100%;
+  padding: 10px 40px 10px 40px;
   font-size: 1rem;
-  border: 1px solid #ccc;
+  border: 2px solid #1f6a8f;
   border-radius: 6px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231f6a8f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='7'%3E%3C/circle%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'%3E%3C/line%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 12px center;
+  background-size: 18px 18px;
+}
+
+/* type="search" inputs get a native browser clear "×" in WebKit/Blink
+   (Chrome, Safari, Edge) and old Edge/IE once there's a value — hide both,
+   since it would otherwise sit on top of / double up with our own custom
+   .learning-search-clear button. */
+.learning-search-input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.learning-search-input::-ms-clear,
+.learning-search-input::-ms-reveal {
+  display: none;
+}
+
+/* Native [hidden] attribute (toggled via clearButton.hidden in view.js)
+   handles the hidden state on its own — deliberately NOT setting
+   "display" unconditionally here, since an author-stylesheet "display"
+   rule always beats the UA stylesheet's [hidden]{display:none} regardless
+   of specificity. The visible-state layout (centering the X icon) is
+   scoped to :not([hidden]) instead, so it only ever applies once view.js
+   has actually un-hidden the button. */
+.learning-search-clear {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 40px;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #1f6a8f;
+  cursor: pointer;
+}
+
+.learning-search-clear:not([hidden]) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.learning-search-clear:hover {
+  color: #154862;
+}
+
+.learning-search-clear:focus-visible {
+  color: #154862;
+  outline: 2px solid #1f6a8f;
+  outline-offset: -2px; /* inset, since the button already sits flush against the input's own border */
 }
 
 .learning-search-status {

@@ -21,6 +21,7 @@ const DEBOUNCE_MS = 200;
 function initLearningSearchBlock(block) {
   const instanceId = block.id;
   const input = block.querySelector(".learning-search-input");
+  const clearButton = block.querySelector(".learning-search-clear");
   const status = block.querySelector(".learning-search-status");
   const results = block.querySelector(".learning-search-results");
   const browse = block.querySelector(".learning-search-browse");
@@ -82,11 +83,45 @@ function initLearningSearchBlock(block) {
     if (browse) browse.hidden = true;
   }
 
+  // Shows/hides the clear (X) button — kept separate from the debounced
+  // search render below so it reacts instantly to typing, not 200ms late.
+  function updateClearButton() {
+    if (clearButton) {
+      clearButton.hidden = input.value.length === 0;
+    }
+  }
+
+  function clearSearch() {
+    input.value = "";
+    updateClearButton();
+    render("");
+    input.focus(); // so the parent can immediately type a new search
+  }
+
   let debounceTimer;
   input.addEventListener("input", () => {
+    updateClearButton();
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => render(input.value), DEBOUNCE_MS);
   });
+
+  // Escape-to-clear is a common, expected search-box convention (native
+  // type="search" fields even do this natively in some browsers) — worth
+  // keeping explicit since the native browser clear affordance is hidden
+  // in favor of our own accessible .learning-search-clear button (see
+  // style.css), which shouldn't mean losing this keyboard shortcut.
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && input.value) {
+      event.stopPropagation(); // don't let Escape do something else on the page (e.g. close an unrelated modal)
+      clearSearch();
+    }
+  });
+
+  if (clearButton) {
+    clearButton.addEventListener("click", clearSearch);
+  }
+
+  updateClearButton(); // covers a value restored by browser autofill/back-forward cache on load
 }
 
 document.querySelectorAll(".learning-search-block").forEach(initLearningSearchBlock);

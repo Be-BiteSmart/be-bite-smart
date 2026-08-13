@@ -6,6 +6,27 @@
    headers).
    ───────────────────────────────────────────────────────────────────────────── */
 
+/* Tighter top/bottom/right padding than .custom-block-accent-card's shared
+   default (top/bottom: spacing--50, up to 50px; right: spacing--20, a flat
+   10px — see the theme's css/shared-block-styles.css) — scoped here rather
+   than changed on the shared class itself, since that class is meant to be
+   reused elsewhere with its own default padding. Left padding
+   (spacing--40) stays as the shared default. NOTE: preset spacing SLUGS
+   aren't pixel values — slug "20" is actually 10px ("Tiny"); slug "30"
+   ("X-Small") is the one that renders as a flat 20px, which is what's used
+   below for both top/bottom and right.
+   The "body:not(.block-editor-page)" prefix isn't decorative — the shared
+   rule this overrides uses that same prefix (see shared-block-styles.css),
+   which raises ITS specificity via the extra "body" element selector.
+   Without matching it here, this override loses the specificity fight and
+   the shared padding wins despite loading correctly — a real gotcha, not
+   just style-guide consistency. */
+body:not(.block-editor-page) .wp-block-custom-qa-entry .qa-entry-card-container {
+  padding-top: var(--wp--preset--spacing--30);
+  padding-bottom: var(--wp--preset--spacing--30);
+  padding-right: var(--wp--preset--spacing--30);
+}
+
 /* Question row (<summary>) — always visible, click anywhere on it to
    reveal/hide the answer body below. Native <details>/<summary>, no JS —
    see the header comment in qa-entry-display.php for why. */
@@ -47,6 +68,19 @@
   margin: 0 0 16px;
 }
 
-.wp-block-custom-qa-entry .qa-entry-guide-link {
-  display: inline-block;
+/* Block + fit-content + auto margins centers just the button itself,
+   without affecting the answer paragraph's own (left-aligned) text.
+   Needs both the "body:not(.block-editor-page)" prefix AND
+   ".block-toggle-btn" chained directly onto the selector (not just an
+   ancestor class) to out-specificity the theme's base button rule
+   (body:not(.block-editor-page) :is(.block-toggle-btn, ...) { display:
+   inline-flex; ... } in the theme's style.css) — same technique already
+   used in pdf-toggle/style.css to override that same base rule. Without
+   matching/beating it, "display: block" here loses and the button stays
+   inline-flex, which is why margin:auto had no visible effect. */
+body:not(.block-editor-page) .wp-block-custom-qa-entry .qa-entry-guide-link.block-toggle-btn {
+  display: block;
+  width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
 }

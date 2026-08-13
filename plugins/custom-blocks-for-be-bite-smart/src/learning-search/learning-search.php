@@ -325,22 +325,32 @@ function render_learning_search_block( $attributes ) {
     ?>
     <section class="wp-block-custom-learning-search learning-search-block" id="<?php echo esc_attr( $instance_id ); ?>" data-stage="<?php echo esc_attr( $stage_slug ); ?>">
 
-        <div class="learning-search-box">
+        <div class="learning-search-box" role="search">
             <label class="learning-search-label" for="<?php echo esc_attr( $instance_id ); ?>-input">
                 <?php
                 /* translators: %s: Stage name, e.g. "Preschool" */
                 printf( esc_html__( 'Search %s Questions & Resources', 'custom-blocks' ), esc_html( $stage_name ) );
                 ?>
             </label>
-            <input
-                type="search"
-                id="<?php echo esc_attr( $instance_id ); ?>-input"
-                class="learning-search-input"
-                placeholder="<?php esc_attr_e( 'Type to search (e.g. "growling")', 'custom-blocks' ); ?>"
-                autocomplete="off"
-            />
+            <p id="<?php echo esc_attr( $instance_id ); ?>-hint"><?php esc_html_e( 'Type to search (e.g. "growling")', 'custom-blocks' ); ?></p>
+            <div class="learning-search-input-wrap">
+                <input
+                    type="search"
+                    id="<?php echo esc_attr( $instance_id ); ?>-input"
+                    class="learning-search-input"
+                    autocomplete="off"
+                    aria-describedby="<?php echo esc_attr( $instance_id ); ?>-hint"
+                />
+                <button type="button" class="learning-search-clear" aria-label="<?php esc_attr_e( 'Clear search', 'custom-blocks' ); ?>" hidden>
+                    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+                        <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"></line>
+                        <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"></line>
+                    </svg>
+                </button>
+            </div>
             <p class="learning-search-status" aria-live="polite"></p>
-            <div class="learning-search-results" aria-live="polite"></div>
+            <?php /* Deliberately no aria-live here — results is rich, multi-card content (headings, links, an accordion each); making it a live region would have screen readers try to re-announce all of that on every keystroke's re-render. The concise status text above ("3 results") is the one thing that should be announced live. */ ?>
+            <div class="learning-search-results"></div>
         </div>
 
         <?php bitesmart_render_learning_search_data( $cards, $instance_id ); ?>
