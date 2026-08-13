@@ -44,6 +44,47 @@
  */
 
 /**
+ * This block renders custom/qa-entry + custom/resource cards by calling
+ * render_qa_entry_block()/render_resource_block() directly (see
+ * bitesmart_build_stage_card_list() below) rather than through WordPress's
+ * normal block-rendering pipeline — necessary, since these cards come from
+ * a WP_Query, not from literal custom/qa-entry or custom/resource block
+ * markup sitting in this page's content. The cost: WordPress's automatic
+ * "scan this page's saved content for which blocks it uses, enqueue their
+ * block.json-declared styles" never sees either block as being present, so
+ * their own style.css (qa-entry-display/resource-display — the marker-
+ * hiding, chevron layout/rotation, etc.) never loads, even though the HTML
+ * renders correctly and the shared theme accent-card CSS still applies
+ * (that one's enqueued globally regardless of what's on the page). Declare
+ * the dependency by hand instead.
+ *
+ * Hooked to wp_enqueue_scripts (the same early timing WordPress's own
+ * automatic per-block enqueue uses), NOT called from inside
+ * render_learning_search_block() itself — that function runs during content
+ * rendering, well after wp_head() has already printed, so enqueuing there
+ * would be too late for the stylesheet to actually end up on the page.
+ *
+ * generate_block_asset_handle() (same helper already used in
+ * site-lang.php's bitesmart_localize_video_language_editors()) gets the
+ * exact handle WordPress auto-generated when custom/qa-entry's and
+ * custom/resource's block.json were registered on init — no guessing at
+ * the handle string.
+ */
+function bitesmart_learning_search_enqueue_card_styles() {
+    if ( ! function_exists( 'generate_block_asset_handle' ) || ! has_block( 'custom/learning-search' ) ) {
+        return;
+    }
+
+    foreach ( array( 'custom/qa-entry', 'custom/resource' ) as $block_name ) {
+        $handle = generate_block_asset_handle( $block_name, 'style' );
+        if ( wp_style_is( $handle, 'registered' ) ) {
+            wp_enqueue_style( $handle );
+        }
+    }
+}
+add_action( 'wp_enqueue_scripts', 'bitesmart_learning_search_enqueue_card_styles' );
+
+/**
  * Bump a generation counter used in transient cache keys — the simplest way
  * to invalidate every cached Stage+language card list at once without a
  * wildcard transient delete (WordPress has no such API; transients are just
@@ -101,6 +142,35 @@ function bitesmart_stage_card_keywords( $post_id, $type, $lang ) {
 }
 
 /**
+ * Cache-key ingredient covering the render TEMPLATES themselves, not just
+ * content — bitesmart_stage_cards_gen (bumped by save_post/set_object_terms,
+ * see above) only tracks Q&A/Resource CONTENT changes. Without this, editing
+ * render_qa_entry_block()/render_resource_block() (e.g. the accent-card
+ * styling, or the <details>/<summary> chevron) would leave the OLD rendered
+ * HTML sitting in cache indefinitely, since nothing about a template edit
+ * touches a post or its terms. Using each file's mtime means any future
+ * template change auto-invalidates this cache too, with nothing to remember
+ * to bump by hand.
+ *
+ * @return string
+ */
+function bitesmart_stage_cards_template_version() {
+    $files = array(
+        __DIR__ . '/../qa-entry-display/qa-entry-display.php',
+        __DIR__ . '/../resource-display/resource-display.php',
+    );
+
+    $stamps = array_map(
+        function ( $file ) {
+            return file_exists( $file ) ? filemtime( $file ) : 0;
+        },
+        $files
+    );
+
+    return implode( '-', $stamps );
+}
+
+/**
  * Build (or fetch from cache) the full, ordered list of rendered cards for
  * one Stage, in the current request's language. Every Q&A Entry + Resource
  * published and tagged with $stage_slug, alphabetical by title.
@@ -111,7 +181,7 @@ function bitesmart_stage_card_keywords( $post_id, $type, $lang ) {
  */
 function bitesmart_build_stage_card_list( $stage_slug, $lang ) {
     $gen = (int) get_option( 'bitesmart_stage_cards_gen', 1 );
-    $cache_key = 'bitesmart_stage_cards_' . md5( $stage_slug . '|' . $lang . '|' . $gen );
+    $cache_key = 'bitesmart_stage_cards_' . md5( $stage_slug . '|' . $lang . '|' . $gen . '|' . bitesmart_stage_cards_template_version() );
 
     $cached = get_transient( $cache_key );
     if ( is_array( $cached ) ) {

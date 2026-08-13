@@ -6,8 +6,41 @@
    headers).
    ───────────────────────────────────────────────────────────────────────────── */
 
+/* Question row (<summary>) — always visible, click anywhere on it to
+   reveal/hide the answer body below. Native <details>/<summary>, no JS —
+   see the header comment in qa-entry-display.php for why. */
+.wp-block-custom-qa-entry .qa-entry-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  list-style: none; /* removes Firefox's default marker */
+}
+
+.wp-block-custom-qa-entry .qa-entry-summary::-webkit-details-marker {
+  display: none; /* removes Chrome/Safari's default marker */
+}
+
 .wp-block-custom-qa-entry .qa-entry-question {
-  margin: 0 0 8px;
+  margin: 0;
+}
+
+.wp-block-custom-qa-entry .qa-entry-chevron {
+  flex-shrink: 0;
+  color: #154862; /* matches .custom-block-accent-heading's text color */
+  transition: transform 0.2s ease;
+}
+
+/* Same rotate-on-open technique as the navbar submenu chevron (see
+   themes/twentytwentyfive-child/css/navbar.css) — keyed off <details>'s
+   native [open] attribute instead of aria-expanded. */
+.wp-block-custom-qa-entry details[open] .qa-entry-chevron {
+  transform: rotate(180deg);
+}
+
+.wp-block-custom-qa-entry .qa-entry-body {
+  margin-top: 12px;
 }
 
 .wp-block-custom-qa-entry .qa-entry-answer {
