@@ -126,6 +126,36 @@ function episode_register_block() {
 }
 add_action( 'init', 'episode_register_block' );
 
+// -------------- Resource Block (CPT-backed) ------------------------ //
+
+// custom/resource stores only which Resource post to show and renders
+// live from that post — same pattern as custom/episode. See
+// src/resource-display/resource-display.php, and the Resource post type
+// in the Custom Post Types for BBS plugin's includes/resource-cpt.php.
+require_once __DIR__ . '/src/resource-display/resource-display.php';
+
+function resource_register_block() {
+    register_block_type( __DIR__ . '/build/resource-display', [
+        'render_callback' => 'render_resource_block',
+    ] );
+}
+add_action( 'init', 'resource_register_block' );
+
+// -------------- Q&A Entry Block (CPT-backed) ------------------------ //
+
+// custom/qa-entry stores only which Q&A Entry post to show and renders
+// live from that post — same pattern as custom/episode and custom/resource.
+// See src/qa-entry-display/qa-entry-display.php, and the Q&A Entry post
+// type in the Custom Post Types for BBS plugin's includes/qa-entry-cpt.php.
+require_once __DIR__ . '/src/qa-entry-display/qa-entry-display.php';
+
+function qa_entry_register_block() {
+    register_block_type( __DIR__ . '/build/qa-entry-display', [
+        'render_callback' => 'render_qa_entry_block',
+    ] );
+}
+add_action( 'init', 'qa_entry_register_block' );
+
 // -----------------------------
 // static save blocks:
 // ----------------------------
@@ -276,6 +306,42 @@ add_action( 'init', 'episode_fields_register_block' );
 // bitesmart_localize_video_language_editors() (site-lang.php). That
 // function keys off generate_block_asset_handle(), so it already covers
 // this block too as long as it's in its $block_names list — see site-lang.php.
+
+// -----------------------------
+// Resource admin fields (locked into the Resource CPT's canvas — see the
+// 'template'/'template_lock' args in the Custom Post Types for BBS
+// plugin's includes/resource-cpt.php)
+// -----------------------------
+
+function resource_fields_register_block() {
+    register_block_type( __DIR__ . '/build/resource-fields' );
+}
+add_action( 'init', 'resource_fields_register_block' );
+
+// custom/resource-fields isn't a display block (save() is null, and
+// Resource posts are never publicly queryable), so it needs no
+// render_callback — but its editor script still needs the same
+// TranslatePress-derived language list, for its per-language Keywords
+// fields. Added to bitesmart_localize_video_language_editors()'s
+// $block_names list — see site-lang.php.
+
+// -----------------------------
+// Q&A Entry admin fields (locked into the Q&A Entry CPT's canvas — see the
+// 'template'/'template_lock' args in the Custom Post Types for BBS
+// plugin's includes/qa-entry-cpt.php)
+// -----------------------------
+
+function qa_entry_fields_register_block() {
+    register_block_type( __DIR__ . '/build/qa-entry-fields' );
+}
+add_action( 'init', 'qa_entry_fields_register_block' );
+
+// custom/qa-entry-fields isn't a display block (save() is null, and Q&A
+// Entry posts are never publicly queryable), so it needs no
+// render_callback — but its editor script still needs the same
+// TranslatePress-derived language list, for its per-language Synonyms
+// fields. Added to bitesmart_localize_video_language_editors()'s
+// $block_names list — see site-lang.php.
 
 // -----------------------------
 // Disable Application Passwords

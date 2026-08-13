@@ -647,11 +647,12 @@ function bitesmart_complementary_landmark_labels( $block_content, $block ) {
 add_filter( 'render_block', 'bitesmart_complementary_landmark_labels', 10, 2 );
 
 /**
- * Editor: pass site language config into episode-card, video-quote, AND
- * episode-fields scripts, so each block's per-language UI (Available
- * Languages checkboxes, or the Vimeo URL field per language) reflects
- * bitesmart_site_languages() (TranslatePress-derived) instead of falling
- * back to the hardcoded DEFAULT_SITE_LANGUAGES in shared/languages.js.
+ * Editor: pass site language config into episode-card, video-quote,
+ * episode-fields, resource-fields, AND qa-entry-fields scripts, so each
+ * block's per-language UI (Available Languages checkboxes, the Vimeo URL
+ * field per language, or the Keywords/Synonyms field per language)
+ * reflects bitesmart_site_languages() (TranslatePress-derived) instead of
+ * falling back to the hardcoded DEFAULT_SITE_LANGUAGES in shared/languages.js.
  */
 function bitesmart_localize_video_language_editors() {
     if ( ! function_exists( 'generate_block_asset_handle' ) ) {
@@ -668,7 +669,13 @@ function bitesmart_localize_video_language_editors() {
         );
     }
 
-    $block_names = array( 'custom/episode-card', 'custom/video-quote', 'custom/episode-fields' );
+    $block_names = array(
+        'custom/episode-card',
+        'custom/video-quote',
+        'custom/episode-fields',
+        'custom/resource-fields',
+        'custom/qa-entry-fields',
+    );
 
     foreach ( $block_names as $block_name ) {
         $handle = generate_block_asset_handle( $block_name, 'editorScript' );

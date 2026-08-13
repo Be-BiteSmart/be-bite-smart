@@ -1,0 +1,19 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Q&A Entry Block
+   Card container, border, and editor margin are handled by global CSS
+   via .custom-block-card and .custom-block-border (same convention as
+   bio-card, episode-card, resource, etc. — see those blocks' style.css
+   headers).
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.wp-block-custom-qa-entry .qa-entry-question {
+  margin: 0 0 8px;
+}
+
+.wp-block-custom-qa-entry .qa-entry-answer {
+  margin: 0 0 16px;
+}
+
+.wp-block-custom-qa-entry .qa-entry-guide-link {
+  display: inline-block;
+}

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "custom/resource",
+  "title": "Resource",
+  "category": "widgets",
+  "description": "Displays a Resource post as a link-out card. Pulls its content live from the chosen Resource — nothing is duplicated into the block itself.",
+  "attributes": {
+    "resourceId": {
+      "type": "number"
+    }
+  },
+  "supports": {
+    "html": false
+  },
+  "editorScript": "file:./index.js",
+  "style": "file:./style-index.css"
+}
