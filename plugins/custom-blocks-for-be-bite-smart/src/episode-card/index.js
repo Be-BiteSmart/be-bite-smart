@@ -532,6 +532,13 @@ registerBlockType("custom/episode-card", {
 
   save: EpisodeCardSave,
 
+  // This whole block is superseded by the CPT-backed "custom/episode"
+  // block (src/episode-display/), which reads its content live from an
+  // Episode post instead of storing its own copy. Left running as-is,
+  // deprecated array included, so existing pages using it keep working
+  // during the transition — see the plan's "Transition" section. Retire
+  // this block (and this deprecated array with it) once every existing
+  // instance has been manually migrated to custom/episode.
   deprecated: [
     {
       attributes: LEGACY_EPISODE_ATTRIBUTES,

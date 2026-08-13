@@ -1,0 +1,6 @@
+/* custom/episode reuses custom/episode-card's front-end styles as-is — the
+   markup this block renders (episode-card-container, episode-number,
+   episode-title, etc.) is deliberately identical, so there's nothing new to
+   style here. A few editor-only rules from episode-card come along unused;
+   harmless dead CSS, simpler than forking the stylesheet. */
+@import "../episode-card/style.css";

@@ -156,6 +156,32 @@ function bitesmart_vimeo_id_from_url( $url ) {
 }
 
 /**
+ * Convert a lang code => Vimeo URL map into a lang code => Vimeo ID map,
+ * dropping any entry whose URL doesn't resolve to a numeric Vimeo ID.
+ *
+ * Shared by the legacy episode-card render_block filter (via
+ * bitesmart_episode_vimeo_ids_from_attrs() below) and the CPT-backed
+ * `custom/episode` block's render_callback — both need the exact same
+ * URL-to-ID resolution, just starting from a different source of the
+ * lang-code => URL map.
+ *
+ * @param array<string, mixed> $videos_by_lang Lang code => Vimeo URL.
+ * @return array<string, string> Lang code => Vimeo ID.
+ */
+function bitesmart_vimeo_ids_by_lang_map( array $videos_by_lang ) {
+    $videos = array();
+
+    foreach ( $videos_by_lang as $code => $url ) {
+        $id = bitesmart_vimeo_id_from_url( $url );
+        if ( $id ) {
+            $videos[ (string) $code ] = $id;
+        }
+    }
+
+    return $videos;
+}
+
+/**
  * Build lang code => Vimeo ID map from episode-card block attributes.
  *
  * @param array<string, mixed> $attrs Block attributes.
@@ -165,12 +191,7 @@ function bitesmart_episode_vimeo_ids_from_attrs( $attrs ) {
     $videos = array();
 
     if ( ! empty( $attrs['videosByLang'] ) && is_array( $attrs['videosByLang'] ) ) {
-        foreach ( $attrs['videosByLang'] as $code => $url ) {
-            $id = bitesmart_vimeo_id_from_url( $url );
-            if ( $id ) {
-                $videos[ (string) $code ] = $id;
-            }
-        }
+        $videos = bitesmart_vimeo_ids_by_lang_map( $attrs['videosByLang'] );
     }
 
     if ( empty( $videos ) ) {
@@ -178,12 +199,7 @@ function bitesmart_episode_vimeo_ids_from_attrs( $attrs ) {
             'en' => $attrs['vimeoUrlEn'] ?? '',
             'es' => $attrs['vimeoUrlEs'] ?? '',
         );
-        foreach ( $legacy as $code => $url ) {
-            $id = bitesmart_vimeo_id_from_url( $url );
-            if ( $id ) {
-                $videos[ $code ] = $id;
-            }
-        }
+        $videos = bitesmart_vimeo_ids_by_lang_map( $legacy );
     }
 
     return $videos;
@@ -631,8 +647,9 @@ function bitesmart_complementary_landmark_labels( $block_content, $block ) {
 add_filter( 'render_block', 'bitesmart_complementary_landmark_labels', 10, 2 );
 
 /**
- * Editor: pass site language config into episode-card AND video-quote
- * scripts, so both blocks' "Available Languages" checkboxes reflect
+ * Editor: pass site language config into episode-card, video-quote, AND
+ * episode-fields scripts, so each block's per-language UI (Available
+ * Languages checkboxes, or the Vimeo URL field per language) reflects
  * bitesmart_site_languages() (TranslatePress-derived) instead of falling
  * back to the hardcoded DEFAULT_SITE_LANGUAGES in shared/languages.js.
  */
@@ -651,7 +668,7 @@ function bitesmart_localize_video_language_editors() {
         );
     }
 
-    $block_names = array( 'custom/episode-card', 'custom/video-quote' );
+    $block_names = array( 'custom/episode-card', 'custom/video-quote', 'custom/episode-fields' );
 
     foreach ( $block_names as $block_name ) {
         $handle = generate_block_asset_handle( $block_name, 'editorScript' );

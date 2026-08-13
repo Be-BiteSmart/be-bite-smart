@@ -14,6 +14,8 @@ module.exports = {
     "educational-coloring-book-download/index":
       "./src/educational-coloring-book-download/index.js",
     "episode-card/index": "./src/episode-card/index.js",
+    "episode-fields/index": "./src/episode-fields/index.js",
+    "episode-display/index": "./src/episode-display/index.js",
     "hero/index": "./src/hero/index.js",
     "news-and-coverage/index": "./src/news-and-coverage/index.js",
     "pdf-toggle/index": "./src/pdf-toggle/index.js",

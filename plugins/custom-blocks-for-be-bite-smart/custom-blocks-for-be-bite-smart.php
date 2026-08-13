@@ -4,8 +4,16 @@
  * Description: Adds custom blocks including Research Article and Bio Card
  * Version: 1.0
  * Author: Janet Spellman-Marsh
- * Requires Plugins: TranslatePress
+ * Requires Plugins: TranslatePress, custom-post-types-for-bbs
  */
+
+// The Episode post type, its meta fields, and the Stage taxonomy are all
+// registered in the separate "Custom Post Types for BBS" plugin (see its
+// includes/episode-cpt.php and includes/stage-taxonomy.php) — that plugin
+// owns the content model, this one owns the blocks that read/write it
+// (custom/episode-fields, custom/episode, further down). The "Requires
+// Plugins" header above makes that a real dependency: WordPress won't let
+// this plugin activate without that one already active.
 
 // Shared helpers (TranslatePress site language, etc.)
 require_once __DIR__ . '/src/includes/site-lang.php';
@@ -99,6 +107,25 @@ function documentary_video_register_block() {
     ] );
 }
 add_action( 'init', 'documentary_video_register_block' );
+
+// -------------- Episode Block (CPT-backed) ------------------------ //
+
+// custom/episode is the CPT-backed replacement for custom/episode-card:
+// it stores only which Episode post to show and renders live from that
+// post, so the same episode can appear on multiple pages without
+// duplicating content. Registered as a NEW block name alongside the old
+// one (not replacing it) — custom/episode-card stays exactly as it is
+// below, untouched, so existing pages using it keep working during the
+// transition. See src/episode-display/episode-display.php.
+require_once __DIR__ . '/src/episode-display/episode-display.php';
+
+function episode_register_block() {
+    register_block_type( __DIR__ . '/build/episode-display', [
+        'render_callback' => 'render_episode_block',
+    ] );
+}
+add_action( 'init', 'episode_register_block' );
+
 // -----------------------------
 // static save blocks:
 // ----------------------------
@@ -230,6 +257,25 @@ function custom_blocks_scripts() {
 
 
 add_action( 'wp_enqueue_scripts', 'custom_blocks_scripts' );
+
+// -----------------------------
+// Episode admin fields (locked into the Episode CPT's canvas — see the
+// 'template'/'template_lock' args in the Custom Post Types for BBS
+// plugin's includes/episode-cpt.php)
+// -----------------------------
+
+function episode_fields_register_block() {
+    register_block_type( __DIR__ . '/build/episode-fields' );
+}
+add_action( 'init', 'episode_fields_register_block' );
+
+// custom/episode-fields isn't a display block (save() is null, and Episode
+// posts are never publicly queryable), so it needs no render_callback —
+// but its editor script still needs the same TranslatePress-derived
+// language list episode-card/video-quote get via
+// bitesmart_localize_video_language_editors() (site-lang.php). That
+// function keys off generate_block_asset_handle(), so it already covers
+// this block too as long as it's in its $block_names list — see site-lang.php.
 
 // -----------------------------
 // Disable Application Passwords
