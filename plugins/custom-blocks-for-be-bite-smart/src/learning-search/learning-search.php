@@ -106,22 +106,28 @@ function bitesmart_stage_cards_bump_generation() {
 }
 
 /**
- * Invalidate the cache when a Q&A Entry, Resource, or Episode is saved
- * (including status transitions — draft/publish/trash all fire save_post)
- * or when its Stage/Topic terms change independently of a full save (e.g.
- * quick-edit). Episode is included because it's shown in this list too now
- * — see render_episode_search_card() in episode-display.php and its use in
- * bitesmart_build_stage_card_list() below.
+ * Invalidate the cache when a Q&A Entry, Resource, Episode, or Coloring
+ * Book is saved (including status transitions — draft/publish/trash all
+ * fire save_post) or when its Stage/Topic terms change independently of a
+ * full save (e.g. quick-edit). Episode is included because it's shown in
+ * this list too now — see render_episode_search_card() in
+ * episode-display.php and its use in bitesmart_build_stage_card_list()
+ * below. Coloring Book is included for the same reason (see
+ * render_coloring_book_search_card() in coloring-book-display.php) AND
+ * because bitesmart_build_downloads_page_card_list() (coloring-books-list.php)
+ * deliberately reuses this same generation counter for its own,
+ * differently-scoped cache — see that function's header comment.
  */
 function bitesmart_stage_cards_maybe_bump( $post_id, $post = null ) {
     $post_type = $post ? $post->post_type : get_post_type( $post_id );
-    if ( in_array( $post_type, array( 'qa_entry', 'resource', 'episode' ), true ) ) {
+    if ( in_array( $post_type, array( 'qa_entry', 'resource', 'episode', 'coloring_book' ), true ) ) {
         bitesmart_stage_cards_bump_generation();
     }
 }
 add_action( 'save_post_qa_entry', 'bitesmart_stage_cards_maybe_bump', 10, 2 );
 add_action( 'save_post_resource', 'bitesmart_stage_cards_maybe_bump', 10, 2 );
 add_action( 'save_post_episode', 'bitesmart_stage_cards_maybe_bump', 10, 2 );
+add_action( 'save_post_coloring_book', 'bitesmart_stage_cards_maybe_bump', 10, 2 );
 add_action( 'delete_post', 'bitesmart_stage_cards_maybe_bump' );
 
 function bitesmart_stage_cards_maybe_bump_terms( $object_id, $terms, $tt_ids, $taxonomy ) {
@@ -144,15 +150,16 @@ add_action( 'set_object_terms', 'bitesmart_stage_cards_maybe_bump_terms', 10, 4 
  * question text, same as Q&A Entry's Synonyms / Resource's Keywords.
  *
  * @param int    $post_id Post ID.
- * @param string $type    'qa_entry', 'resource', or 'episode'.
+ * @param string $type    'qa_entry', 'resource', 'episode', or 'coloring_book'.
  * @param string $lang    Short language code.
  * @return string
  */
 function bitesmart_stage_card_keywords( $post_id, $type, $lang ) {
     $meta_keys = array(
-        'qa_entry' => '_bitesmart_qa_synonyms_by_lang',
-        'resource' => '_bitesmart_resource_keywords_by_lang',
-        'episode'  => '_bitesmart_episode_keywords_by_lang',
+        'qa_entry'      => '_bitesmart_qa_synonyms_by_lang',
+        'resource'      => '_bitesmart_resource_keywords_by_lang',
+        'episode'       => '_bitesmart_episode_keywords_by_lang',
+        'coloring_book' => '_bitesmart_coloring_book_keywords_by_lang',
     );
 
     if ( ! isset( $meta_keys[ $type ] ) ) {
@@ -185,6 +192,7 @@ function bitesmart_stage_cards_template_version() {
         __DIR__ . '/../qa-entry-display/qa-entry-display.php',
         __DIR__ . '/../resource-display/resource-display.php',
         __DIR__ . '/../episode-display/episode-display.php', // holds render_episode_search_card() too, not just render_episode_block()
+        __DIR__ . '/../coloring-book-display/coloring-book-display.php', // holds render_coloring_book_search_card() too, not just render_coloring_book_block()
     );
 
     $stamps = array_map(
@@ -200,12 +208,16 @@ function bitesmart_stage_cards_template_version() {
 /**
  * Build (or fetch from cache) the full, ordered list of rendered cards for
  * one Stage, in the current request's language. Every Q&A Entry + Resource
- * + Episode published and tagged with $stage_slug, alphabetical by title.
- * Episode is included as a compact synthesized-question card (see
- * render_episode_search_card() in episode-display.php), not its full
- * video-player embed — Episodes already default to the Preschool stage
- * term on save (see episode-cpt.php), so this "just works" for the
- * Preschool page's search/browse list without any extra tagging.
+ * + Episode + Coloring Book published and tagged with $stage_slug,
+ * alphabetical by title. Episode is included as a compact
+ * synthesized-question card (see render_episode_search_card() in
+ * episode-display.php), not its full video-player embed — Episodes already
+ * default to the Preschool stage term on save (see episode-cpt.php), so
+ * this "just works" for the Preschool page's search/browse list without
+ * any extra tagging. Coloring Book, unlike Episode, embeds its actual
+ * Download buttons inline (see render_coloring_book_search_card() in
+ * coloring-book-display.php) rather than linking out — no stage default,
+ * since coloring books aren't necessarily Preschool-specific.
  *
  * @param string $stage_slug Stage taxonomy term slug.
  * @param string $lang       Short language code (bitesmart_site_lang_code()).
@@ -221,7 +233,7 @@ function bitesmart_build_stage_card_list( $stage_slug, $lang ) {
     }
 
     $query = new WP_Query( array(
-        'post_type'      => array( 'qa_entry', 'resource', 'episode' ),
+        'post_type'      => array( 'qa_entry', 'resource', 'episode', 'coloring_book' ),
         'post_status'    => 'publish',
         'posts_per_page' => -1,
         'orderby'        => 'title',
@@ -243,6 +255,8 @@ function bitesmart_build_stage_card_list( $stage_slug, $lang ) {
             $html = render_qa_entry_block( array( 'entryId' => $post->ID ) );
         } elseif ( 'resource' === $post->post_type ) {
             $html = render_resource_block( array( 'resourceId' => $post->ID ) );
+        } elseif ( 'coloring_book' === $post->post_type ) {
+            $html = render_coloring_book_search_card( array( 'coloringBookId' => $post->ID ) );
         } else {
             $html = render_episode_search_card( array( 'episodeId' => $post->ID ) );
         }

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "custom/coloring-books-list",
+  "title": "Coloring Books List",
+  "category": "widgets",
+  "icon": "art",
+  "description": "Auto-lists every published Coloring Book, cached and refreshed whenever one is added, edited, or removed. Place once on the downloads page — new coloring books need no further page-editing step.",
+  "supports": {
+    "html": false,
+    "multiple": false
+  },
+  "editorScript": "file:./index.js"
+}

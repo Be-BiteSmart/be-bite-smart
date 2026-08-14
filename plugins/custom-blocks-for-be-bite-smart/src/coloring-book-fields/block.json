@@ -1,0 +1,14 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "custom/coloring-book-fields",
+  "title": "Coloring Book Fields",
+  "category": "widgets",
+  "description": "Episode #, EN/ES PDF uploads, and search keywords for a Coloring Book post. Only ever appears via the Coloring Book post type's locked content template (see coloring-book-cpt.php) — not meant to be inserted anywhere else.",
+  "supports": {
+    "inserter": false,
+    "html": false,
+    "multiple": false
+  },
+  "editorScript": "file:./index.js"
+}

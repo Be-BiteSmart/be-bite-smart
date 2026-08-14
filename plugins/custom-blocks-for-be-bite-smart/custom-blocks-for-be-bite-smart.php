@@ -156,15 +156,49 @@ function qa_entry_register_block() {
 }
 add_action( 'init', 'qa_entry_register_block' );
 
+// -------------- Coloring Book Block (CPT-backed) ------------------------ //
+
+// custom/coloring-book stores only which Coloring Book post to show and
+// renders live from that post — same pattern as custom/episode and
+// custom/resource. See src/coloring-book-display/coloring-book-display.php,
+// and the Coloring Book post type in the Custom Post Types for BBS
+// plugin's includes/coloring-book-cpt.php. Most pages should use
+// custom/coloring-books-list (registered further down) instead of placing
+// these one at a time.
+require_once __DIR__ . '/src/coloring-book-display/coloring-book-display.php';
+
+function coloring_book_register_block() {
+    register_block_type( __DIR__ . '/build/coloring-book-display', [
+        'render_callback' => 'render_coloring_book_block',
+    ] );
+}
+add_action( 'init', 'coloring_book_register_block' );
+
+// -------------- Coloring Books List Block ------------------------ //
+
+// custom/coloring-books-list auto-lists every published Coloring Book —
+// see src/coloring-books-list/coloring-books-list.php. Requires
+// coloring-book-display.php (just above) to already be loaded, since its
+// render callback calls render_coloring_book_block() for each item.
+require_once __DIR__ . '/src/coloring-books-list/coloring-books-list.php';
+
+function coloring_books_list_register_block() {
+    register_block_type( __DIR__ . '/build/coloring-books-list', [
+        'render_callback' => 'render_coloring_books_list_block',
+    ] );
+}
+add_action( 'init', 'coloring_books_list_register_block' );
+
 // -------------- Learning Hub Search Block ------------------------ //
 
 // custom/learning-search is placed once per Stage archive page (e.g.
 // /learning/stages/preschool/) — see [[be-bitesmart-content-hub-plan]] in
-// memory. It reuses render_qa_entry_block() / render_resource_block()
-// (registered just above) to build both its paginated "browse all" list
-// and the data its front-end Fuse.js search reads, so both plugins'
-// require order matters here: this file must load after
-// qa-entry-display.php and resource-display.php, which it does.
+// memory. It reuses render_qa_entry_block() / render_resource_block() /
+// render_coloring_book_search_card() (registered just above) to build both
+// its paginated "browse all" list and the data its front-end Fuse.js
+// search reads, so require order matters here: this file must load after
+// qa-entry-display.php, resource-display.php, and
+// coloring-book-display.php, which it does.
 require_once __DIR__ . '/src/learning-search/learning-search.php';
 
 function learning_search_register_block() {
@@ -288,10 +322,24 @@ function custom_blocks_scripts() {
     $asset = include plugin_dir_path( __FILE__ ) . 'build/pdf-toggle/index.asset.php';
     wp_enqueue_style( 'pdf-toggle-style', plugins_url( 'build/pdf-toggle/style-index.css', __FILE__ ), array(), $asset['version'] );
 
-    // Shared by learnal-*-download blocks. Webpack only emits one style chunk per
+    // Shared by educational-*-download blocks (and now coloring-book-display/
+    // coloring-books-list — see below). Webpack only emits one style chunk per
     // shared import path, so video/coloring block.json style files are not generated.
     // Shared download-card CSS (webpack emits one chunk from the first block entry).
-    $download_card_css = plugin_dir_path( __FILE__ ) . 'build/learnal-content-download/style-index.css';
+    //
+    // NOTE: this file_exists() guard used to check a typo'd path
+    // ("build/learnal-content-download/...") that never existed, so this
+    // enqueue silently never ran — harmless before now, since each of the
+    // three educational-*-download blocks gets this same CSS anyway via its
+    // own block.json's automatic per-block enqueue whenever that block is
+    // literally present on a page. It matters now because
+    // render_coloring_book_search_card() (coloring-book-display.php) is
+    // injected into custom/learning-search's output via PHP, the same way
+    // render_qa_entry_block()/render_resource_block() are — WordPress's
+    // automatic has_block() detection can't see it, so it needs an explicit
+    // enqueue. Fixed to point at the real path instead of adding yet
+    // another special case.
+    $download_card_css = plugin_dir_path( __FILE__ ) . 'build/educational-content-download/style-index.css';
     if ( file_exists( $download_card_css ) ) {
         $download_card_asset = include plugin_dir_path( __FILE__ ) . 'build/educational-content-download/index.asset.php';
         wp_enqueue_style(
@@ -358,6 +406,24 @@ add_action( 'init', 'qa_entry_fields_register_block' );
 // Entry posts are never publicly queryable), so it needs no
 // render_callback — but its editor script still needs the same
 // TranslatePress-derived language list, for its per-language Synonyms
+// fields. Added to bitesmart_localize_video_language_editors()'s
+// $block_names list — see site-lang.php.
+
+// -----------------------------
+// Coloring Book admin fields (locked into the Coloring Book CPT's canvas —
+// see the 'template'/'template_lock' args in the Custom Post Types for BBS
+// plugin's includes/coloring-book-cpt.php)
+// -----------------------------
+
+function coloring_book_fields_register_block() {
+    register_block_type( __DIR__ . '/build/coloring-book-fields' );
+}
+add_action( 'init', 'coloring_book_fields_register_block' );
+
+// custom/coloring-book-fields isn't a display block (save() is null, and
+// Coloring Book posts are never publicly queryable), so it needs no
+// render_callback — but its editor script still needs the same
+// TranslatePress-derived language list, for its per-language Keywords
 // fields. Added to bitesmart_localize_video_language_editors()'s
 // $block_names list — see site-lang.php.
 

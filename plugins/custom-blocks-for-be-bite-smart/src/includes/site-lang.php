@@ -675,6 +675,7 @@ function bitesmart_localize_video_language_editors() {
         'custom/episode-fields',
         'custom/resource-fields',
         'custom/qa-entry-fields',
+        'custom/coloring-book-fields',
     );
 
     foreach ( $block_names as $block_name ) {
