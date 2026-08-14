@@ -26,10 +26,11 @@
  * to build.
  *
  * The (b) paginated list is genuinely server-rendered and cached (a
- * transient per Stage+language, invalidated only when Q&A/Resource/Episode
- * content actually changes — see bitesmart_stage_cards_bump_generation()
- * below) — NOT regenerated on every page view. Pagination itself is plain
- * `?bs_page=N` links, no JS required.
+ * transient per Stage+language, invalidated only when Q&A/Resource/Episode/
+ * Coloring Book content actually changes — see
+ * bitesmart_stage_cards_bump_generation() below) — NOT regenerated on every
+ * page view. Server-side, pagination is plain `?bs_page=N` links, no JS
+ * required — that's what a visitor with JS disabled actually sees.
  *
  * The (a) search box reuses the exact same rendered card HTML: the full
  * per-Stage list (not just the current page) is embedded once as a
@@ -38,6 +39,21 @@
  * over it entirely in the browser — no REST endpoint, no fetch, no second
  * translation path. A search "result" is just one of these same
  * already-rendered, already-translated card HTML strings being shown.
+ *
+ * Added 2026-08-13 (later the same day the Coloring Book search cards were
+ * built): "Show: [x] Q&A [x] Resources …" type-filter checkboxes (see
+ * bitesmart_render_learning_search_type_filter() below), all checked by
+ * default. Per Janet, unchecking a type needed to hide it from BOTH the
+ * live search results AND the browse list — one consistent setting, not
+ * two independently-behaving filters — which meant the (b) browse list
+ * couldn't stay purely server-rendered-per-request; view.js now takes it
+ * over on load (same embedded JSON blob (a) already uses) and re-paginates
+ * it client-side whenever a checkbox changes, with the server-rendered
+ * version underneath as the no-JS fallback (see the "browse-content"
+ * wrapper div below). This is the one part of the block that behaves
+ * differently with JS on vs off — the search box already was 100% JS-only,
+ * so making the type filter JS-only too doesn't lower the no-JS floor any
+ * further, it just doesn't raise it either.
  *
  * Known v1 limitation (confirmed acceptable with Janet): the plain-text
  * search-matching corpus for each card is built from the CURRENT request's
@@ -321,12 +337,70 @@ function bitesmart_render_learning_search_data( array $cards, $instance_id ) {
 }
 
 /**
- * Hidden, TranslatePress-translatable source of truth for the two status
- * messages view.js builds dynamically (result count / no-results) — same
- * technique as bitesmart_render_video_lang_name_templates() and friends in
+ * Card type => checkbox label, in the fixed order the type-filter
+ * checkboxes always render — see bitesmart_render_learning_search_type_filter()
+ * below. One place to add a label if a new card type is ever added to
+ * bitesmart_build_stage_card_list()'s WP_Query.
+ *
+ * @return array<string, string>
+ */
+function bitesmart_learning_search_type_labels() {
+    return array(
+        'qa_entry'      => __( 'Q&A', 'custom-blocks' ),
+        'resource'      => __( 'Resources', 'custom-blocks' ),
+        'episode'       => __( 'Episodes', 'custom-blocks' ),
+        'coloring_book' => __( 'Coloring Books', 'custom-blocks' ),
+    );
+}
+
+/**
+ * "Show: [x] Q&A [x] Resources …" checkboxes — all checked by default,
+ * unchecking one hides that type from BOTH the live Fuse.js search results
+ * AND the browse list below (view.js reads these via
+ * .learning-search-type-checkbox/data-type; see initLearningSearchBlock()).
+ * Deliberately JS-only, same as the search box itself doing nothing without
+ * JS — no server-side GET-param fallback, so as not to duplicate the
+ * filtering logic in two places for a feature that's an enhancement on top
+ * of an already fully-JS-dependent live search.
+ *
+ * Only rendered when this Stage actually has 2+ distinct card types —
+ * a single checkbox with nothing to compare against isn't a useful filter,
+ * and no checkboxes at all when $cards is empty (nothing to filter).
+ *
+ * @param array<int, array{id:int, type:string, html:string, searchText:string}> $cards
+ * @return void
+ */
+function bitesmart_render_learning_search_type_filter( array $cards ) {
+    $present_types = array_unique( wp_list_pluck( $cards, 'type' ) );
+    if ( count( $present_types ) < 2 ) {
+        return;
+    }
+
+    ?>
+    <fieldset class="learning-search-type-filter">
+        <legend class="learning-search-type-filter-legend"><?php esc_html_e( 'Show:', 'custom-blocks' ); ?></legend>
+        <?php foreach ( bitesmart_learning_search_type_labels() as $type => $label ) : ?>
+            <?php if ( in_array( $type, $present_types, true ) ) : // don't offer a "Coloring Books" checkbox on a Stage with none, etc. ?>
+                <label class="learning-search-type-toggle">
+                    <input type="checkbox" class="learning-search-type-checkbox" data-type="<?php echo esc_attr( $type ); ?>" checked>
+                    <?php echo esc_html( $label ); ?>
+                </label>
+            <?php endif; ?>
+        <?php endforeach; ?>
+    </fieldset>
+    <?php
+}
+
+/**
+ * Hidden, TranslatePress-translatable source of truth for the status
+ * messages/pagination labels view.js builds dynamically — same technique
+ * as bitesmart_render_video_lang_name_templates() and friends in
  * site-lang.php: dynamic JS-built strings aren't reliably translatable by
  * TranslatePress, but static rendered HTML (even display:none) is, since TP
- * translates whatever text renders on the page.
+ * translates whatever text renders on the page. The browse-* keys are for
+ * view.js's client-side-paginated browse list (see renderBrowse() there),
+ * which took over from plain ?bs_page=N links so the type-filter checkboxes
+ * above can affect it without a page reload.
  */
 function bitesmart_render_learning_search_strings( $instance_id ) {
     ?>
@@ -334,6 +408,11 @@ function bitesmart_render_learning_search_strings( $instance_id ) {
         <span class="learning-search-string" data-key="no-results"><?php esc_html_e( 'No matches found for "{query}".', 'custom-blocks' ); ?></span>
         <span class="learning-search-string" data-key="results-count-one"><?php esc_html_e( '1 result', 'custom-blocks' ); ?></span>
         <span class="learning-search-string" data-key="results-count-other"><?php esc_html_e( '{count} results', 'custom-blocks' ); ?></span>
+        <span class="learning-search-string" data-key="browse-empty-filtered"><?php esc_html_e( 'Nothing matches the selected filters.', 'custom-blocks' ); ?></span>
+        <span class="learning-search-string" data-key="browse-prev"><?php esc_html_e( 'Previous', 'custom-blocks' ); ?></span>
+        <span class="learning-search-string" data-key="browse-next"><?php esc_html_e( 'Next', 'custom-blocks' ); ?></span>
+        <span class="learning-search-string" data-key="browse-page-status"><?php esc_html_e( 'Page {current} of {total}', 'custom-blocks' ); ?></span>
+        <span class="learning-search-string" data-key="browse-pagination-label"><?php esc_html_e( 'Questions & Resources pages', 'custom-blocks' ); ?></span>
     </div>
     <?php
 }
@@ -398,6 +477,7 @@ function render_learning_search_block( $attributes ) {
             </div>
             <p class="learning-search-status" aria-live="polite"></p>
             <?php /* Deliberately no aria-live here — results is rich, multi-card content (headings, links, an accordion each); making it a live region would have screen readers try to re-announce all of that on every keystroke's re-render. The concise status text above ("3 results") is the one thing that should be announced live. */ ?>
+            <?php bitesmart_render_learning_search_type_filter( $cards ); ?>
             <div class="learning-search-results"></div>
         </div>
 
@@ -412,42 +492,57 @@ function render_learning_search_block( $attributes ) {
                 ?>
             </h3>
 
-            <?php if ( empty( $page_cards ) ) : ?>
-                <p class="learning-search-empty"><?php esc_html_e( 'Nothing has been added for this Stage yet.', 'custom-blocks' ); ?></p>
-            <?php else : ?>
-                <div class="learning-search-browse-list">
-                    <?php foreach ( $page_cards as $card ) : ?>
-                        <?php echo $card['html']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- already-escaped HTML from render_qa_entry_block()/render_resource_block() ?>
-                    <?php endforeach; ?>
-                </div>
+            <?php
+            /*
+             * This inner wrapper (rather than the ?bs_page=N links below
+             * being the only pagination mechanism) exists so view.js's
+             * renderBrowse() has one clean target to replace wholesale once
+             * JS loads — see initLearningSearchBlock() there. What's here
+             * server-side is real, working, no-JS-required pagination
+             * (exactly as before this existed) that JS then takes over so
+             * the type-filter checkboxes above can affect it live, without
+             * a page reload. If JS never loads, this is exactly what a
+             * visitor sees and it works fine on its own.
+             */
+            ?>
+            <div class="learning-search-browse-content">
+                <?php if ( empty( $page_cards ) ) : ?>
+                    <p class="learning-search-empty"><?php esc_html_e( 'Nothing has been added for this Stage yet.', 'custom-blocks' ); ?></p>
+                <?php else : ?>
+                    <div class="learning-search-browse-list">
+                        <?php foreach ( $page_cards as $card ) : ?>
+                            <?php echo $card['html']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- already-escaped HTML from render_qa_entry_block()/render_resource_block() ?>
+                        <?php endforeach; ?>
+                    </div>
 
-                <?php if ( $total_pages > 1 ) : ?>
-                    <nav class="learning-search-pagination" aria-label="<?php esc_attr_e( 'Questions & Resources pages', 'custom-blocks' ); ?>">
-                        <?php if ( $page > 1 ) : ?>
-                            <a class="learning-search-page-link learning-search-prev" href="<?php echo esc_url( add_query_arg( 'bs_page', $page - 1 ) . '#' . $instance_id ); ?>">
-                                <?php esc_html_e( 'Previous', 'custom-blocks' ); ?>
-                            </a>
-                        <?php endif; ?>
+                    <?php if ( $total_pages > 1 ) : ?>
+                        <nav class="learning-search-pagination" aria-label="<?php esc_attr_e( 'Questions & Resources pages', 'custom-blocks' ); ?>">
+                            <?php if ( $page > 1 ) : ?>
+                                <a class="learning-search-page-link learning-search-prev" href="<?php echo esc_url( add_query_arg( 'bs_page', $page - 1 ) . '#' . $instance_id ); ?>">
+                                    <?php esc_html_e( 'Previous', 'custom-blocks' ); ?>
+                                </a>
+                            <?php endif; ?>
 
-                        <span class="learning-search-page-status">
-                            <?php
-                            printf(
-                                /* translators: 1: current page, 2: total pages */
-                                esc_html__( 'Page %1$d of %2$d', 'custom-blocks' ),
-                                (int) $page,
-                                (int) $total_pages
-                            );
-                            ?>
-                        </span>
+                            <span class="learning-search-page-status">
+                                <?php
+                                printf(
+                                    /* translators: 1: current page, 2: total pages */
+                                    esc_html__( 'Page %1$d of %2$d', 'custom-blocks' ),
+                                    (int) $page,
+                                    (int) $total_pages
+                                );
+                                ?>
+                            </span>
 
-                        <?php if ( $page < $total_pages ) : ?>
-                            <a class="learning-search-page-link learning-search-next" href="<?php echo esc_url( add_query_arg( 'bs_page', $page + 1 ) . '#' . $instance_id ); ?>">
-                                <?php esc_html_e( 'Next', 'custom-blocks' ); ?>
-                            </a>
-                        <?php endif; ?>
-                    </nav>
+                            <?php if ( $page < $total_pages ) : ?>
+                                <a class="learning-search-page-link learning-search-next" href="<?php echo esc_url( add_query_arg( 'bs_page', $page + 1 ) . '#' . $instance_id ); ?>">
+                                    <?php esc_html_e( 'Next', 'custom-blocks' ); ?>
+                                </a>
+                            <?php endif; ?>
+                        </nav>
+                    <?php endif; ?>
                 <?php endif; ?>
-            <?php endif; ?>
+            </div>
         </div>
     </section>
     <?php

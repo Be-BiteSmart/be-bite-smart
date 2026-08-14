@@ -102,6 +102,38 @@
   color: #555;
 }
 
+/* "Show: [x] Q&A [x] Resources …" — see
+   bitesmart_render_learning_search_type_filter() in learning-search.php.
+   Reset to plain flex row: a <fieldset>/<legend> pair is used for its
+   built-in "these checkboxes are one group" semantics, not its default
+   bordered-box appearance. */
+.learning-search-type-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+  margin: 12px 0 0;
+  padding: 0;
+  border: none;
+}
+
+.learning-search-type-filter-legend {
+  font-weight: 600;
+  padding: 0;
+}
+
+.learning-search-type-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.learning-search-type-checkbox {
+  cursor: pointer;
+}
+
 .learning-search-results {
   display: grid;
   gap: 16px;
@@ -134,6 +166,26 @@
 
 .learning-search-page-link {
   font-weight: 600;
+}
+
+/* Prev/Next render as <a href> in the server-rendered no-JS fallback, but
+   as <button> once view.js's renderBrowse() takes the browse list over
+   (see that file's header comment) — reset button chrome so it reads
+   identically to the link version it replaces. */
+button.learning-search-page-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: inherit;
+  color: #1f6a8f;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+button.learning-search-page-link:hover,
+button.learning-search-page-link:focus-visible {
+  color: #154862;
 }
 
 .learning-search-page-status {
