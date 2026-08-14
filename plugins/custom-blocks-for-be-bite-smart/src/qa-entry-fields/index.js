@@ -1,11 +1,16 @@
 import { registerBlockType } from "@wordpress/blocks";
-import { createElement as el } from "@wordpress/element";
+import { createElement as el, useEffect } from "@wordpress/element";
 import { useBlockProps } from "@wordpress/block-editor";
 import { useEntityProp } from "@wordpress/core-data";
-import { useSelect } from "@wordpress/data";
-import { TextControl, TextareaControl, RadioControl, ComboboxControl } from "@wordpress/components";
+import { useSelect, useDispatch } from "@wordpress/data";
+import { TextControl, TextareaControl, RadioControl, ComboboxControl, Notice } from "@wordpress/components";
 import { __ } from "@wordpress/i18n";
 import { getSiteLanguages } from "../shared/languages";
+
+// Lock name for lockPostSaving()/unlockPostSaving() below — must be
+// unique among any other lock some other plugin/block might register, not
+// meaningful beyond that.
+const STAGE_REQUIRED_LOCK = "qa-entry-requires-stage";
 
 // This block IS the Q&A Entry edit screen's main content — locked into
 // place via the 'template' + template_lock: 'all' args on the qa_entry CPT,
@@ -40,6 +45,33 @@ function QaEntryFieldsEdit() {
   const setSynonyms = (code, text) =>
     updateMeta("_bitesmart_qa_synonyms_by_lang", { ...synonyms, [code]: text });
 
+  // Stage is how a Q&A Entry gets found at all (see
+  // bitesmart_build_stage_card_list() in learning-search.php) — but unlike
+  // Episode/Coloring Book, there's no single sensible Stage to default a
+  // Q&A Entry to (see bitesmart_default_episode_stage_term() in
+  // episode-cpt.php for that pattern), so rather than silently letting one
+  // save with no Stage and quietly never show up anywhere, saving itself
+  // is blocked until at least one is picked in the sidebar panel — same
+  // lockPostSaving()/unlockPostSaving() mechanism WordPress itself uses
+  // for "can't publish yet" states, not a dismissible-and-forgettable
+  // alert. Blocks Save Draft too, not just Publish/Update — deliberately
+  // strict, per Janet's "when trying to save" (not "when trying to
+  // publish").
+  const stageTermIds = useSelect(
+    (select) => select("core/editor").getEditedPostAttribute("stage") || [],
+    [],
+  );
+  const hasStage = stageTermIds.length > 0;
+
+  const { lockPostSaving, unlockPostSaving } = useDispatch("core/editor");
+  useEffect(() => {
+    if (hasStage) {
+      unlockPostSaving(STAGE_REQUIRED_LOCK);
+    } else {
+      lockPostSaving(STAGE_REQUIRED_LOCK);
+    }
+  }, [hasStage, lockPostSaving, unlockPostSaving]);
+
   const resources = useSelect(
     (select) =>
       linkType === "resource"
@@ -63,6 +95,16 @@ function QaEntryFieldsEdit() {
   return el(
     "div",
     blockProps,
+
+    !hasStage &&
+      el(
+        Notice,
+        { status: "warning", isDismissible: false },
+        __(
+          "A Stage must be selected before this Q&A Entry can be saved — choose one in the Stage panel in the sidebar.",
+          "custom-blocks",
+        ),
+      ),
 
     el("h2", { className: "qa-entry-fields-heading" }, __("Q&A Entry Details", "custom-blocks")),
     el(

@@ -19,6 +19,7 @@ import Fuse from "fuse.js";
 
 const MIN_QUERY_LENGTH = 2;
 const DEBOUNCE_MS = 200;
+const LOG_DEBOUNCE_MS = 700; // separate, longer "typing settled" delay before a zero-result search is considered loggable — see maybeLogZeroResult() below
 const BROWSE_PER_PAGE = 10; // mirrors $per_page in render_learning_search_block()
 
 function initLearningSearchBlock(block) {
@@ -33,6 +34,7 @@ function initLearningSearchBlock(block) {
     block.querySelectorAll(".learning-search-type-checkbox"),
   );
   const dataEl = document.getElementById(`${instanceId}-data`);
+  const { lang, restUrl, restNonce } = block.dataset;
 
   if (!input || !results || !dataEl) {
     return;
@@ -71,20 +73,34 @@ function initLearningSearchBlock(block) {
     );
   }
 
+  // Tracked so maybeLogZeroResult() (below) can tell a genuine "Fuse found
+  // nothing" from "Fuse found matches but the type filter hid them all"
+  // without re-running Fuse itself — only the former is loggable (see its
+  // own comment). lastRawFuseCount stays null (never loggable) whenever no
+  // real search has actually run, e.g. the box is empty/below
+  // MIN_QUERY_LENGTH.
+  let lastQuery = "";
+  let lastRawFuseCount = null;
+
   function render(query) {
     const trimmed = query.trim();
+    lastQuery = trimmed;
 
     if (trimmed.length < MIN_QUERY_LENGTH) {
+      lastRawFuseCount = null;
       results.innerHTML = "";
       status.textContent = "";
       if (browse) browse.hidden = false;
       return;
     }
 
+    const rawMatches = fuse.search(trimmed);
+    lastRawFuseCount = rawMatches.length;
+
     const enabledTypes = getEnabledTypes();
-    const matches = fuse
-      .search(trimmed)
-      .filter((match) => !enabledTypes || enabledTypes.has(match.item.type));
+    const matches = rawMatches.filter(
+      (match) => !enabledTypes || enabledTypes.has(match.item.type),
+    );
 
     if (matches.length === 0) {
       results.innerHTML = "";
@@ -200,11 +216,66 @@ function initLearningSearchBlock(block) {
     input.focus(); // so the parent can immediately type a new search
   }
 
+  // Dedup within this one page visit — retyping the same zero-result term
+  // (e.g. backspace-and-retype) shouldn't log it again. Naturally resets on
+  // reload since it's just in-memory; that's fine, the server-side count in
+  // search_log still accumulates across visits.
+  const loggedZeroResultTerms = new Set();
+
+  // Fires ~700ms after typing settles (LOG_DEBOUNCE_MS, independent of the
+  // 200ms results debounce below) — waiting longer than the results
+  // debounce avoids logging every intermediate zero-result state while a
+  // parent is still mid-word (e.g. "gro" before "growling"). Only a
+  // genuine "Fuse found nothing" counts (lastRawFuseCount === 0) — a
+  // search where Fuse found matches but the type-filter checkboxes hid all
+  // of them is a filter-UX signal, not a "content doesn't exist" signal,
+  // and would be a false positive in the discovery data (see render()'s
+  // lastRawFuseCount comment above).
+  //
+  // Fire-and-forget: this must never affect the visible search UX, so
+  // nothing here surfaces success or failure of the log call back to the
+  // parent — the .catch(() => {}) exists only to avoid an unhandled-
+  // rejection console warning, not to react to failures.
+  function maybeLogZeroResult() {
+    if (!restUrl || !restNonce) {
+      return; // shouldn't happen post-deploy, but never let a missing attribute throw
+    }
+
+    // Re-read fresh rather than trusting a value captured when this timer
+    // was scheduled — if the parent kept typing and render() hasn't caught
+    // up yet, lastQuery/lastRawFuseCount could be stale for the box's
+    // current value. Skip this cycle; the next keystroke re-arms the timer
+    // and will catch it once things settle.
+    const trimmed = input.value.trim();
+    if (trimmed !== lastQuery || lastRawFuseCount !== 0) {
+      return;
+    }
+
+    const key = trimmed.toLowerCase();
+    if (loggedZeroResultTerms.has(key)) {
+      return;
+    }
+    loggedZeroResultTerms.add(key);
+
+    fetch(restUrl, {
+      method: "POST",
+      keepalive: true,
+      headers: {
+        "Content-Type": "application/json",
+        "X-WP-Nonce": restNonce,
+      },
+      body: JSON.stringify({ term: trimmed, stage: block.dataset.stage, lang }),
+    }).catch(() => {});
+  }
+
   let debounceTimer;
+  let logDebounceTimer;
   input.addEventListener("input", () => {
     updateClearButton();
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => render(input.value), DEBOUNCE_MS);
+    clearTimeout(logDebounceTimer);
+    logDebounceTimer = setTimeout(maybeLogZeroResult, LOG_DEBOUNCE_MS);
   });
 
   // Escape-to-clear is a common, expected search-box convention (native

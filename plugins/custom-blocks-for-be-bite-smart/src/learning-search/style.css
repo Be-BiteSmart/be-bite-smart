@@ -14,11 +14,11 @@
   margin-bottom: 32px;
 }
 
-.learning-search-label {
-  display: block;
-  font-weight: 600;
-  margin-bottom: 8px;
-}
+/* No overrides here on purpose — this is a real <h3> now (see the PHP
+   comment at its call site), a sibling of .learning-search-browse-heading,
+   which also has no overrides of its own. Both just render with the
+   theme's default h3 styling, so they look identical — reinforcing that
+   they're equivalent subsections, not just matching by coincidence. */
 
 /* Magnifying-glass icon as a background-image (not a separate DOM element)
    — simplest way to keep it fixed in place regardless of how much text is
@@ -104,19 +104,25 @@
 
 /* "Filter search & the list below by type" — see
    bitesmart_render_learning_search_type_filter() in learning-search.php.
-   Rendered as a sibling BETWEEN .learning-search-box and
-   .learning-search-browse (not nested inside the search box) specifically
-   so it doesn't read as belonging to just one of them — Janet flagged that
-   the original nested placement made it unclear at a glance that it also
-   filtered the browse list below. The top/bottom border reinforces that:
-   its own divider row, not a sub-section of whatever's above or below it.
+   Rendered FIRST, above .learning-search-box (not nested inside it, and
+   not sandwiched between the search box and .learning-search-browse
+   either — tried that first, but .learning-search-results can grow tall
+   enough while actively searching to visually push this down below the
+   results, which then read as "part of the results" rather than a
+   control governing them). Sitting above everything is stable regardless
+   of result count, and still reads as governing both the search box and
+   the browse list below it — the top/bottom border reinforces that: its
+   own divider row, not a sub-section of whatever's above or below it. No
+   top margin (unlike the bottom) since this is the block's first child —
+   .learning-search-block's own 32px outer margin already provides that
+   spacing; adding more here would just double it up.
    The border/spacing lives on THIS wrapper rather than the <fieldset>
    inside it — see the PHP comment at the call site for why: a <fieldset>
    with a full-width <legend> would have the legend's native
    border-cutout behavior hide the entire top border, not just a notch
    under the caption text. */
 .learning-search-type-filter-wrap {
-  margin: 25px 0 20px 0;
+  margin: 0 0 20px 0;
   padding: 16px 0;
   border-top: 1px solid #d0e4eb;
   border-bottom: 1px solid #d0e4eb;

@@ -453,15 +453,47 @@ function render_learning_search_block( $attributes ) {
 
     ob_start();
     ?>
-    <section class="wp-block-custom-learning-search learning-search-block" id="<?php echo esc_attr( $instance_id ); ?>" data-stage="<?php echo esc_attr( $stage_slug ); ?>">
+    <section class="wp-block-custom-learning-search learning-search-block" id="<?php echo esc_attr( $instance_id ); ?>" data-stage="<?php echo esc_attr( $stage_slug ); ?>" data-lang="<?php echo esc_attr( $lang ); ?>" data-rest-url="<?php echo esc_url( rest_url( 'bitesmart/v1/zero-result-search' ) ); ?>" data-rest-nonce="<?php echo esc_attr( wp_create_nonce( 'wp_rest' ) ); ?>">
+
+        <?php
+        /*
+         * Rendered FIRST, above the search box — NOT nested inside
+         * .learning-search-box, and not sandwiched between the search box
+         * and browse list either (tried that first; see git history/memory
+         * for why — Janet flagged that .learning-search-results can grow
+         * tall enough while actively searching to visually push the
+         * filter down below the results, which then reads as "part of the
+         * results" rather than a control that also governs them). Sitting
+         * above everything is stable regardless of how many results
+         * render, and still reads as governing both the search box and
+         * the browse list below it. See its own CSS for the border/legend
+         * treatment that reinforces this.
+         */
+        bitesmart_render_learning_search_type_filter( $cards );
+        ?>
 
         <div class="learning-search-box" role="search">
-            <label class="learning-search-label" for="<?php echo esc_attr( $instance_id ); ?>-input">
+            <?php
+            /*
+             * A real <h3> now, not a <label> — a <label> isn't part of the
+             * heading outline at all, so a screen reader navigating by
+             * headings jumped straight from this page's "Find Resources"
+             * (h2) to "All %s Questions & Resources" (h3) below, skipping
+             * this search section entirely. Janet flagged that both
+             * headings should be h3 siblings under that h2, since both are
+             * subsections of "Find Resources". A heading can't be a
+             * <label>'s content (label only permits phrasing content), so
+             * the input's accessible name now comes from aria-labelledby
+             * referencing this h3's id instead of <label for> — same
+             * effect, correct semantics either way.
+             */
+            ?>
+            <h3 class="learning-search-label" id="<?php echo esc_attr( $instance_id ); ?>-label">
                 <?php
                 /* translators: %s: Stage name, e.g. "Preschool" */
                 printf( esc_html__( 'Search %s Questions & Resources', 'custom-blocks' ), esc_html( $stage_name ) );
                 ?>
-            </label>
+            </h3>
             <p id="<?php echo esc_attr( $instance_id ); ?>-hint"><?php esc_html_e( 'Type to search (e.g. "growling")', 'custom-blocks' ); ?></p>
             <div class="learning-search-input-wrap">
                 <input
@@ -469,6 +501,7 @@ function render_learning_search_block( $attributes ) {
                     id="<?php echo esc_attr( $instance_id ); ?>-input"
                     class="learning-search-input"
                     autocomplete="off"
+                    aria-labelledby="<?php echo esc_attr( $instance_id ); ?>-label"
                     aria-describedby="<?php echo esc_attr( $instance_id ); ?>-hint"
                 />
                 <button type="button" class="learning-search-clear" aria-label="<?php esc_attr_e( 'Clear search', 'custom-blocks' ); ?>" hidden>
@@ -482,19 +515,6 @@ function render_learning_search_block( $attributes ) {
             <?php /* Deliberately no aria-live here — results is rich, multi-card content (headings, links, an accordion each); making it a live region would have screen readers try to re-announce all of that on every keystroke's re-render. The concise status text above ("3 results") is the one thing that should be announced live. */ ?>
             <div class="learning-search-results"></div>
         </div>
-
-        <?php
-        /*
-         * Sits between the search box and the browse list on purpose — NOT
-         * nested inside .learning-search-box — so it reads as governing
-         * both, rather than looking like a sub-control of the search box
-         * alone (which is where it originally lived; Janet flagged it
-         * wasn't clear at a glance that it also filtered "All %s Questions
-         * & Resources" below). See its own CSS for the border/legend
-         * treatment that reinforces this.
-         */
-        bitesmart_render_learning_search_type_filter( $cards );
-        ?>
 
         <?php bitesmart_render_learning_search_data( $cards, $instance_id ); ?>
         <?php bitesmart_render_learning_search_strings( $instance_id ); ?>

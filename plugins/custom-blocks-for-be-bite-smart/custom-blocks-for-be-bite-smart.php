@@ -201,6 +201,12 @@ add_action( 'init', 'coloring_books_list_register_block' );
 // coloring-book-display.php, which it does.
 require_once __DIR__ . '/src/learning-search/learning-search.php';
 
+// Logs zero-result searches from that same block — its own file since it
+// has a different lifecycle (rest_api_init, not a block render_callback)
+// and no ordering dependency on learning-search.php itself, just grouped
+// here for locality. See its own header comment for the full picture.
+require_once __DIR__ . '/src/learning-search/zero-result-log.php';
+
 function learning_search_register_block() {
     register_block_type( __DIR__ . '/build/learning-search', array(
         'render_callback' => 'render_learning_search_block',
