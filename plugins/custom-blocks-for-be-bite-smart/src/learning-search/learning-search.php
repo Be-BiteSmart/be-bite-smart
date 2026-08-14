@@ -377,17 +377,20 @@ function bitesmart_render_learning_search_type_filter( array $cards ) {
     }
 
     ?>
-    <fieldset class="learning-search-type-filter">
-        <legend class="learning-search-type-filter-legend"><?php esc_html_e( 'Show:', 'custom-blocks' ); ?></legend>
-        <?php foreach ( bitesmart_learning_search_type_labels() as $type => $label ) : ?>
-            <?php if ( in_array( $type, $present_types, true ) ) : // don't offer a "Coloring Books" checkbox on a Stage with none, etc. ?>
-                <label class="learning-search-type-toggle">
-                    <input type="checkbox" class="learning-search-type-checkbox" data-type="<?php echo esc_attr( $type ); ?>" checked>
-                    <?php echo esc_html( $label ); ?>
-                </label>
-            <?php endif; ?>
-        <?php endforeach; ?>
-    </fieldset>
+    <?php /* The border/divider look lives on THIS wrapper, not the <fieldset> below — a <fieldset> with a <legend> child natively "cuts a notch" out of its own top border where the legend sits (that's how a fieldset caption is meant to render). With the legend forced to 100% width so it stacks on its own line, that notch would span the fieldset's entire top edge and hide the border completely. Keeping <fieldset>/<legend> for their real accessibility grouping semantics, just not for this visual treatment. */ ?>
+    <div class="learning-search-type-filter-wrap">
+        <fieldset class="learning-search-type-filter">
+            <legend class="learning-search-type-filter-legend"><?php esc_html_e( 'Filter search & the list below by type:', 'custom-blocks' ); ?></legend>
+            <?php foreach ( bitesmart_learning_search_type_labels() as $type => $label ) : ?>
+                <?php if ( in_array( $type, $present_types, true ) ) : // don't offer a "Coloring Books" checkbox on a Stage with none, etc. ?>
+                    <label class="learning-search-type-toggle">
+                        <input type="checkbox" class="learning-search-type-checkbox" data-type="<?php echo esc_attr( $type ); ?>" checked>
+                        <?php echo esc_html( $label ); ?>
+                    </label>
+                <?php endif; ?>
+            <?php endforeach; ?>
+        </fieldset>
+    </div>
     <?php
 }
 
@@ -477,9 +480,21 @@ function render_learning_search_block( $attributes ) {
             </div>
             <p class="learning-search-status" aria-live="polite"></p>
             <?php /* Deliberately no aria-live here — results is rich, multi-card content (headings, links, an accordion each); making it a live region would have screen readers try to re-announce all of that on every keystroke's re-render. The concise status text above ("3 results") is the one thing that should be announced live. */ ?>
-            <?php bitesmart_render_learning_search_type_filter( $cards ); ?>
             <div class="learning-search-results"></div>
         </div>
+
+        <?php
+        /*
+         * Sits between the search box and the browse list on purpose — NOT
+         * nested inside .learning-search-box — so it reads as governing
+         * both, rather than looking like a sub-control of the search box
+         * alone (which is where it originally lived; Janet flagged it
+         * wasn't clear at a glance that it also filtered "All %s Questions
+         * & Resources" below). See its own CSS for the border/legend
+         * treatment that reinforces this.
+         */
+        bitesmart_render_learning_search_type_filter( $cards );
+        ?>
 
         <?php bitesmart_render_learning_search_data( $cards, $instance_id ); ?>
         <?php bitesmart_render_learning_search_strings( $instance_id ); ?>

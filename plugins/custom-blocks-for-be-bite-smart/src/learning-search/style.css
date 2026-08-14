@@ -102,36 +102,110 @@
   color: #555;
 }
 
-/* "Show: [x] Q&A [x] Resources …" — see
+/* "Filter search & the list below by type" — see
    bitesmart_render_learning_search_type_filter() in learning-search.php.
-   Reset to plain flex row: a <fieldset>/<legend> pair is used for its
-   built-in "these checkboxes are one group" semantics, not its default
-   bordered-box appearance. */
+   Rendered as a sibling BETWEEN .learning-search-box and
+   .learning-search-browse (not nested inside the search box) specifically
+   so it doesn't read as belonging to just one of them — Janet flagged that
+   the original nested placement made it unclear at a glance that it also
+   filtered the browse list below. The top/bottom border reinforces that:
+   its own divider row, not a sub-section of whatever's above or below it.
+   The border/spacing lives on THIS wrapper rather than the <fieldset>
+   inside it — see the PHP comment at the call site for why: a <fieldset>
+   with a full-width <legend> would have the legend's native
+   border-cutout behavior hide the entire top border, not just a notch
+   under the caption text. */
+.learning-search-type-filter-wrap {
+  margin: 25px 0 20px 0;
+  padding: 16px 0;
+  border-top: 1px solid #d0e4eb;
+  border-bottom: 1px solid #d0e4eb;
+}
+
+/* Reset to plain flex row — the <fieldset>/<legend> pair here is for its
+   built-in "these checkboxes are one group" accessibility semantics only,
+   not for its default bordered-box appearance (that's the wrapper above)
+   or default margin/padding (browsers give fieldset its own by default). */
 .learning-search-type-filter {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px 16px;
-  margin: 12px 0 0;
+  gap: 8px 10px;
+  margin: 0;
   padding: 0;
   border: none;
+  min-width: 0; /* fieldset's UA default is min-width: min-content, which can force unwanted overflow in a flex/grid ancestor */
 }
 
 .learning-search-type-filter-legend {
   font-weight: 600;
-  padding: 0;
+  padding: 0 0 10px 0;
+  width: 100%; /* own line above the button row, rather than squeezed inline before it */
 }
 
+/* Pill/button look, per Janet — accent-3 (yellow) fill with black text
+   while ON (checked), an outlined/unfilled look while OFF ("clicked off").
+   Filled-vs-outlined rather than two different fill colors on purpose:
+   WCAG 1.4.1 (Use of Color) wants state conveyed by more than color alone,
+   and a fill/outline swap reads as a distinct shape change even for a
+   colorblind visitor, not just "a duller color". The real
+   <input type="checkbox"> stays in the DOM, still genuinely focusable and
+   announced as checked/not-checked by a screen reader — only visually
+   hidden below (standard clip-based technique, NOT display:none, which
+   would remove it from the tab order entirely). Clicking anywhere on the
+   pill still toggles it: this is a native <label>-wraps-<input> click
+   target, no JS involved. */
 .learning-search-type-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: var(--wp--preset--color--accent-3);
+  color: #000;
+  border: 2px solid var(--wp--preset--color--accent-3);
   font-size: 0.9rem;
+  font-weight: 600;
   cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
 }
 
+/* Visually hidden, not display:none — a screen reader still finds it,
+   Tab still reaches it, and :focus-visible below still fires on it. */
 .learning-search-type-checkbox {
-  cursor: pointer;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* OFF state — :has() reads the real checkbox state, so this can't drift
+   out of sync with what a screen reader announces. White fill + dark grey
+   text/border, comfortably past the 4.5:1 AA floor at this font-size
+   (unlike a plain grey-on-grey fill, which was tried first and cut it too
+   close). */
+.learning-search-type-toggle:has(.learning-search-type-checkbox:not(:checked)) {
+  background: #fff;
+  color: #3f3f46;
+  border-color: #71717a;
+}
+
+.learning-search-type-toggle:hover {
+  filter: brightness(0.95);
+}
+
+/* Focus ring on the whole pill (not just the now visually-hidden
+   checkbox) so keyboard focus is easy to see. */
+.learning-search-type-toggle:has(.learning-search-type-checkbox:focus-visible) {
+  outline: 2px solid #154862;
+  outline-offset: 2px;
 }
 
 .learning-search-results {
@@ -142,10 +216,6 @@
 
 .learning-search-results:empty {
   margin-top: 0;
-}
-
-.learning-search-browse-heading {
-  margin-bottom: 16px;
 }
 
 .learning-search-browse-list {

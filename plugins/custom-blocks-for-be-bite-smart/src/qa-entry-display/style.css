@@ -21,7 +21,9 @@
    Without matching it here, this override loses the specificity fight and
    the shared padding wins despite loading correctly — a real gotcha, not
    just style-guide consistency. */
-body:not(.block-editor-page) .wp-block-custom-qa-entry .qa-entry-card-container {
+body:not(.block-editor-page)
+  .wp-block-custom-qa-entry
+  .qa-entry-card-container {
   padding-top: var(--wp--preset--spacing--30);
   padding-bottom: var(--wp--preset--spacing--30);
   padding-right: var(--wp--preset--spacing--30);
@@ -45,6 +47,7 @@ body:not(.block-editor-page) .wp-block-custom-qa-entry .qa-entry-card-container 
 
 .wp-block-custom-qa-entry .qa-entry-question {
   margin: 0;
+  font-weight: 500;
 }
 
 .wp-block-custom-qa-entry .qa-entry-chevron {
@@ -78,7 +81,9 @@ body:not(.block-editor-page) .wp-block-custom-qa-entry .qa-entry-card-container 
    used in pdf-toggle/style.css to override that same base rule. Without
    matching/beating it, "display: block" here loses and the button stays
    inline-flex, which is why margin:auto had no visible effect. */
-body:not(.block-editor-page) .wp-block-custom-qa-entry .qa-entry-guide-link.block-toggle-btn {
+body:not(.block-editor-page)
+  .wp-block-custom-qa-entry
+  .qa-entry-guide-link.block-toggle-btn {
   display: block;
   width: fit-content;
   margin-left: auto;
