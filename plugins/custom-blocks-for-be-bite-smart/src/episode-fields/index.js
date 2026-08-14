@@ -53,10 +53,13 @@ function EpisodeFieldsEdit() {
   const [meta = {}, setMeta] = useEntityProp("postType", "episode", "meta");
   const languages = getSiteLanguages();
   const videos = meta._bitesmart_episode_videos_by_lang || {};
+  const keywords = meta._bitesmart_episode_keywords_by_lang || {};
 
   const updateMeta = (key, value) => setMeta({ ...meta, [key]: value });
   const setVideoUrl = (code, url) =>
     updateMeta("_bitesmart_episode_videos_by_lang", { ...videos, [code]: url });
+  const setKeywords = (code, text) =>
+    updateMeta("_bitesmart_episode_keywords_by_lang", { ...keywords, [code]: text });
 
   return el(
     "div",
@@ -132,6 +135,27 @@ function EpisodeFieldsEdit() {
               ? __("Replace Sponsor Logo", "custom-blocks")
               : __("Choose Sponsor Logo", "custom-blocks"),
           ),
+      }),
+    ),
+
+    el("hr", { style: { margin: "24px 0" } }),
+
+    el("h3", { className: "episode-fields-subheading" }, __("Search Keywords", "custom-blocks")),
+    el(
+      "p",
+      { className: "episode-fields-hint" },
+      __(
+        "Internal search-matching phrases, not shown to visitors — not automatically translated, so fill in each language directly. Helps this episode turn up in the Learning Hub Search even when a parent's wording doesn't match the description above.",
+        "custom-blocks",
+      ),
+    ),
+    ...languages.map((lang) =>
+      el(TextControl, {
+        key: lang.code,
+        label: `${__("Keywords", "custom-blocks")} (${lang.name})`,
+        value: keywords[lang.code] || "",
+        onChange: (val) => setKeywords(lang.code, val),
+        placeholder: __("e.g. stress signals, body language, calming signs", "custom-blocks"),
       }),
     ),
   );

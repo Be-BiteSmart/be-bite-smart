@@ -8,23 +8,27 @@
  * [[be-bitesmart-content-hub-plan]] in memory:
  *
  *   (a) a client-side search box, and
- *   (b) below it, a paginated list (10/page) of ALL Q&A Entries + Resources
- *       tagged with that Stage, for parents who don't want to search.
+ *   (b) below it, a paginated list (10/page) of ALL Q&A Entries +
+ *       Resources + Episodes tagged with that Stage, for parents who don't
+ *       want to search.
  *
- * Both are built from the SAME underlying data: every Q&A Entry / Resource
- * post tagged with this block's Stage, each rendered through the EXISTING
- * render_qa_entry_block() / render_resource_block() functions (see
- * qa-entry-display.php / resource-display.php) — not reimplemented here.
- * That reuse is deliberate: those functions already call get_the_title() /
- * get_post_meta() the same way any other embedded custom/qa-entry or
- * custom/resource block on the site does, so whatever TranslatePress
- * translation already happens for those blocks elsewhere on the site
- * happens here too, for free, with no separate translation step to build.
+ * Built from the SAME underlying data: every Q&A Entry / Resource / Episode
+ * post tagged with this block's Stage, each rendered through an EXISTING
+ * render function — render_qa_entry_block() / render_resource_block() (see
+ * qa-entry-display.php / resource-display.php) as-is, and, for Episode, the
+ * compact render_episode_search_card() (episode-display.php) rather than
+ * that file's full video-player render_episode_block() — not reimplemented
+ * here. That reuse is deliberate: those functions already call
+ * get_the_title() / get_post_meta() the same way any other embedded
+ * custom/qa-entry or custom/resource block on the site does, so whatever
+ * TranslatePress translation already happens for those blocks elsewhere on
+ * the site happens here too, for free, with no separate translation step
+ * to build.
  *
  * The (b) paginated list is genuinely server-rendered and cached (a
- * transient per Stage+language, invalidated only when Q&A/Resource content
- * actually changes — see bitesmart_stage_cards_bump_generation() below) —
- * NOT regenerated on every page view. Pagination itself is plain
+ * transient per Stage+language, invalidated only when Q&A/Resource/Episode
+ * content actually changes — see bitesmart_stage_cards_bump_generation()
+ * below) — NOT regenerated on every page view. Pagination itself is plain
  * `?bs_page=N` links, no JS required.
  *
  * The (a) search box reuses the exact same rendered card HTML: the full
@@ -69,6 +73,11 @@
  * exact handle WordPress auto-generated when custom/qa-entry's and
  * custom/resource's block.json were registered on init — no guessing at
  * the handle string.
+ *
+ * Episode cards (render_episode_search_card() in episode-display.php) need
+ * nothing added here — they deliberately reuse custom/qa-entry's own
+ * markup/classes rather than custom/episode's, so qa-entry's style handle
+ * (already enqueued below) covers them too.
  */
 function bitesmart_learning_search_enqueue_card_styles() {
     if ( ! function_exists( 'generate_block_asset_handle' ) || ! has_block( 'custom/learning-search' ) ) {
@@ -97,22 +106,30 @@ function bitesmart_stage_cards_bump_generation() {
 }
 
 /**
- * Invalidate the cache when a Q&A Entry or Resource is saved (including
- * status transitions — draft/publish/trash all fire save_post) or when its
- * Stage/Topic terms change independently of a full save (e.g. quick-edit).
+ * Invalidate the cache when a Q&A Entry, Resource, or Episode is saved
+ * (including status transitions — draft/publish/trash all fire save_post)
+ * or when its Stage/Topic terms change independently of a full save (e.g.
+ * quick-edit). Episode is included because it's shown in this list too now
+ * — see render_episode_search_card() in episode-display.php and its use in
+ * bitesmart_build_stage_card_list() below.
  */
 function bitesmart_stage_cards_maybe_bump( $post_id, $post = null ) {
     $post_type = $post ? $post->post_type : get_post_type( $post_id );
-    if ( in_array( $post_type, array( 'qa_entry', 'resource' ), true ) ) {
+    if ( in_array( $post_type, array( 'qa_entry', 'resource', 'episode' ), true ) ) {
         bitesmart_stage_cards_bump_generation();
     }
 }
 add_action( 'save_post_qa_entry', 'bitesmart_stage_cards_maybe_bump', 10, 2 );
 add_action( 'save_post_resource', 'bitesmart_stage_cards_maybe_bump', 10, 2 );
+add_action( 'save_post_episode', 'bitesmart_stage_cards_maybe_bump', 10, 2 );
 add_action( 'delete_post', 'bitesmart_stage_cards_maybe_bump' );
 
 function bitesmart_stage_cards_maybe_bump_terms( $object_id, $terms, $tt_ids, $taxonomy ) {
-    if ( in_array( $taxonomy, array( 'stage', 'topic' ), true ) ) {
+    // 'series' is included because it feeds an Episode card's "Watch
+    // Episode" link (bitesmart_episode_anchor_id() in episode-display.php)
+    // — changing it changes that rendered href, even though nothing about
+    // it is visible page text.
+    if ( in_array( $taxonomy, array( 'stage', 'topic', 'series' ), true ) ) {
         bitesmart_stage_cards_maybe_bump( $object_id );
     }
 }
@@ -120,20 +137,29 @@ add_action( 'set_object_terms', 'bitesmart_stage_cards_maybe_bump_terms', 10, 4 
 
 /**
  * Per-language search-matching keywords for one post, plain string,
- * '' if none filled in for that language. Reads whichever of the two
- * per-language meta keys applies to the post's type.
+ * '' if none filled in for that language. Reads whichever of the three
+ * per-language meta keys applies to the post's type — Episode's
+ * (`_bitesmart_episode_keywords_by_lang`) added 2026-08-13 so Episodes
+ * shown in this search can match on more than just their synthesized
+ * question text, same as Q&A Entry's Synonyms / Resource's Keywords.
  *
  * @param int    $post_id Post ID.
- * @param string $type    'qa_entry' or 'resource'.
+ * @param string $type    'qa_entry', 'resource', or 'episode'.
  * @param string $lang    Short language code.
  * @return string
  */
 function bitesmart_stage_card_keywords( $post_id, $type, $lang ) {
-    $meta_key = 'qa_entry' === $type
-        ? '_bitesmart_qa_synonyms_by_lang'
-        : '_bitesmart_resource_keywords_by_lang';
+    $meta_keys = array(
+        'qa_entry' => '_bitesmart_qa_synonyms_by_lang',
+        'resource' => '_bitesmart_resource_keywords_by_lang',
+        'episode'  => '_bitesmart_episode_keywords_by_lang',
+    );
 
-    $by_lang = get_post_meta( $post_id, $meta_key, true );
+    if ( ! isset( $meta_keys[ $type ] ) ) {
+        return '';
+    }
+
+    $by_lang = get_post_meta( $post_id, $meta_keys[ $type ], true );
     if ( ! is_array( $by_lang ) ) {
         return '';
     }
@@ -158,6 +184,7 @@ function bitesmart_stage_cards_template_version() {
     $files = array(
         __DIR__ . '/../qa-entry-display/qa-entry-display.php',
         __DIR__ . '/../resource-display/resource-display.php',
+        __DIR__ . '/../episode-display/episode-display.php', // holds render_episode_search_card() too, not just render_episode_block()
     );
 
     $stamps = array_map(
@@ -173,7 +200,12 @@ function bitesmart_stage_cards_template_version() {
 /**
  * Build (or fetch from cache) the full, ordered list of rendered cards for
  * one Stage, in the current request's language. Every Q&A Entry + Resource
- * published and tagged with $stage_slug, alphabetical by title.
+ * + Episode published and tagged with $stage_slug, alphabetical by title.
+ * Episode is included as a compact synthesized-question card (see
+ * render_episode_search_card() in episode-display.php), not its full
+ * video-player embed — Episodes already default to the Preschool stage
+ * term on save (see episode-cpt.php), so this "just works" for the
+ * Preschool page's search/browse list without any extra tagging.
  *
  * @param string $stage_slug Stage taxonomy term slug.
  * @param string $lang       Short language code (bitesmart_site_lang_code()).
@@ -189,7 +221,7 @@ function bitesmart_build_stage_card_list( $stage_slug, $lang ) {
     }
 
     $query = new WP_Query( array(
-        'post_type'      => array( 'qa_entry', 'resource' ),
+        'post_type'      => array( 'qa_entry', 'resource', 'episode' ),
         'post_status'    => 'publish',
         'posts_per_page' => -1,
         'orderby'        => 'title',
@@ -209,8 +241,10 @@ function bitesmart_build_stage_card_list( $stage_slug, $lang ) {
     foreach ( $query->posts as $post ) {
         if ( 'qa_entry' === $post->post_type ) {
             $html = render_qa_entry_block( array( 'entryId' => $post->ID ) );
-        } else {
+        } elseif ( 'resource' === $post->post_type ) {
             $html = render_resource_block( array( 'resourceId' => $post->ID ) );
+        } else {
+            $html = render_episode_search_card( array( 'episodeId' => $post->ID ) );
         }
 
         if ( ! $html ) {
