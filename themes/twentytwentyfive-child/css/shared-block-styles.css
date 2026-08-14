@@ -59,8 +59,6 @@ body:not(.block-editor-page) .custom-block-accent-card {
 body:not(.block-editor-page) .custom-block-accent-heading {
   display: block;
   color: #154862;
-  text-transform: uppercase;
-  letter-spacing: 2px;
   font-size: var(--wp--preset--font-size--large);
   margin: 0 0 0.5rem;
 }

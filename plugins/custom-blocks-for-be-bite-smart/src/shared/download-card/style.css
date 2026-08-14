@@ -90,6 +90,33 @@ body:not(.block-editor-page) .download-card-block .download-card-language-row {
   }
 }
 
+/* Same button-row layout, reused inside the Q&A-style accordion body of
+   render_coloring_book_search_card() (coloring-book-display.php) — that
+   card's shell is .qa-entry-card-container, not .download-card-block, so
+   the rules above (all scoped to .download-card-block) don't reach it.
+   No 400px fixed-width variant here on purpose: that width exists for the
+   full card's side-by-side label/buttons split, which doesn't apply
+   inside a narrow accordion body — always row-wrapped and centered
+   instead, at any viewport width. */
+body:not(.block-editor-page) .qa-entry-body .download-card-buttons {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+}
+
+body:not(.block-editor-page) .qa-entry-body .download-card-language-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  width: auto;
+}
+
 body:not(.block-editor-page)
   .download-card-language-row
   .ecd-toggle.block-toggle-btn {

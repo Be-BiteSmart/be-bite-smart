@@ -92,13 +92,31 @@ function bitesmart_build_downloads_page_card_list( $lang ) {
 /**
  * Render callback for "custom/coloring-books-list".
  */
+/**
+ * Outer chrome (rounded-border card + "Downloadable Coloring Books" accent
+ * banner) baked directly into this block's own render output, rather than
+ * left for an editor to hand-recreate as a native Group block every time.
+ * Matches, field for field, the hand-authored markup the old manually
+ * placed set of educational-coloring-book-download blocks used to sit
+ * inside (anchor id "download-coloring-books" included) — Janet wanted the
+ * page to look exactly the same after switching to the auto-listing
+ * block. Baking it in here (rather than documenting "wrap this block in a
+ * Group styled like X") means there's nothing for an editor to get
+ * slightly wrong — border color, radius, and banner copy stay in sync
+ * automatically, and the block still needs no page-editing step per entry.
+ */
 function render_coloring_books_list_block( $attributes ) {
     $lang  = bitesmart_site_lang_code();
     $cards = bitesmart_build_downloads_page_card_list( $lang );
 
     ob_start();
     ?>
-    <div class="wp-block-custom-coloring-books-list coloring-books-list custom-block-card custom-block-border">
+    <div id="download-coloring-books" class="wp-block-custom-coloring-books-list wp-block-group has-border-color" style="border-color:#e1e8f1;border-width:2px;border-top-left-radius:2rem;border-top-right-radius:2rem;border-bottom-left-radius:2rem;border-bottom-right-radius:2rem;padding-right:0;padding-left:0">
+        <div class="wp-block-group has-accent-2-background-color has-background" style="border-top-left-radius:27px;border-top-right-radius:27px;margin-top:0;margin-bottom:0;padding-top:var(--wp--preset--spacing--40);padding-right:var(--wp--preset--spacing--60);padding-bottom:var(--wp--preset--spacing--40);padding-left:var(--wp--preset--spacing--60)">
+            <h3 class="wp-block-heading has-base-color has-text-color has-link-color"><strong><?php esc_html_e( 'Downloadable Coloring Books', 'custom-blocks' ); ?></strong></h3>
+            <p class="has-base-color has-text-color has-link-color" style="padding-right:0;padding-left:0"><?php esc_html_e( 'For each episode — English & Spanish', 'custom-blocks' ); ?></p>
+        </div>
+
         <?php if ( empty( $cards ) ) : ?>
             <?php if ( current_user_can( 'edit_posts' ) ) : ?>
                 <p class="coloring-books-list-empty"><?php esc_html_e( 'No Coloring Books have been published yet.', 'custom-blocks' ); ?></p>
