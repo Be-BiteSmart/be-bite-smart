@@ -1,0 +1,15 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "custom/guide-single",
+  "title": "Guide",
+  "category": "widgets",
+  "description": "Displays a Guide's full chapter accordion. Pulls its content live from the chosen Guide — nothing is duplicated into the block itself. Use this to show a Guide at a URL of your choosing (e.g. a Page whose slug is exactly \"guide\") — the Guide post itself also has its own permalink independently (see guide-cpt.php), this is just a second way to reach the same content.",
+  "attributes": {
+    "guideId": { "type": "number" }
+  },
+  "supports": {
+    "html": false
+  },
+  "editorScript": "file:./index.js"
+}

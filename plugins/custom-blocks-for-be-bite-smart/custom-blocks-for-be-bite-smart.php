@@ -434,6 +434,65 @@ add_action( 'init', 'coloring_book_fields_register_block' );
 // $block_names list — see site-lang.php.
 
 // -----------------------------
+// Guide admin fields (locked into the Guide CPT's canvas — see the
+// 'template'/'template_lock' args in the Custom Post Types for BBS
+// plugin's includes/guide-cpt.php)
+// -----------------------------
+
+function guide_fields_register_block() {
+    register_block_type( __DIR__ . '/build/guide-fields' );
+}
+add_action( 'init', 'guide_fields_register_block' );
+
+// custom/guide-fields isn't a display block (save() is null) — UNLIKE the
+// other *-fields blocks above, Guide posts ARE publicly queryable now (see
+// [[be-bitesmart-guide-cpt-plan]] in memory), but the front end renders a
+// real single-guide template reading this post's chapters directly, not
+// this block's saved output, so no render_callback is needed here either.
+// No per-language fields on this one (Description only — Video/Keywords
+// live on each chapter's own custom/guide-chapter-panel instead), so unlike
+// resource-fields/episode-fields/qa-entry-fields/coloring-book-fields it
+// does NOT need adding to bitesmart_localize_video_language_editors()'s
+// $block_names list in site-lang.php.
+
+// -----------------------------
+// Guide Chapter sidebar panel (NOT a locked template block — guide_chapter's
+// canvas stays open for its real rich-text body. See
+// src/guide-chapter-panel/guide-chapter-panel.php for the full explanation
+// of why this needs its own manual enqueue/localize instead of the usual
+// register_block_type()-from-block.json + bitesmart_localize_video_language_editors()
+// combo every other fields UI in this plugin gets.)
+// -----------------------------
+require_once __DIR__ . '/src/guide-chapter-panel/guide-chapter-panel.php';
+
+// -----------------------------
+// Guide Chapter shared front-end rendering (bitesmart_render_guide_chapter_row(),
+// bitesmart_render_guide_format_controls()) + its format-toggle.js/style.css
+// enqueue. See src/guide-chapter-display/guide-chapter-display.php's header
+// comment — used by a Guide's own page, a chapter's own page, and the
+// pooled multi-Guide search page (none of which are built yet). Not a
+// registered block (no block.json) — nothing here is ever inserted via the
+// block editor.
+// -----------------------------
+require_once __DIR__ . '/src/guide-chapter-display/guide-chapter-display.php';
+
+// -----------------------------
+// Guide + Guide Chapter single-post front end (the_content filter, no new
+// theme template files — see src/guide-single/guide-single.php's header
+// comment for why). Requires guide-chapter-display.php above to already be
+// loaded, since it calls bitesmart_render_guide_chapter_row()/
+// bitesmart_render_guide_format_controls().
+// -----------------------------
+require_once __DIR__ . '/src/guide-single/guide-single.php';
+
+function guide_single_register_block() {
+    register_block_type( __DIR__ . '/build/guide-single', array(
+        'render_callback' => 'render_guide_single_block',
+    ) );
+}
+add_action( 'init', 'guide_single_register_block' );
+
+// -----------------------------
 // Disable Application Passwords
 // -----------------------------
 add_action( 'init', function() {

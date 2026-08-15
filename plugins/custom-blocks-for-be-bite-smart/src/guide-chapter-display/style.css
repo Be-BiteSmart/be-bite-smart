@@ -1,0 +1,230 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Guide Chapter row
+   Card container/border reuse the global .custom-block-card/.custom-block-border
+   convention (same as bio-card, episode-card, qa-entry, etc. — see those
+   blocks' style.css headers). Expand/collapse is native <details>/<summary>,
+   no JS — same reasoning as custom/qa-entry (see qa-entry-display.php).
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.guide-chapter-row {
+  margin-bottom: 8px;
+}
+
+.guide-chapter-summary {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+  list-style: none; /* removes Firefox's default marker */
+}
+
+.guide-chapter-summary::-webkit-details-marker {
+  display: none; /* removes Chrome/Safari's default marker */
+}
+
+.guide-chapter-index {
+  font-family: var(--wp--preset--font-family--monospace, monospace);
+  font-size: 0.85em;
+  color: var(--wp--preset--color--contrast-2, #6b6b6b);
+  flex-shrink: 0;
+  padding-top: 0.2em;
+}
+
+.guide-chapter-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.guide-chapter-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.guide-chapter-title {
+  font-weight: 500;
+  margin: 0;
+}
+
+.guide-chapter-badges {
+  display: flex;
+  gap: 6px;
+}
+
+/* Real <button>s now (see guide-chapter-display.php) — this resets the
+   browser's default button chrome (font, background, appearance) back to
+   matching what the old <span> version looked like, then layers the
+   active/off/inactive states on top. */
+.guide-chapter-badge {
+  display: inline-flex;
+  align-items: center;
+  font: inherit;
+  font-size: 0.75em;
+  padding: 2px 9px;
+  border-radius: 20px;
+  border: 1px solid transparent;
+  background: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.guide-chapter-badge:disabled {
+  cursor: default;
+}
+
+.guide-chapter-badge:focus-visible {
+  outline: 2px solid var(--wp--preset--color--accent-1, #d16b0c);
+  outline-offset: 2px;
+}
+
+.guide-chapter-badge.is-active {
+  background: var(--wp--preset--color--accent-1, #d16b0c);
+  color: #fff;
+}
+
+/* This chapter HAS this format, but a visitor toggled it off just for this
+   chapter (format-toggle.js) — same color family as .is-active (still
+   reads as "this exists"), just muted, so it's visually distinct from
+   .is-inactive below ("doesn't exist at all for this chapter"). */
+.guide-chapter-badge.is-off {
+  background: var(--wp--preset--color--accent-1, #d16b0c);
+  color: #fff;
+  opacity: 0.35;
+}
+
+.guide-chapter-badge.is-inactive {
+  background: transparent;
+  border-color: currentColor;
+  color: var(--wp--preset--color--contrast-2, #6b6b6b);
+  opacity: 0.7;
+}
+
+.guide-chapter-summary-text {
+  display: block;
+  font-size: 0.9em;
+  color: var(--wp--preset--color--contrast-2, #6b6b6b);
+}
+
+.guide-chapter-chevron {
+  flex-shrink: 0;
+  margin-top: 2px;
+  transition: transform 0.2s ease;
+}
+
+/* Same rotate-on-open technique as custom/qa-entry's chevron (see
+   qa-entry-display/style.css) — keyed off <details>'s native [open]
+   attribute. */
+.guide-chapter-container[open] .guide-chapter-chevron {
+  transform: rotate(180deg);
+}
+
+.guide-chapter-body {
+  margin-top: 16px;
+  padding-left: 32px;
+}
+
+.guide-chapter-missing-note {
+  font-size: 0.9em;
+  color: var(--wp--preset--color--contrast-2, #6b6b6b);
+  font-style: italic;
+}
+
+.guide-chapter-video {
+  margin-bottom: 16px;
+}
+
+.guide-chapter-video-duration {
+  font-size: 0.85em;
+  color: var(--wp--preset--color--contrast-2, #6b6b6b);
+  margin: 4px 0;
+}
+
+.guide-chapter-video-frame {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  margin-top: 8px;
+}
+
+.guide-chapter-video-frame iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.guide-chapter-text {
+  font-size: 0.95em;
+  line-height: 1.7;
+}
+
+/* Chapter body images shouldn't overflow the card on narrow screens — see
+   artifact-design-style responsive-image conventions used elsewhere in this
+   plugin (e.g. download-card/style.css). */
+.guide-chapter-text img {
+  max-width: 100%;
+  height: auto;
+}
+
+.guide-chapter-parent-link {
+  margin-top: 16px;
+  font-size: 0.85em;
+  color: var(--wp--preset--color--contrast-2, #6b6b6b);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Shared format-toggle controls bar
+   Rendered once per page by bitesmart_render_guide_format_controls() —
+   never per chapter. See format-toggle.js for the localStorage/visibility
+   logic.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.guide-format-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  background: var(--wp--preset--color--base-2, #f5f4f0);
+  border-radius: 8px;
+}
+
+.guide-format-controls-label {
+  font-size: 0.85em;
+  color: var(--wp--preset--color--contrast-2, #6b6b6b);
+}
+
+.guide-format-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.guide-format-warning {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 0.85em;
+  color: var(--wp--preset--color--contrast-2, #6b6b6b);
+}
+
+.guide-format-warning[hidden] {
+  display: none;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Single-post wrappers (guide-single.php) — minimal, mostly just spacing;
+   the real visual weight is each chapter row's .custom-block-card/
+   .custom-block-border (see the theme's shared-block-styles.css).
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.guide-single-description {
+  font-size: 1.05em;
+  margin-bottom: 20px;
+}
+
+.guide-single-empty {
+  font-style: italic;
+  color: var(--wp--preset--color--contrast-2, #6b6b6b);
+}

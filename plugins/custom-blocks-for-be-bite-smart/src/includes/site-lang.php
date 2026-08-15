@@ -36,12 +36,28 @@ function bitesmart_short_lang_code( $full_code ) {
  */
 function bitesmart_site_languages() {
     if ( function_exists( 'trp_get_languages' ) ) {
-        $overrides = get_option( 'bitesmart_video_languages', array() );
-        $languages = array();
+        $overrides   = get_option( 'bitesmart_video_languages', array() );
+        $languages   = array();
+        $seen_codes  = array(); // guards against the dedup bug below
 
         foreach ( trp_get_languages() as $full_code => $name ) {
             $short_code = bitesmart_short_lang_code( $full_code );
-            $override   = isset( $overrides[ $short_code ] ) ? $overrides[ $short_code ] : array();
+
+            // trp_get_languages() returns one entry per full TranslatePress
+            // locale (e.g. "en_US", "es_ES", "es_MX") — if a site has more
+            // than one regional variant of the same language configured,
+            // bitesmart_short_lang_code() collapses them to the SAME short
+            // code, and without this guard every per-language field on the
+            // site (Vimeo URL, Keywords/Synonyms, etc. — everything that
+            // calls bitesmart_site_languages()/getSiteLanguages()) would
+            // render one duplicate row per extra regional variant. First
+            // configured locale for a given short code wins.
+            if ( isset( $seen_codes[ $short_code ] ) ) {
+                continue;
+            }
+            $seen_codes[ $short_code ] = true;
+
+            $override = isset( $overrides[ $short_code ] ) ? $overrides[ $short_code ] : array();
 
             $languages[] = array(
                 'code'       => $short_code,

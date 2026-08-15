@@ -91,9 +91,16 @@ function EpisodeFieldsEdit() {
     }),
 
     el("h3", { className: "episode-fields-subheading" }, __("Videos", "custom-blocks")),
+    // key is prefixed "video-" — this map() and the Keywords one below both
+    // key by lang.code, and since both spread directly into this SAME flat
+    // children array (not each wrapped in their own Fragment), an
+    // unprefixed key: lang.code would collide across the two groups (found
+    // as a real bug in guide-chapter-panel/index.js — tripled fields — this
+    // block has the identical two-group shape, so the same fix applies
+    // here even though nobody had reported it here yet).
     ...languages.map((lang) =>
       el(TextControl, {
-        key: lang.code,
+        key: `video-${lang.code}`,
         label: `${__("Vimeo URL", "custom-blocks")} (${lang.name})`,
         value: videos[lang.code] || "",
         onChange: (val) => setVideoUrl(lang.code, val),
@@ -151,7 +158,7 @@ function EpisodeFieldsEdit() {
     ),
     ...languages.map((lang) =>
       el(TextControl, {
-        key: lang.code,
+        key: `keyword-${lang.code}`,
         label: `${__("Keywords", "custom-blocks")} (${lang.name})`,
         value: keywords[lang.code] || "",
         onChange: (val) => setKeywords(lang.code, val),
