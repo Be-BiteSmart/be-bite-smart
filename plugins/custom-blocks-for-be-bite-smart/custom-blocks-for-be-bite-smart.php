@@ -193,12 +193,14 @@ add_action( 'init', 'coloring_books_list_register_block' );
 
 // custom/learning-search is placed once per Stage archive page (e.g.
 // /learning/stages/preschool/) — see [[be-bitesmart-content-hub-plan]] in
-// memory. It reuses render_qa_entry_block() / render_resource_block() /
-// render_coloring_book_search_card() (registered just above) to build both
-// its paginated "browse all" list and the data its front-end Fuse.js
-// search reads, so require order matters here: this file must load after
-// qa-entry-display.php, resource-display.php, and
-// coloring-book-display.php, which it does.
+// memory. Handles ONLY the search box + live Fuse.js results as of the
+// 2026-08-16 split — the paginated "browse all" list moved to the sibling
+// custom/learning-browse block just below (place both, same Stage, on a
+// real Stage page). It reuses render_qa_entry_block() / render_resource_block()
+// / render_coloring_book_search_card() (registered just above) to build the
+// data its front-end Fuse.js search reads, so require order matters here:
+// this file must load after qa-entry-display.php, resource-display.php,
+// and coloring-book-display.php, which it does.
 require_once __DIR__ . '/src/learning-search/learning-search.php';
 
 // Logs zero-result searches from that same block — its own file since it
@@ -213,6 +215,33 @@ function learning_search_register_block() {
     ) );
 }
 add_action( 'init', 'learning_search_register_block' );
+
+// -------------- Learning Hub Browse Block ------------------------ //
+
+// custom/learning-browse holds the type-filter checkboxes + paginated
+// "All X" browse list split OUT of custom/learning-search on 2026-08-16 —
+// see src/learning-browse/learning-browse.php's header comment for the
+// full "why" (short version: a persistent, independently-styled block
+// instead of a section that disappeared while the sibling search block's
+// live search was active). Reuses learning-search.php's shared helpers
+// (bitesmart_build_stage_card_list(), bitesmart_render_learning_search_type_filter(),
+// bitesmart_render_learning_search_data(), bitesmart_render_learning_search_strings(),
+// bitesmart_learning_search_headings()) — those are only ever CALLED at
+// render time (this block's own init-registered callback), not at
+// file-require time, so exact require order relative to learning-search.php
+// doesn't functionally matter, but it's required right after it here for
+// readability (same "runtime vs. require-time" fact already true of
+// guide-chapter-display.php's bitesmart_render_guide_format_controls(),
+// required much later in this file yet still safely callable from
+// learning-search.php above).
+require_once __DIR__ . '/src/learning-browse/learning-browse.php';
+
+function learning_browse_register_block() {
+    register_block_type( __DIR__ . '/build/learning-browse', array(
+        'render_callback' => 'render_learning_browse_block',
+    ) );
+}
+add_action( 'init', 'learning_browse_register_block' );
 
 // -----------------------------
 // static save blocks:

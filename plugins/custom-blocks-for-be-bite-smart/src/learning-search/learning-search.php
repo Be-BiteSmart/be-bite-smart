@@ -1,16 +1,30 @@
 <?php
 /**
- * Render callback + supporting logic for the "custom/learning-search" block.
+ * Render callback + shared supporting logic for the "custom/learning-search"
+ * block AND its sibling "custom/learning-browse" block
+ * (src/learning-browse/learning-browse.php).
  *
  * Placed once per Stage archive page (e.g. /learning/stages/preschool/),
- * with a Stage picked in the block's editor UI (index.js). Combines the two
- * things the content hub plan calls for on that page — see
- * [[be-bitesmart-content-hub-plan]] in memory:
+ * with a Stage picked in the block's editor UI (index.js) — see
+ * [[be-bitesmart-content-hub-plan]] in memory.
  *
- *   (a) a client-side search box, and
- *   (b) below it, a paginated list (10/page) of ALL Q&A Entries +
- *       Resources + Episodes tagged with that Stage, for parents who don't
- *       want to search.
+ * UNTIL 2026-08-16 this file's render_learning_search_block() alone
+ * produced BOTH (a) a client-side search box AND (b) a paginated "browse
+ * everything" list below it. Split into two blocks that day, per Janet: the
+ * pooled Guide search page's "All Chapters" browse list was a pointless
+ * duplicate of custom/guide-single's own chapter list at /guide/, and on
+ * real Stage pages the browse list disappearing while a visitor searched
+ * (and being fully rebuilt via innerHTML at JS init) coupled its lifecycle
+ * to the search box's for no good reason — she wanted it genuinely
+ * persistent and independently stylable instead. render_learning_search_block()
+ * below now handles ONLY the search box; render_learning_browse_block()
+ * (learning-browse.php) handles the type-filter checkboxes + persistent
+ * browse list, as a second block placed alongside this one. BOTH still call
+ * bitesmart_build_stage_card_list() below independently (cheap — same
+ * transient cache, a hit if the sibling block already populated it for this
+ * Stage+language) and BOTH still reuse the same render_qa_entry_block()/
+ * render_resource_block()/etc. functions for card HTML — none of that
+ * changed, only which block emits which section of markup.
  *
  * Built from the SAME underlying data: every Q&A Entry / Resource / Episode
  * post tagged with this block's Stage, each rendered through an EXISTING
@@ -25,14 +39,7 @@
  * the site happens here too, for free, with no separate translation step
  * to build.
  *
- * The (b) paginated list is genuinely server-rendered and cached (a
- * transient per Stage+language, invalidated only when Q&A/Resource/Episode/
- * Coloring Book content actually changes — see
- * bitesmart_stage_cards_bump_generation() below) — NOT regenerated on every
- * page view. Server-side, pagination is plain `?bs_page=N` links, no JS
- * required — that's what a visitor with JS disabled actually sees.
- *
- * The (a) search box reuses the exact same rendered card HTML: the full
+ * The search box reuses the exact same rendered card HTML: the full
  * per-Stage list (not just the current page) is embedded once as a
  * <script type="application/json"> blob in the page output (see
  * bitesmart_render_learning_search_data() below), and view.js runs Fuse.js
@@ -40,20 +47,15 @@
  * translation path. A search "result" is just one of these same
  * already-rendered, already-translated card HTML strings being shown.
  *
- * Added 2026-08-13 (later the same day the Coloring Book search cards were
- * built): "Show: [x] Q&A [x] Resources …" type-filter checkboxes (see
- * bitesmart_render_learning_search_type_filter() below), all checked by
- * default. Per Janet, unchecking a type needed to hide it from BOTH the
- * live search results AND the browse list — one consistent setting, not
- * two independently-behaving filters — which meant the (b) browse list
- * couldn't stay purely server-rendered-per-request; view.js now takes it
- * over on load (same embedded JSON blob (a) already uses) and re-paginates
- * it client-side whenever a checkbox changes, with the server-rendered
- * version underneath as the no-JS fallback (see the "browse-content"
- * wrapper div below). This is the one part of the block that behaves
- * differently with JS on vs off — the search box already was 100% JS-only,
- * so making the type filter JS-only too doesn't lower the no-JS floor any
- * further, it just doesn't raise it either.
+ * "Show: [x] Q&A [x] Resources …" type-filter checkboxes (see
+ * bitesmart_render_learning_search_type_filter() below) render in BOTH this
+ * block's AND custom/learning-browse's own output as of 2026-08-16 (own
+ * copy each, all checked by default) — Janet wanted the filter usable from
+ * the search block alone, without needing the browse block present. view.js
+ * and browse.js each keep every copy on the page in sync and both re-apply
+ * their own filtering whenever ANY copy changes — one consistent setting,
+ * not independently-behaving filters, same idea as the "Show video/text"
+ * bar's own cross-block sync (format-toggle.js).
  *
  * Known v1 limitation (confirmed acceptable with Janet): the plain-text
  * search-matching corpus for each card is built from the CURRENT request's
@@ -96,7 +98,14 @@
  * (already enqueued below) covers them too.
  */
 function bitesmart_learning_search_enqueue_card_styles() {
-    if ( ! function_exists( 'generate_block_asset_handle' ) || ! has_block( 'custom/learning-search' ) ) {
+    if ( ! function_exists( 'generate_block_asset_handle' ) ) {
+        return;
+    }
+    // custom/learning-browse (learning-browse.php) also renders these same
+    // card types (via its own browse list), so it needs this enqueue just
+    // as much as custom/learning-search does — see the file-level comment
+    // above for the 2026-08-16 split.
+    if ( ! has_block( 'custom/learning-search' ) && ! has_block( 'custom/learning-browse' ) ) {
         return;
     }
 
@@ -122,21 +131,29 @@ function bitesmart_stage_cards_bump_generation() {
 }
 
 /**
- * Invalidate the cache when a Q&A Entry, Resource, Episode, or Coloring
- * Book is saved (including status transitions — draft/publish/trash all
- * fire save_post) or when its Stage/Topic terms change independently of a
- * full save (e.g. quick-edit). Episode is included because it's shown in
- * this list too now — see render_episode_search_card() in
- * episode-display.php and its use in bitesmart_build_stage_card_list()
- * below. Coloring Book is included for the same reason (see
- * render_coloring_book_search_card() in coloring-book-display.php) AND
- * because bitesmart_build_downloads_page_card_list() (coloring-books-list.php)
+ * Invalidate the cache when a Q&A Entry, Resource, Episode, Coloring Book,
+ * or Guide Chapter is saved (including status transitions —
+ * draft/publish/trash all fire save_post) or when its Stage/Topic terms
+ * change independently of a full save (e.g. quick-edit). Episode is
+ * included because it's shown in this list too now — see
+ * render_episode_search_card() in episode-display.php and its use in
+ * bitesmart_build_stage_card_list() below. Coloring Book is included for
+ * the same reason (see render_coloring_book_search_card() in
+ * coloring-book-display.php) AND because
+ * bitesmart_build_downloads_page_card_list() (coloring-books-list.php)
  * deliberately reuses this same generation counter for its own,
- * differently-scoped cache — see that function's header comment.
+ * differently-scoped cache — see that function's header comment. Guide
+ * Chapter is included for the same reason as Episode/Coloring Book (see
+ * render_guide_chapter_search_card() in guide-chapter-display.php) — a
+ * chapter's Stage terms changing matters here twice over: it can change
+ * which REAL Stage's list it appears in, AND (since every chapter also
+ * auto-carries the "Guide" pseudo-stage term — see
+ * [[be-bitesmart-guide-cpt-plan]] in memory) editing a chapter always
+ * affects the pooled Guide-pseudo-stage list too.
  */
 function bitesmart_stage_cards_maybe_bump( $post_id, $post = null ) {
     $post_type = $post ? $post->post_type : get_post_type( $post_id );
-    if ( in_array( $post_type, array( 'qa_entry', 'resource', 'episode', 'coloring_book' ), true ) ) {
+    if ( in_array( $post_type, array( 'qa_entry', 'resource', 'episode', 'coloring_book', 'guide_chapter' ), true ) ) {
         bitesmart_stage_cards_bump_generation();
     }
 }
@@ -144,6 +161,7 @@ add_action( 'save_post_qa_entry', 'bitesmart_stage_cards_maybe_bump', 10, 2 );
 add_action( 'save_post_resource', 'bitesmart_stage_cards_maybe_bump', 10, 2 );
 add_action( 'save_post_episode', 'bitesmart_stage_cards_maybe_bump', 10, 2 );
 add_action( 'save_post_coloring_book', 'bitesmart_stage_cards_maybe_bump', 10, 2 );
+add_action( 'save_post_guide_chapter', 'bitesmart_stage_cards_maybe_bump', 10, 2 );
 add_action( 'delete_post', 'bitesmart_stage_cards_maybe_bump' );
 
 function bitesmart_stage_cards_maybe_bump_terms( $object_id, $terms, $tt_ids, $taxonomy ) {
@@ -159,14 +177,16 @@ add_action( 'set_object_terms', 'bitesmart_stage_cards_maybe_bump_terms', 10, 4 
 
 /**
  * Per-language search-matching keywords for one post, plain string,
- * '' if none filled in for that language. Reads whichever of the three
- * per-language meta keys applies to the post's type — Episode's
+ * '' if none filled in for that language. Reads whichever of the per-
+ * language meta keys applies to the post's type — Episode's
  * (`_bitesmart_episode_keywords_by_lang`) added 2026-08-13 so Episodes
  * shown in this search can match on more than just their synthesized
  * question text, same as Q&A Entry's Synonyms / Resource's Keywords.
+ * Guide Chapter's (`_bitesmart_chapter_keywords_by_lang`) added the same
+ * way — see [[be-bitesmart-guide-cpt-plan]] in memory.
  *
  * @param int    $post_id Post ID.
- * @param string $type    'qa_entry', 'resource', 'episode', or 'coloring_book'.
+ * @param string $type    'qa_entry', 'resource', 'episode', 'coloring_book', or 'guide_chapter'.
  * @param string $lang    Short language code.
  * @return string
  */
@@ -176,6 +196,7 @@ function bitesmart_stage_card_keywords( $post_id, $type, $lang ) {
         'resource'      => '_bitesmart_resource_keywords_by_lang',
         'episode'       => '_bitesmart_episode_keywords_by_lang',
         'coloring_book' => '_bitesmart_coloring_book_keywords_by_lang',
+        'guide_chapter' => '_bitesmart_chapter_keywords_by_lang',
     );
 
     if ( ! isset( $meta_keys[ $type ] ) ) {
@@ -209,6 +230,7 @@ function bitesmart_stage_cards_template_version() {
         __DIR__ . '/../resource-display/resource-display.php',
         __DIR__ . '/../episode-display/episode-display.php', // holds render_episode_search_card() too, not just render_episode_block()
         __DIR__ . '/../coloring-book-display/coloring-book-display.php', // holds render_coloring_book_search_card() too, not just render_coloring_book_block()
+        __DIR__ . '/../guide-chapter-display/guide-chapter-display.php', // holds render_guide_chapter_search_card() too, not just bitesmart_render_guide_chapter_row()
     );
 
     $stamps = array_map(
@@ -224,8 +246,8 @@ function bitesmart_stage_cards_template_version() {
 /**
  * Build (or fetch from cache) the full, ordered list of rendered cards for
  * one Stage, in the current request's language. Every Q&A Entry + Resource
- * + Episode + Coloring Book published and tagged with $stage_slug,
- * alphabetical by title. Episode is included as a compact
+ * + Episode + Coloring Book + Guide Chapter published and tagged with
+ * $stage_slug, alphabetical by title. Episode is included as a compact
  * synthesized-question card (see render_episode_search_card() in
  * episode-display.php), not its full video-player embed — Episodes already
  * default to the Preschool stage term on save (see episode-cpt.php), so
@@ -233,7 +255,28 @@ function bitesmart_stage_cards_template_version() {
  * any extra tagging. Coloring Book, unlike Episode, embeds its actual
  * Download buttons inline (see render_coloring_book_search_card() in
  * coloring-book-display.php) rather than linking out — no stage default,
- * since coloring books aren't necessarily Preschool-specific.
+ * since coloring books aren't necessarily Preschool-specific. Guide
+ * Chapter renders its FULL accordion row here (see
+ * render_guide_chapter_search_card() in guide-chapter-display.php), not a
+ * compact card like Episode/Coloring Book — see
+ * [[be-bitesmart-guide-cpt-plan]] in memory for why.
+ *
+ * $stage_slug === 'guide' (the pooled multi-Guide search page) is handled
+ * as its own query branch below, NOT via the normal tax_query path — an
+ * earlier version tried to make every chapter carry a "Guide" pseudo-stage
+ * TERM so the normal tax_query path could return them "for free", but that
+ * depended on wp_set_object_terms() actually being called for a chapter's
+ * Stage at least once, which only happens if an editor touches that
+ * post's Stage panel at all — a brand-new chapter whose Stage panel is
+ * never opened never gets the term applied, so it silently never showed up
+ * on the pooled page (real bug Janet hit and diagnosed herself). Querying
+ * `post_type => 'guide_chapter'` directly with no tax_query at all is both
+ * simpler and can't have that failure mode — EVERY published chapter shows
+ * on the pooled page unconditionally, full stop, nothing to tag or forget
+ * to tag. The "Guide" Stage TERM itself still exists
+ * (bitesmart_seed_guide_stage_term(), stage-taxonomy.php) purely so it's
+ * selectable in custom/learning-search's own Stage dropdown (index.js) —
+ * it's just no longer read by this query.
  *
  * @param string $stage_slug Stage taxonomy term slug.
  * @param string $lang       Short language code (bitesmart_site_lang_code()).
@@ -248,21 +291,35 @@ function bitesmart_build_stage_card_list( $stage_slug, $lang ) {
         return $cached;
     }
 
-    $query = new WP_Query( array(
-        'post_type'      => array( 'qa_entry', 'resource', 'episode', 'coloring_book' ),
-        'post_status'    => 'publish',
-        'posts_per_page' => -1,
-        'orderby'        => 'title',
-        'order'          => 'ASC',
-        'no_found_rows'  => true,
-        'tax_query'      => array(
-            array(
-                'taxonomy' => 'stage',
-                'field'    => 'slug',
-                'terms'    => $stage_slug,
+    if ( 'guide' === $stage_slug ) {
+        // Every published chapter, unconditionally — see the header
+        // comment above for why this bypasses tax_query entirely rather
+        // than filtering by a "Guide" pseudo-stage term.
+        $query = new WP_Query( array(
+            'post_type'      => 'guide_chapter',
+            'post_status'    => 'publish',
+            'posts_per_page' => -1,
+            'orderby'        => 'title',
+            'order'          => 'ASC',
+            'no_found_rows'  => true,
+        ) );
+    } else {
+        $query = new WP_Query( array(
+            'post_type'      => array( 'qa_entry', 'resource', 'episode', 'coloring_book', 'guide_chapter' ),
+            'post_status'    => 'publish',
+            'posts_per_page' => -1,
+            'orderby'        => 'title',
+            'order'          => 'ASC',
+            'no_found_rows'  => true,
+            'tax_query'      => array(
+                array(
+                    'taxonomy' => 'stage',
+                    'field'    => 'slug',
+                    'terms'    => $stage_slug,
+                ),
             ),
-        ),
-    ) );
+        ) );
+    }
 
     $cards = array();
 
@@ -273,6 +330,8 @@ function bitesmart_build_stage_card_list( $stage_slug, $lang ) {
             $html = render_resource_block( array( 'resourceId' => $post->ID ) );
         } elseif ( 'coloring_book' === $post->post_type ) {
             $html = render_coloring_book_search_card( array( 'coloringBookId' => $post->ID ) );
+        } elseif ( 'guide_chapter' === $post->post_type ) {
+            $html = render_guide_chapter_search_card( array( 'chapterId' => $post->ID ) );
         } else {
             $html = render_episode_search_card( array( 'episodeId' => $post->ID ) );
         }
@@ -350,18 +409,29 @@ function bitesmart_learning_search_type_labels() {
         'resource'      => __( 'Resources', 'custom-blocks' ),
         'episode'       => __( 'Episodes', 'custom-blocks' ),
         'coloring_book' => __( 'Coloring Books', 'custom-blocks' ),
+        'guide_chapter' => __( 'Guide Chapters', 'custom-blocks' ),
     );
 }
 
 /**
  * "Show: [x] Q&A [x] Resources …" checkboxes — all checked by default,
  * unchecking one hides that type from BOTH the live Fuse.js search results
- * AND the browse list below (view.js reads these via
- * .learning-search-type-checkbox/data-type; see initLearningSearchBlock()).
- * Deliberately JS-only, same as the search box itself doing nothing without
- * JS — no server-side GET-param fallback, so as not to duplicate the
- * filtering logic in two places for a feature that's an enhancement on top
- * of an already fully-JS-dependent live search.
+ * AND the browse list below (view.js/browse.js each read these via
+ * .learning-search-type-checkbox/data-type). Deliberately JS-only, same as
+ * the search box itself doing nothing without JS — no server-side GET-param
+ * fallback, so as not to duplicate the filtering logic in two places for a
+ * feature that's an enhancement on top of an already fully-JS-dependent
+ * live search.
+ *
+ * Called from BOTH custom/learning-search's and custom/learning-browse's
+ * render callbacks as of 2026-08-16 (each independently, own copy — same
+ * "each block works correctly on its own" reasoning as
+ * bitesmart_render_guide_format_controls()) — the legend text is
+ * deliberately generic ("Filter by type", not "...the list below...")
+ * since it no longer only ever sits above a list. view.js and browse.js
+ * keep every copy's checked state in sync with each other and both re-apply
+ * their own filtering whenever ANY copy changes, the same way
+ * format-toggle.js already keeps multiple "Show video/text" bars in sync.
  *
  * Only rendered when this Stage actually has 2+ distinct card types —
  * a single checkbox with nothing to compare against isn't a useful filter,
@@ -380,7 +450,7 @@ function bitesmart_render_learning_search_type_filter( array $cards ) {
     <?php /* The border/divider look lives on THIS wrapper, not the <fieldset> below — a <fieldset> with a <legend> child natively "cuts a notch" out of its own top border where the legend sits (that's how a fieldset caption is meant to render). With the legend forced to 100% width so it stacks on its own line, that notch would span the fieldset's entire top edge and hide the border completely. Keeping <fieldset>/<legend> for their real accessibility grouping semantics, just not for this visual treatment. */ ?>
     <div class="learning-search-type-filter-wrap">
         <fieldset class="learning-search-type-filter">
-            <legend class="learning-search-type-filter-legend"><?php esc_html_e( 'Filter search & the list below by type:', 'custom-blocks' ); ?></legend>
+            <legend class="learning-search-type-filter-legend"><?php esc_html_e( 'Filter by type', 'custom-blocks' ); ?></legend>
             <?php foreach ( bitesmart_learning_search_type_labels() as $type => $label ) : ?>
                 <?php if ( in_array( $type, $present_types, true ) ) : // don't offer a "Coloring Books" checkbox on a Stage with none, etc. ?>
                     <label class="learning-search-type-toggle">
@@ -395,33 +465,68 @@ function bitesmart_render_learning_search_type_filter( array $cards ) {
 }
 
 /**
- * Hidden, TranslatePress-translatable source of truth for the status
- * messages/pagination labels view.js builds dynamically — same technique
- * as bitesmart_render_video_lang_name_templates() and friends in
- * site-lang.php: dynamic JS-built strings aren't reliably translatable by
- * TranslatePress, but static rendered HTML (even display:none) is, since TP
- * translates whatever text renders on the page. The browse-* keys are for
- * view.js's client-side-paginated browse list (see renderBrowse() there),
- * which took over from plain ?bs_page=N links so the type-filter checkboxes
- * above can affect it without a page reload.
+ * All 8 hidden, TranslatePress-translatable status/pagination strings, in
+ * one place — same technique as bitesmart_render_video_lang_name_templates()
+ * and friends in site-lang.php: dynamic JS-built strings aren't reliably
+ * translatable by TranslatePress, but static rendered HTML (even
+ * display:none) is, since TP translates whatever text renders on the page.
+ * Split from a single always-emit-everything function into a catalog +
+ * bitesmart_render_learning_search_strings() (below) on 2026-08-16, when
+ * search-only vs. browse-only keys ended up needing to live in two
+ * DIFFERENT blocks' output (custom/learning-search vs.
+ * custom/learning-browse) — this catalog is the one place the actual
+ * English/translator text lives, so neither block's copy can drift from
+ * the other's.
+ *
+ * @return array<string, string> Key => already-translated (esc_html__()) text.
  */
-function bitesmart_render_learning_search_strings( $instance_id ) {
+function bitesmart_learning_search_string_catalog() {
+    return array(
+        'no-results'              => esc_html__( 'No matches found for "{query}".', 'custom-blocks' ),
+        'results-count-one'       => esc_html__( '1 result', 'custom-blocks' ),
+        'results-count-other'     => esc_html__( '{count} results', 'custom-blocks' ),
+        'browse-empty-filtered'   => esc_html__( 'Nothing matches the selected filters.', 'custom-blocks' ),
+        'browse-prev'             => esc_html__( 'Previous', 'custom-blocks' ),
+        'browse-next'             => esc_html__( 'Next', 'custom-blocks' ),
+        'browse-page-status'      => esc_html__( 'Page {current} of {total}', 'custom-blocks' ),
+        'browse-pagination-label' => esc_html__( 'Questions & Resources pages', 'custom-blocks' ),
+    );
+}
+
+/**
+ * Emits only the requested subset of bitesmart_learning_search_string_catalog()
+ * — custom/learning-search passes just its 3 search-relevant keys,
+ * custom/learning-browse (learning-browse.php) passes its 5 browse-relevant
+ * ones, so neither block ships hidden markup for strings it never reads.
+ *
+ * @param string             $instance_id
+ * @param array<int, string> $keys Which catalog keys to emit, in order.
+ */
+function bitesmart_render_learning_search_strings( $instance_id, array $keys ) {
+    $catalog = bitesmart_learning_search_string_catalog();
     ?>
     <div class="learning-search-strings" aria-hidden="true" style="display:none;">
-        <span class="learning-search-string" data-key="no-results"><?php esc_html_e( 'No matches found for "{query}".', 'custom-blocks' ); ?></span>
-        <span class="learning-search-string" data-key="results-count-one"><?php esc_html_e( '1 result', 'custom-blocks' ); ?></span>
-        <span class="learning-search-string" data-key="results-count-other"><?php esc_html_e( '{count} results', 'custom-blocks' ); ?></span>
-        <span class="learning-search-string" data-key="browse-empty-filtered"><?php esc_html_e( 'Nothing matches the selected filters.', 'custom-blocks' ); ?></span>
-        <span class="learning-search-string" data-key="browse-prev"><?php esc_html_e( 'Previous', 'custom-blocks' ); ?></span>
-        <span class="learning-search-string" data-key="browse-next"><?php esc_html_e( 'Next', 'custom-blocks' ); ?></span>
-        <span class="learning-search-string" data-key="browse-page-status"><?php esc_html_e( 'Page {current} of {total}', 'custom-blocks' ); ?></span>
-        <span class="learning-search-string" data-key="browse-pagination-label"><?php esc_html_e( 'Questions & Resources pages', 'custom-blocks' ); ?></span>
+        <?php foreach ( $keys as $key ) : ?>
+            <?php if ( isset( $catalog[ $key ] ) ) : ?>
+                <span class="learning-search-string" data-key="<?php echo esc_attr( $key ); ?>"><?php echo $catalog[ $key ]; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- already esc_html__()'d in the catalog ?></span>
+            <?php endif; ?>
+        <?php endforeach; ?>
     </div>
     <?php
 }
 
 /**
- * Render callback for "custom/learning-search".
+ * Render callback for "custom/learning-search" — the search box + live
+ * Fuse.js results, as of the 2026-08-16 split (see the file-level comment
+ * above). Also renders its own copy of the type-filter checkboxes above the
+ * search box (added same day, see the call site below) — the paginated
+ * "browse everything" list itself still lives only in the sibling
+ * custom/learning-browse block (learning-browse.php) — place both, same
+ * Stage, on a real Stage page; place only this one on the pooled Guide
+ * search page (Stage=Guide), where a persistent "All Chapters" list would
+ * just duplicate custom/guide-single's own chapter list at /guide/ (Stage=
+ * Guide never has 2+ distinct card types anyway, so its type filter never
+ * renders regardless).
  */
 function render_learning_search_block( $attributes ) {
     $stage_slug = isset( $attributes['stageSlug'] ) ? sanitize_title( $attributes['stageSlug'] ) : '';
@@ -438,62 +543,52 @@ function render_learning_search_block( $attributes ) {
         return '';
     }
 
-    $stage_term = get_term_by( 'slug', $stage_slug, 'stage' );
-    $stage_name = $stage_term ? $stage_term->name : $stage_slug;
-    $lang       = bitesmart_site_lang_code();
-    $cards      = bitesmart_build_stage_card_list( $stage_slug, $lang );
+    $lang        = bitesmart_site_lang_code();
+    $cards       = bitesmart_build_stage_card_list( $stage_slug, $lang );
     $instance_id = 'learning-search-' . $stage_slug;
-
-    $per_page    = 10;
-    $total       = count( $cards );
-    $total_pages = max( 1, (int) ceil( $total / $per_page ) );
-    $page        = isset( $_GET['bs_page'] ) ? absint( wp_unslash( $_GET['bs_page'] ) ) : 1; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only pagination, no state change
-    $page        = max( 1, min( $page, $total_pages ) );
-    $page_cards  = array_slice( $cards, ( $page - 1 ) * $per_page, $per_page );
 
     ob_start();
     ?>
     <section class="wp-block-custom-learning-search learning-search-block" id="<?php echo esc_attr( $instance_id ); ?>" data-stage="<?php echo esc_attr( $stage_slug ); ?>" data-lang="<?php echo esc_attr( $lang ); ?>" data-rest-url="<?php echo esc_url( rest_url( 'bitesmart/v1/zero-result-search' ) ); ?>" data-rest-nonce="<?php echo esc_attr( wp_create_nonce( 'wp_rest' ) ); ?>">
 
         <?php
-        /*
-         * Rendered FIRST, above the search box — NOT nested inside
-         * .learning-search-box, and not sandwiched between the search box
-         * and browse list either (tried that first; see git history/memory
-         * for why — Janet flagged that .learning-search-results can grow
-         * tall enough while actively searching to visually push the
-         * filter down below the results, which then reads as "part of the
-         * results" rather than a control that also governs them). Sitting
-         * above everything is stable regardless of how many results
-         * render, and still reads as governing both the search box and
-         * the browse list below it. See its own CSS for the border/legend
-         * treatment that reinforces this.
-         */
+        // Own copy of the type filter, above the search box — 2026-08-16,
+        // per Janet: it used to live only in the sibling custom/learning-
+        // browse block, but she wanted it repeated here too so a visitor
+        // narrowing by type doesn't need the browse block present/visible
+        // to filter the live search results. view.js/browse.js keep every
+        // copy of these checkboxes on the page in sync with each other and
+        // both react when ANY copy changes — see
+        // bitesmart_render_learning_search_type_filter()'s own comment.
         bitesmart_render_learning_search_type_filter( $cards );
+
+        // Only rendered on the pooled Guide pseudo-stage (stage_slug ===
+        // 'guide'), where the card list is 100% chapters — never on a real
+        // Stage page, where chapters are at most a small slice of mixed
+        // content and a global "Show video/text" control would apply to
+        // almost nothing on screen. Real Stage pages rely solely on each
+        // chapter's own per-chapter badges (guide-chapter-display.php)
+        // instead. See bitesmart_render_guide_format_controls().
+        if ( 'guide' === $stage_slug ) {
+            echo bitesmart_render_guide_format_controls(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- own trusted markup
+        }
         ?>
 
         <div class="learning-search-box" role="search">
             <?php
             /*
-             * A real <h3> now, not a <label> — a <label> isn't part of the
-             * heading outline at all, so a screen reader navigating by
-             * headings jumped straight from this page's "Find Resources"
-             * (h2) to "All %s Questions & Resources" (h3) below, skipping
-             * this search section entirely. Janet flagged that both
-             * headings should be h3 siblings under that h2, since both are
-             * subsections of "Find Resources". A heading can't be a
-             * <label>'s content (label only permits phrasing content), so
-             * the input's accessible name now comes from aria-labelledby
-             * referencing this h3's id instead of <label for> — same
-             * effect, correct semantics either way.
+             * No visible heading rendered here as of 2026-08-16 — Janet
+             * adds her own Heading block above this block in the page
+             * editor instead, for full styling control. That heading isn't
+             * reliably reachable by id from this block's PHP (a manually
+             * placed block, no guaranteed anchor), so the input's
+             * accessible name comes from a plain, generic aria-label
+             * instead of aria-labelledby — the visible page heading above
+             * still gives sighted AND screen-reader users the real
+             * "Search {Stage}" context via normal reading order, this is
+             * just the form control's own fallback name.
              */
             ?>
-            <h3 class="learning-search-label" id="<?php echo esc_attr( $instance_id ); ?>-label">
-                <?php
-                /* translators: %s: Stage name, e.g. "Preschool" */
-                printf( esc_html__( 'Search %s Questions & Resources', 'custom-blocks' ), esc_html( $stage_name ) );
-                ?>
-            </h3>
             <p id="<?php echo esc_attr( $instance_id ); ?>-hint"><?php esc_html_e( 'Type to search (e.g. "growling")', 'custom-blocks' ); ?></p>
             <div class="learning-search-input-wrap">
                 <input
@@ -501,7 +596,7 @@ function render_learning_search_block( $attributes ) {
                     id="<?php echo esc_attr( $instance_id ); ?>-input"
                     class="learning-search-input"
                     autocomplete="off"
-                    aria-labelledby="<?php echo esc_attr( $instance_id ); ?>-label"
+                    aria-label="<?php esc_attr_e( 'Search', 'custom-blocks' ); ?>"
                     aria-describedby="<?php echo esc_attr( $instance_id ); ?>-hint"
                 />
                 <button type="button" class="learning-search-clear" aria-label="<?php esc_attr_e( 'Clear search', 'custom-blocks' ); ?>" hidden>
@@ -517,68 +612,7 @@ function render_learning_search_block( $attributes ) {
         </div>
 
         <?php bitesmart_render_learning_search_data( $cards, $instance_id ); ?>
-        <?php bitesmart_render_learning_search_strings( $instance_id ); ?>
-
-        <div class="learning-search-browse">
-            <h3 class="learning-search-browse-heading">
-                <?php
-                /* translators: %s: Stage name, e.g. "Preschool" */
-                printf( esc_html__( 'All %s Questions & Resources', 'custom-blocks' ), esc_html( $stage_name ) );
-                ?>
-            </h3>
-
-            <?php
-            /*
-             * This inner wrapper (rather than the ?bs_page=N links below
-             * being the only pagination mechanism) exists so view.js's
-             * renderBrowse() has one clean target to replace wholesale once
-             * JS loads — see initLearningSearchBlock() there. What's here
-             * server-side is real, working, no-JS-required pagination
-             * (exactly as before this existed) that JS then takes over so
-             * the type-filter checkboxes above can affect it live, without
-             * a page reload. If JS never loads, this is exactly what a
-             * visitor sees and it works fine on its own.
-             */
-            ?>
-            <div class="learning-search-browse-content">
-                <?php if ( empty( $page_cards ) ) : ?>
-                    <p class="learning-search-empty"><?php esc_html_e( 'Nothing has been added for this Stage yet.', 'custom-blocks' ); ?></p>
-                <?php else : ?>
-                    <div class="learning-search-browse-list">
-                        <?php foreach ( $page_cards as $card ) : ?>
-                            <?php echo $card['html']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- already-escaped HTML from render_qa_entry_block()/render_resource_block() ?>
-                        <?php endforeach; ?>
-                    </div>
-
-                    <?php if ( $total_pages > 1 ) : ?>
-                        <nav class="learning-search-pagination" aria-label="<?php esc_attr_e( 'Questions & Resources pages', 'custom-blocks' ); ?>">
-                            <?php if ( $page > 1 ) : ?>
-                                <a class="learning-search-page-link learning-search-prev" href="<?php echo esc_url( add_query_arg( 'bs_page', $page - 1 ) . '#' . $instance_id ); ?>">
-                                    <?php esc_html_e( 'Previous', 'custom-blocks' ); ?>
-                                </a>
-                            <?php endif; ?>
-
-                            <span class="learning-search-page-status">
-                                <?php
-                                printf(
-                                    /* translators: 1: current page, 2: total pages */
-                                    esc_html__( 'Page %1$d of %2$d', 'custom-blocks' ),
-                                    (int) $page,
-                                    (int) $total_pages
-                                );
-                                ?>
-                            </span>
-
-                            <?php if ( $page < $total_pages ) : ?>
-                                <a class="learning-search-page-link learning-search-next" href="<?php echo esc_url( add_query_arg( 'bs_page', $page + 1 ) . '#' . $instance_id ); ?>">
-                                    <?php esc_html_e( 'Next', 'custom-blocks' ); ?>
-                                </a>
-                            <?php endif; ?>
-                        </nav>
-                    <?php endif; ?>
-                <?php endif; ?>
-            </div>
-        </div>
+        <?php bitesmart_render_learning_search_strings( $instance_id, array( 'no-results', 'results-count-one', 'results-count-other' ) ); ?>
     </section>
     <?php
     return ob_get_clean();

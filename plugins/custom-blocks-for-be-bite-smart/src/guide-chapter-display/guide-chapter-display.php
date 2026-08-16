@@ -283,16 +283,61 @@ function bitesmart_render_guide_chapter_row( $chapter_id, array $args = array() 
 }
 
 /**
+ * Renders one chapter for the Learning Hub Search/Browse blocks
+ * (custom/learning-search and custom/learning-browse — two SEPARATE blocks
+ * as of 2026-08-16, each independently calling
+ * bitesmart_build_stage_card_list() for the same Stage, see that
+ * function's own comment in learning-search.php) — alongside
+ * render_qa_entry_block()/render_resource_block()/render_episode_search_card()/
+ * render_coloring_book_search_card() for the other content types shown
+ * there.
+ *
+ * UNLIKE those, this is NOT a compact teaser — it's the exact SAME full
+ * accordion row bitesmart_render_guide_chapter_row() renders everywhere
+ * else (video, text, badges, all of it). Deliberate, per Janet: search
+ * results here should let a visitor actually view the chapter in place,
+ * not link out to read it elsewhere — see [[be-bitesmart-guide-cpt-plan]]
+ * in memory, "Front end: one pooled, searchable accordion — not link-out
+ * cards". No `accordion_group` — chapters appearing in a mixed search/
+ * browse list (possibly from different Guides once a second Guide post
+ * type exists) should be independently openable, not forced into a single
+ * "one at a time" group the way a single Guide's own page uses.
+ *
+ * @param array $attributes Block-style attributes ({ chapterId }), matching
+ *     the shape every other *_search_card() function in this codebase uses.
+ * @return string
+ */
+function render_guide_chapter_search_card( $attributes ) {
+    $chapter_id = isset( $attributes['chapterId'] ) ? (int) $attributes['chapterId'] : 0;
+
+    return bitesmart_render_guide_chapter_row( $chapter_id, array(
+        'show_guide_link' => true,
+    ) );
+}
+
+/**
  * The shared "Show video" / "Show text" checkbox bar + zero-formats-picked
- * warning — rendered once per page (never per chapter), read by
- * format-toggle.js. Both checked by default, preference persisted per-
- * browser via localStorage (no accounts on this site — see
- * [[be-bitesmart-guide-cpt-plan]] in memory) — the actual default/restore
- * logic lives client-side in format-toggle.js; this just emits the
- * checked="checked" starting markup so the controls render correctly
- * before JS runs (progressive enhancement: with JS disabled, every
- * chapter's video AND text both show, matching these boxes' server-rendered
- * checked state).
+ * warning — rendered once per BLOCK that needs it (never per chapter), read
+ * by format-toggle.js. Only rendered where the surrounding content is 100%
+ * chapters: the main Guide page/chapter page (guide-single.php, always) and
+ * the pooled Guide search+browse pages (stage_slug === 'guide', in
+ * learning-search.php / learning-browse.php). Deliberately NOT rendered on
+ * real Stage pages, where chapters are at most a small slice of a mixed
+ * Q&A/Resource/Episode list and a global control would apply to almost
+ * nothing on screen — those pages rely solely on each chapter's own
+ * per-chapter badges instead. Because custom/learning-search and
+ * custom/learning-browse are separate blocks that could both legitimately
+ * sit on the pooled Guide page at once, up to two copies can still render
+ * on one page — format-toggle.js already treats every `.guide-format-checkbox`
+ * on the page as one synchronized group regardless of how many copies
+ * exist, so that's a deliberate, accepted redundancy, not a bug. Both
+ * checked by default, preference persisted per-browser via localStorage (no
+ * accounts on this site — see [[be-bitesmart-guide-cpt-plan]] in memory) —
+ * the actual default/restore logic lives client-side in format-toggle.js;
+ * this just emits the checked="checked" starting markup so the controls
+ * render correctly before JS runs (progressive enhancement: with JS
+ * disabled, every chapter's video AND text both show, matching these
+ * boxes' server-rendered checked state).
  *
  * @return string
  */
@@ -322,11 +367,13 @@ function bitesmart_render_guide_format_controls() {
  * format controls bar) can actually appear. NOT a registered block, so it
  * can't rely on WordPress's automatic "saved content contains this block"
  * detection (has_block()) the way most blocks in this plugin do for their
- * OWN markup — but two of the three consumer surfaces here DO place a real
- * block (custom/guide-single, wherever an editor put the main Guide Page;
- * custom/learning-search, the pooled multi-Guide/per-Stage search), so
- * has_block() works for both. The third (a chapter's own single-post page)
- * is a real template view, not block content at all — is_singular()
+ * OWN markup — but the block surfaces here DO place real blocks
+ * (custom/guide-single, wherever an editor put the main Guide Page;
+ * custom/learning-search AND custom/learning-browse, split 2026-08-16 —
+ * either can independently render a format-controls bar/chapter rows for
+ * the same Stage, see each block's own render callback), so has_block()
+ * works for all three. The remaining surface (a chapter's own single-post
+ * page) is a real template view, not block content at all — is_singular()
  * is the right check there. Guide itself is headless now (no permalink —
  * see guide-cpt.php), so there's no is_singular('guide') branch; its only
  * front end is the custom/guide-single block, already covered.
@@ -338,6 +385,7 @@ function bitesmart_render_guide_format_controls() {
 function bitesmart_enqueue_guide_chapter_display_assets() {
     $needs_assets = is_singular( 'guide_chapter' )
         || has_block( 'custom/learning-search' )
+        || has_block( 'custom/learning-browse' )
         || has_block( 'custom/guide-single' );
 
     if ( ! $needs_assets ) {

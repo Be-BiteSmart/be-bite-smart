@@ -29,6 +29,8 @@ module.exports = {
     "guide-single/index": "./src/guide-single/index.js",
     "learning-search/index": "./src/learning-search/index.js",
     "learning-search/view": "./src/learning-search/view.js",
+    "learning-browse/index": "./src/learning-browse/index.js",
+    "learning-browse/browse": "./src/learning-browse/browse.js",
     "hero/index": "./src/hero/index.js",
     "news-and-coverage/index": "./src/news-and-coverage/index.js",
     "pdf-toggle/index": "./src/pdf-toggle/index.js",

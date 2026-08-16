@@ -1,11 +1,14 @@
 import Fuse from "fuse.js";
 
-// Front-end behavior for custom/learning-search (see learning-search.php's
-// render_learning_search_block() for what it renders server-side: the
-// search box + inline JSON data blob this reads, and the browse list below
-// it, server-rendered with plain ?bs_page=N links as a no-JS fallback —
-// once this script runs, renderBrowse() below takes it over so the type
-// filter checkboxes can affect it live, without a page reload).
+// Front-end behavior for custom/learning-search — the search box + live
+// Fuse.js results, as of the 2026-08-16 split (see learning-search.php's
+// file-level comment for the full "why"). The paginated "All X" browse
+// list this used to also own now lives in the sibling custom/learning-
+// browse block instead (browse.js). The type-filter checkboxes can render
+// in EITHER block's own output (or both) — see getEnabledTypes() and
+// syncTypeCheckboxes() below for how this file keeps every copy on the
+// page in sync and correctly applies whichever one a visitor touches,
+// wherever it lives.
 //
 // Deliberately NOT a fetch()/REST call: every card for this block's Stage
 // is already embedded in the page as a <script type="application/json">
@@ -13,27 +16,40 @@ import Fuse from "fuse.js";
 // already rendered through the same render_qa_entry_block()/
 // render_resource_block() functions used elsewhere on the site — so it's
 // already in whatever language the page itself rendered in. A "search
-// result" (or browse-list item) here is just one of those same
-// already-rendered, already-translated HTML strings being shown; nothing
-// is built from scratch in JS.
+// result" here is just one of those same already-rendered,
+// already-translated HTML strings being shown; nothing is built from
+// scratch in JS.
 
 const MIN_QUERY_LENGTH = 2;
 const DEBOUNCE_MS = 200;
 const LOG_DEBOUNCE_MS = 700; // separate, longer "typing settled" delay before a zero-result search is considered loggable — see maybeLogZeroResult() below
-const BROWSE_PER_PAGE = 10; // mirrors $per_page in render_learning_search_block()
+
+// Keeps every .learning-search-type-checkbox with the same data-type in
+// sync with whichever one a visitor just toggled — this block's own copy
+// (added 2026-08-16) and/or a sibling custom/learning-browse block's copy,
+// however many of each are on the page. Assumes one Stage's worth of
+// checkboxes per page (this codebase's existing convention — see e.g.
+// custom/learning-search being "placed once per Stage archive page"), so
+// no data-stage scoping here, same as format-toggle.js's own page-wide
+// .guide-format-checkbox sync. Mutating .checked directly (not
+// dispatchEvent) is deliberate — it doesn't fire another "change" event, so
+// this can't loop; browse.js has its own identical copy of this function
+// and its own document-level listener that reacts to the SAME single
+// genuine change event, so both files' effects (live search + browse list)
+// stay correct without either file needing to know the other exists.
+function syncTypeCheckboxes(source) {
+  const type = source.dataset.type;
+  document.querySelectorAll(`.learning-search-type-checkbox[data-type="${type}"]`).forEach((cb) => {
+    if (cb !== source) cb.checked = source.checked;
+  });
+}
 
 function initLearningSearchBlock(block) {
-  const instanceId = block.id;
   const input = block.querySelector(".learning-search-input");
   const clearButton = block.querySelector(".learning-search-clear");
   const status = block.querySelector(".learning-search-status");
   const results = block.querySelector(".learning-search-results");
-  const browse = block.querySelector(".learning-search-browse");
-  const browseContent = block.querySelector(".learning-search-browse-content");
-  const typeCheckboxes = Array.from(
-    block.querySelectorAll(".learning-search-type-checkbox"),
-  );
-  const dataEl = document.getElementById(`${instanceId}-data`);
+  const dataEl = document.getElementById(`${block.id}-data`);
   const { lang, restUrl, restNonce } = block.dataset;
 
   if (!input || !results || !dataEl) {
@@ -44,7 +60,7 @@ function initLearningSearchBlock(block) {
   try {
     cards = JSON.parse(dataEl.textContent);
   } catch {
-    return; // malformed/empty data blob — search box stays inert, browse list below still works via its server-rendered ?bs_page=N links
+    return; // malformed/empty data blob — search box stays inert
   }
 
   if (!Array.isArray(cards) || cards.length === 0) {
@@ -61,16 +77,23 @@ function initLearningSearchBlock(block) {
     minMatchCharLength: MIN_QUERY_LENGTH,
   });
 
-  // No checkboxes rendered at all (bitesmart_render_learning_search_type_filter()
-  // skips this Stage — fewer than 2 distinct card types present) means
-  // "every type is enabled" by definition, same as if they were all checked.
+  // Type-filter checkboxes can render in THIS block's own output AND in a
+  // sibling custom/learning-browse block's output (both call
+  // bitesmart_render_learning_search_type_filter() independently — see
+  // learning-search.php). Reading every copy on the page and keeping them
+  // all in sync (see syncTypeCheckboxes() below) means it doesn't matter
+  // which copy a visitor actually touches, or whether a browse block is
+  // even present — recomputed fresh on every call (cheap — a couple of
+  // querySelectors, not a hot loop). Degrades to null ("no filtering") on
+  // a page with no type-filter checkboxes at all — e.g. the pooled Guide
+  // search page, which is 100% one type so the filter never renders there.
   function getEnabledTypes() {
-    if (typeCheckboxes.length === 0) {
-      return null; // null = no filtering, everything passes
+    const checkboxes = Array.from(document.querySelectorAll(".learning-search-type-checkbox"));
+
+    if (checkboxes.length === 0) {
+      return null; // no filtering, everything passes
     }
-    return new Set(
-      typeCheckboxes.filter((cb) => cb.checked).map((cb) => cb.dataset.type),
-    );
+    return new Set(checkboxes.filter((cb) => cb.checked).map((cb) => cb.dataset.type));
   }
 
   // Tracked so maybeLogZeroResult() (below) can tell a genuine "Fuse found
@@ -90,7 +113,6 @@ function initLearningSearchBlock(block) {
       lastRawFuseCount = null;
       results.innerHTML = "";
       status.textContent = "";
-      if (browse) browse.hidden = false;
       return;
     }
 
@@ -110,95 +132,33 @@ function initLearningSearchBlock(block) {
       );
     } else {
       results.innerHTML = matches.map((match) => match.item.html).join("");
+      // Freshly-inserted card markup starts with the SERVER-rendered
+      // default format visibility baked in (every checkbox "on") — this
+      // reconciles it against whatever the visitor's global "Show video"/
+      // "Show text" checkboxes actually say right now. Optional-chained:
+      // this file doesn't assume format-toggle.js is loaded (e.g. a Stage
+      // whose card list has zero Guide Chapters still runs this same code
+      // path). See window.bitesmartApplyGuideFormatState's own comment in
+      // format-toggle.js for why this hook exists.
+      window.bitesmartApplyGuideFormatState?.();
       const countKey = matches.length === 1 ? "results-count-one" : "results-count-other";
       const countFallback = matches.length === 1 ? "1 result" : "{count} results";
       status.textContent = stringFor(countKey, countFallback).replace("{count}", matches.length);
     }
-
-    // While actively searching, the "browse everything" list below is
-    // redundant noise for the parent — hide it, it comes back once the
-    // search box is cleared (see the branch above).
-    if (browse) browse.hidden = true;
   }
 
-  // Client-side pagination state for the browse list — reset to page 1
-  // whenever the type filter changes (see the checkbox listener below), so
-  // a parent never lands on a now-out-of-range or unexpectedly-different
-  // page after narrowing the filter.
-  let browsePage = 1;
-
-  function renderBrowse() {
-    if (!browseContent) {
-      return; // no cards at all for this Stage — nothing to paginate (render_learning_search_block() still renders the plain "nothing added yet" message server-side in that case)
+  // Type-filter checkboxes aren't guaranteed to live inside `block` (a
+  // sibling custom/learning-browse block can have its own copy too), so
+  // this is delegated on document rather than bound to specific checkbox
+  // elements at init. Syncs every same-type checkbox on the page first
+  // (see syncTypeCheckboxes() above), then re-runs the search using
+  // getEnabledTypes()'s now-consistent page-wide read.
+  document.addEventListener("change", (event) => {
+    if (!event.target.classList.contains("learning-search-type-checkbox")) return;
+    syncTypeCheckboxes(event.target);
+    if (input.value.trim().length >= MIN_QUERY_LENGTH) {
+      render(input.value);
     }
-
-    const enabledTypes = getEnabledTypes();
-    const filtered = enabledTypes
-      ? cards.filter((card) => enabledTypes.has(card.type))
-      : cards;
-
-    const totalPages = Math.max(1, Math.ceil(filtered.length / BROWSE_PER_PAGE));
-    browsePage = Math.max(1, Math.min(browsePage, totalPages));
-    const pageCards = filtered.slice(
-      (browsePage - 1) * BROWSE_PER_PAGE,
-      browsePage * BROWSE_PER_PAGE,
-    );
-
-    if (pageCards.length === 0) {
-      browseContent.innerHTML = `<p class="learning-search-empty">${stringFor(
-        "browse-empty-filtered",
-        "Nothing matches the selected filters.",
-      )}</p>`;
-      return;
-    }
-
-    const list = `<div class="learning-search-browse-list">${pageCards
-      .map((card) => card.html)
-      .join("")}</div>`;
-
-    let pagination = "";
-    if (totalPages > 1) {
-      const prevButton =
-        browsePage > 1
-          ? `<button type="button" class="learning-search-page-link learning-search-prev" data-page-action="prev">${stringFor("browse-prev", "Previous")}</button>`
-          : "";
-      const nextButton =
-        browsePage < totalPages
-          ? `<button type="button" class="learning-search-page-link learning-search-next" data-page-action="next">${stringFor("browse-next", "Next")}</button>`
-          : "";
-      const pageStatus = stringFor("browse-page-status", "Page {current} of {total}")
-        .replace("{current}", browsePage)
-        .replace("{total}", totalPages);
-
-      pagination = `<nav class="learning-search-pagination" aria-label="${stringFor("browse-pagination-label", "Questions & Resources pages")}">${prevButton}<span class="learning-search-page-status">${pageStatus}</span>${nextButton}</nav>`;
-    }
-
-    browseContent.innerHTML = list + pagination;
-  }
-
-  // Delegated (not bound per-button) since renderBrowse() replaces
-  // browseContent's buttons wholesale on every render.
-  if (browseContent) {
-    browseContent.addEventListener("click", (event) => {
-      const button = event.target.closest("[data-page-action]");
-      if (!button) return;
-      browsePage += button.dataset.pageAction === "prev" ? -1 : 1;
-      renderBrowse();
-      browseContent.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    });
-  }
-
-  // A type checkbox affects BOTH the live search results and the browse
-  // list — one consistent "I don't want to see this" setting, not two
-  // independently-behaving filters (see this file's header comment).
-  typeCheckboxes.forEach((checkbox) => {
-    checkbox.addEventListener("change", () => {
-      browsePage = 1;
-      renderBrowse();
-      if (input.value.trim().length >= MIN_QUERY_LENGTH) {
-        render(input.value);
-      }
-    });
   });
 
   // Shows/hides the clear (X) button — kept separate from the debounced
@@ -295,7 +255,6 @@ function initLearningSearchBlock(block) {
   }
 
   updateClearButton(); // covers a value restored by browser autofill/back-forward cache on load
-  renderBrowse(); // takes over from the server-rendered ?bs_page=N version — see this file's header comment
 }
 
 document.querySelectorAll(".learning-search-block").forEach(initLearningSearchBlock);
