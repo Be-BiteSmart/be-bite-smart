@@ -270,18 +270,32 @@ function bitesmart_resolve_citation_refs( $html ) {
         $link->setAttribute( 'href', $references_url . '#citation-' . $id );
         $link->setAttribute( 'class', 'citation-ref' );
         $link->setAttribute( 'aria-describedby', 'citation-tooltip' );
+
+        // Tooltip text lives directly on the LINK itself (not the
+        // surrounding <sup> wrapper, and not a separate page-wide JSON
+        // blob keyed by citation ID) — simpler, and still only ever ships
+        // the text for citations actually cited in THIS chapter
+        // (duplicated once per mention if the same citation is cited
+        // twice in one chapter, an accepted small tradeoff for not
+        // needing any separate blob-plus-lookup machinery at all).
+        // DOMDocument's setAttribute() escapes this safely for attribute
+        // embedding on its own.
+        //
+        // MUST be on $link, not $node (the <sup>): citation-tooltip.js's
+        // showTooltip() reads it off `event.target.closest(".citation-ref")`
+        // — .citation-ref is this <a>'s own class, not the <sup>'s
+        // (.citation-ref-wrap) — and .closest() only ever matches the
+        // element itself or an ANCESTOR, never a descendant. Originally
+        // set on $node instead, which silently broke the hover/focus
+        // preview entirely (trigger.dataset.citationTooltip was always
+        // undefined, so showTooltip()'s `if (!text) return;` guard always
+        // exited immediately — no error, just nothing ever shown). Caught
+        // 2026-08-16 when Janet reported hover still not working even
+        // with a cleanly-inserted citation.
+        $link->setAttribute( 'data-citation-tooltip', $citations_by_id[ $id ]['text'] );
+
         $link->appendChild( $dom->createTextNode( $number ? $number : '?' ) );
         $node->appendChild( $link );
-
-        // Tooltip text lives directly on the wrapper mark itself, not a
-        // separate page-wide JSON blob keyed by citation ID — simpler, and
-        // still only ever ships the text for citations actually cited
-        // in THIS chapter (duplicated once per mention if the same
-        // citation is cited twice in one chapter, an accepted small
-        // tradeoff for not needing any separate blob-plus-lookup
-        // machinery at all). DOMDocument's setAttribute() escapes this
-        // safely for attribute embedding on its own.
-        $node->setAttribute( 'data-citation-tooltip', $citations_by_id[ $id ]['text'] );
     }
 
     $wrapper = $dom->getElementsByTagName( 'div' )->item( 0 );
