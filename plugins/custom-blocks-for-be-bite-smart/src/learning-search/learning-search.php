@@ -231,7 +231,7 @@ function bitesmart_stage_cards_template_version() {
         __DIR__ . '/../resource-display/resource-display.php',
         __DIR__ . '/../episode-display/episode-display.php', // holds render_episode_search_card() too, not just render_episode_block()
         __DIR__ . '/../coloring-book-display/coloring-book-display.php', // holds render_coloring_book_search_card() too, not just render_coloring_book_block()
-        __DIR__ . '/../guide-chapter-display/guide-chapter-display.php', // holds render_guide_chapter_search_card() too, not just bitesmart_render_guide_chapter_row()
+        __DIR__ . '/../guide-chapter-display/guide-chapter-display.php', // holds render_guide_chapter_search_card()/render_guide_chapter_pooled_card() too, not just bitesmart_render_guide_chapter_row()
     );
 
     $stamps = array_map(
@@ -257,10 +257,16 @@ function bitesmart_stage_cards_template_version() {
  * Download buttons inline (see render_coloring_book_search_card() in
  * coloring-book-display.php) rather than linking out — no stage default,
  * since coloring books aren't necessarily Preschool-specific. Guide
- * Chapter renders its FULL accordion row here (see
- * render_guide_chapter_search_card() in guide-chapter-display.php), not a
- * compact card like Episode/Coloring Book — see
- * [[be-bitesmart-guide-cpt-plan]] in memory for why.
+ * Chapter is the one type whose rendering DIFFERS by which Stage this is:
+ * on a REAL Stage (this function's `else` branch below), it renders a
+ * compact teaser (see render_guide_chapter_search_card() in
+ * guide-chapter-display.php), same "link out to the real thing" idea as
+ * Episode/Coloring Book, added 2026-08-16 once a chapter's video/format
+ * logic got heavy enough that Janet wanted it minimized on a mixed-content
+ * Stage page; on the pooled Guide pseudo-stage (`'guide' === $stage_slug`
+ * branch below), it renders the FULL accordion row instead (see
+ * render_guide_chapter_pooled_card() in guide-chapter-display.php) — see
+ * [[be-bitesmart-guide-cpt-plan]] in memory for the full "why" either way.
  *
  * $stage_slug === 'guide' (the pooled multi-Guide search page) is handled
  * as its own query branch below, NOT via the normal tax_query path — an
@@ -332,7 +338,14 @@ function bitesmart_build_stage_card_list( $stage_slug, $lang ) {
         } elseif ( 'coloring_book' === $post->post_type ) {
             $html = render_coloring_book_search_card( array( 'coloringBookId' => $post->ID ) );
         } elseif ( 'guide_chapter' === $post->post_type ) {
-            $html = render_guide_chapter_search_card( array( 'chapterId' => $post->ID ) );
+            // Full accordion row on the pooled Guide pseudo-stage (every
+            // result there IS a chapter); a compact link-out teaser on a
+            // real Stage, where a chapter is at most a small slice of
+            // mixed content — see this function's own header comment and
+            // each render function's docblock (guide-chapter-display.php).
+            $html = ( 'guide' === $stage_slug )
+                ? render_guide_chapter_pooled_card( array( 'chapterId' => $post->ID ) )
+                : render_guide_chapter_search_card( array( 'chapterId' => $post->ID ) );
         } else {
             $html = render_episode_search_card( array( 'episodeId' => $post->ID ) );
         }

@@ -1,15 +1,29 @@
 <?php
 /**
- * Shared rendering for ONE Guide Chapter — the single function every
- * front-end surface that shows a chapter calls into, so there's exactly one
- * place that knows what a chapter's markup looks like:
- *  - a Guide's own page (single-guide.php, not yet built)
- *  - a chapter's own page (single-guide_chapter.php, not yet built)
- *  - the pooled multi-Guide search page, via a not-yet-built
- *    render_guide_chapter_search_card() that will call
- *    bitesmart_render_guide_chapter_row() below, same as how
- *    render_episode_search_card() reuses custom/qa-entry's markup rather
- *    than inventing its own (episode-display.php)
+ * Shared rendering for ONE Guide Chapter — `bitesmart_render_guide_chapter_row()`
+ * below is the single function every "show the chapter FULLY" surface calls
+ * into, so there's exactly one place that knows what a chapter's full
+ * accordion markup looks like:
+ *  - a Guide's own page (guide-single.php, bitesmart_render_guide_single())
+ *  - a chapter's own page (guide-single.php, bitesmart_render_guide_chapter_single())
+ *  - the pooled multi-Guide search/browse pages (learning-search.php /
+ *    learning-browse.php, Stage=Guide), via render_guide_chapter_pooled_card()
+ *    below
+ *
+ * A REAL Stage page (mixed with Q&A/Resource/Episode/Coloring Book content)
+ * is different: `render_guide_chapter_search_card()` below renders a
+ * COMPACT teaser instead — title + summary + a "View full chapter page"
+ * link out to the chapter's own real permalink, not the full video/text/
+ * downloads body. Added 2026-08-16, per Janet: "on the stages page's the
+ * guides information should minimally appear since the video logic ect
+ * will get more complicated once we've finished it... like the video, for
+ * stages pages it should only appear as a teaser" — same "compact card
+ * reusing custom/qa-entry's markup, links out to the real thing" pattern
+ * `render_episode_search_card()` already uses for Episode (see
+ * episode-display.php), for the same underlying reason: a chapter's full
+ * video/text/download body is too heavy for a dense, mixed-content
+ * results/browse list, and only gets heavier as the video-format logic
+ * keeps growing.
  *
  * See [[be-bitesmart-guide-cpt-plan]] in memory for the full feature. Not
  * registered as a block (no block.json) — chapters are never manually
@@ -81,6 +95,27 @@ function bitesmart_guide_chapter_video_ids( $chapter_id ) {
 }
 
 /**
+ * This chapter's parent Guide post, validated (must actually resolve, be
+ * the `guide` post type, and be published) — same three-line check
+ * `bitesmart_render_guide_chapter_row()` already did inline, extracted here
+ * so a second caller (the chapter-page breadcrumb, guide-single.php) didn't
+ * need to duplicate it.
+ *
+ * @param int $chapter_id
+ * @return WP_Post|null
+ */
+function bitesmart_guide_chapter_parent_guide( $chapter_id ) {
+    $guide_id = (int) get_post_meta( $chapter_id, '_bitesmart_chapter_guide_id', true );
+    $guide    = $guide_id ? get_post( $guide_id ) : null;
+
+    if ( ! $guide || 'guide' !== $guide->post_type || 'publish' !== $guide->post_status ) {
+        return null;
+    }
+
+    return $guide;
+}
+
+/**
  * Lang code => downloadable PDF URL map for one chapter, empty entries
  * already dropped by bitesmart_sanitize_guide_chapter_pdfs_by_lang()
  * (guide-chapter-cpt.php) at save time — this just reads the meta back and
@@ -114,6 +149,151 @@ function bitesmart_guide_chapter_lang_label( $code ) {
 }
 
 /**
+ * Resolves every "Cite" citation-ref mark in a chapter's already-rendered
+ * text to its CURRENT live values — visible number, href (pointing at the
+ * References page's anchor for that citation — custom/guide-references,
+ * guide-references.php), and the text a hover/focus tooltip should show
+ * (citation-tooltip.js). Added 2026-08-16 — see
+ * [[be-bitesmart-guide-cpt-plan]] in memory for the full citations
+ * feature.
+ *
+ * The chapter's own stored post_content only ever has a citation's ID
+ * baked in (`data-citation-id`, set at author time by the "Cite" RichText
+ * format — guide-chapter-panel/citation-format.js); this function looks
+ * everything else up FRESH on every render, so renumbering a citation (or
+ * editing its text) in wp-admin updates every chapter that already cites
+ * it automatically, with nothing to re-save on the chapter side.
+ *
+ * Uses DOMDocument, NOT the lighter core WP_HTML_Tag_Processor — this
+ * needs to rewrite each mark's INNER text content (the visible number),
+ * not just its attributes, and Tag_Processor is attribute-only. The
+ * `<?xml encoding="UTF-8">` prefix + libxml_use_internal_errors() dance is
+ * the standard, well-known fix for DOMDocument's two rough edges: it
+ * defaults to Latin-1 when no charset is declared (silently mangling any
+ * non-ASCII character anywhere in the chapter's text, not just inside
+ * citation marks), and it logs a PHP warning for every HTML5 element it
+ * doesn't recognize (it only understands HTML4).
+ *
+ * @param string $html Already-rendered chapter text (do_blocks() output).
+ * @return string
+ */
+function bitesmart_resolve_citation_refs( $html ) {
+    if ( false === strpos( $html, 'citation-ref-wrap' ) ) {
+        return $html; // fast path — this chapter cites nothing, skip the DOM parse entirely
+    }
+
+    $dom = new DOMDocument();
+
+    $previous_errors_setting = libxml_use_internal_errors( true );
+    $dom->loadHTML(
+        '<?xml encoding="UTF-8"><div id="bitesmart-citation-wrap">' . $html . '</div>',
+        LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD
+    );
+    libxml_clear_errors();
+    libxml_use_internal_errors( $previous_errors_setting );
+
+    $xpath = new DOMXPath( $dom );
+    $nodes = $xpath->query( "//sup[contains(concat(' ', normalize-space(@class), ' '), ' citation-ref-wrap ')]" );
+
+    if ( 0 === $nodes->length ) {
+        return $html;
+    }
+
+    // Collect every distinct citation ID actually present, then ONE query
+    // for all of them — not one query per mark, even if the same citation
+    // is cited more than once in this one chapter.
+    $ids = array();
+    foreach ( $nodes as $node ) {
+        $id = (int) $node->getAttribute( 'data-citation-id' );
+        if ( $id ) {
+            $ids[ $id ] = true;
+        }
+    }
+
+    if ( empty( $ids ) ) {
+        return $html;
+    }
+
+    $citations_query = new WP_Query( array(
+        'post_type'      => 'citation',
+        'post_status'    => 'publish',
+        'post__in'       => array_keys( $ids ),
+        'posts_per_page' => -1,
+        'no_found_rows'  => true,
+    ) );
+
+    $citations_by_id = array();
+    foreach ( $citations_query->posts as $citation ) {
+        $citations_by_id[ $citation->ID ] = array(
+            'number' => get_post_meta( $citation->ID, '_bitesmart_citation_number', true ),
+            // Deliberately kept as its already-wp_kses_post()'d HTML, not
+            // stripped to plain text — this is the whole reason Citation
+            // Text is a RichText field (see citation-cpt.php): an
+            // italicized journal title should still look that way in the
+            // hover/focus tooltip, not just on the References page.
+            // citation-tooltip.js renders it via innerHTML, same trust
+            // level as any other editorial content on this site (only
+            // someone with edit_post capability on Citations can write it
+            // at all, already sanitized at save time).
+            'text'   => get_post_meta( $citation->ID, '_bitesmart_citation_text', true ),
+        );
+    }
+
+    // /learning/guide/references/ would normally collide with
+    // guide_chapter's own wildcard rewrite rule (a single path segment
+    // under /learning/guide/ reads as "look up a Chapter with this slug"
+    // — see guide-chapter-cpt.php's "URL architecture" section) and 404,
+    // which is exactly what Janet hit 2026-08-16 the moment she created
+    // this page. Kept this exact url anyway, per her own preference (reads
+    // as part of the guide) — bitesmart_guide_references_rewrite_carveout()
+    // (guide-chapter-cpt.php) adds one explicit, higher-priority rewrite
+    // rule specifically for this one literal path, so it resolves to the
+    // real Page instead of falling into the chapter wildcard.
+    $references_url = home_url( '/learning/guide/references/' );
+
+    foreach ( $nodes as $node ) {
+        $id = (int) $node->getAttribute( 'data-citation-id' );
+        if ( ! isset( $citations_by_id[ $id ] ) ) {
+            continue; // citation trashed/unpublished since this chapter cited it — leave the mark as originally authored rather than guessing
+        }
+
+        $number = $citations_by_id[ $id ]['number'];
+
+        // Rebuild this mark's ENTIRE inner content fresh — simpler and
+        // more robust than trying to surgically patch whatever HTML the
+        // editor happened to bake in at author time.
+        while ( $node->firstChild ) {
+            $node->removeChild( $node->firstChild );
+        }
+
+        $link = $dom->createElement( 'a' );
+        $link->setAttribute( 'href', $references_url . '#citation-' . $id );
+        $link->setAttribute( 'class', 'citation-ref' );
+        $link->setAttribute( 'aria-describedby', 'citation-tooltip' );
+        $link->appendChild( $dom->createTextNode( $number ? $number : '?' ) );
+        $node->appendChild( $link );
+
+        // Tooltip text lives directly on the wrapper mark itself, not a
+        // separate page-wide JSON blob keyed by citation ID — simpler, and
+        // still only ever ships the text for citations actually cited
+        // in THIS chapter (duplicated once per mention if the same
+        // citation is cited twice in one chapter, an accepted small
+        // tradeoff for not needing any separate blob-plus-lookup
+        // machinery at all). DOMDocument's setAttribute() escapes this
+        // safely for attribute embedding on its own.
+        $node->setAttribute( 'data-citation-tooltip', $citations_by_id[ $id ]['text'] );
+    }
+
+    $wrapper = $dom->getElementsByTagName( 'div' )->item( 0 );
+    $result  = '';
+    foreach ( $wrapper->childNodes as $child ) {
+        $result .= $dom->saveHTML( $child );
+    }
+
+    return $result;
+}
+
+/**
  * Renders ONE chapter as a native <details> row — badges always visible,
  * expand to reveal video and/or text (each independently hideable by the
  * page-level format-toggle checkboxes — see format-toggle.js), plus, at the
@@ -126,6 +306,16 @@ function bitesmart_guide_chapter_lang_label( $code ) {
  * works identically whether the row was in the page's initial HTML or
  * injected later by the pooled search page's Fuse.js swap (see this file's
  * header comment).
+ *
+ * Very last thing in the body: a plain "Usage Rights, Permissions &
+ * Attribution" link to the site's existing `/legal/` Page. Briefly a
+ * nested inline `<details>` accordion instead (2026-08-16, reading a
+ * dedicated Guide field) — reverted the SAME day once Janet flagged that
+ * the real text needs richer formatting (lists, weblinks) than a plain
+ * meta field could hold, and pointed out the site already has a `/legal/`
+ * Page to consolidate this on instead ("so all the legal information is
+ * in one place"). Real Gutenberg content there gets full formatting for
+ * free, with nothing custom to build/maintain here.
  *
  * @param int $chapter_id
  * @param array{accordion_group?: string, show_guide_link?: bool, show_chapter_link?: bool} $args
@@ -168,9 +358,8 @@ function bitesmart_render_guide_chapter_row( $chapter_id, array $args = array() 
         'open'              => false, // pre-expanded — a chapter's own single page passes true, since there's nothing else on that page competing for attention.
     ) );
 
-    $guide_id = (int) get_post_meta( $chapter_id, '_bitesmart_chapter_guide_id', true );
-    $guide    = $guide_id ? get_post( $guide_id ) : null;
-    $guide_ok = ( $guide && 'guide' === $guide->post_type && 'publish' === $guide->post_status );
+    $guide    = bitesmart_guide_chapter_parent_guide( $chapter_id );
+    $guide_ok = (bool) $guide;
 
     $number      = get_post_meta( $chapter_id, '_bitesmart_chapter_number', true );
     $summary     = get_post_meta( $chapter_id, '_bitesmart_chapter_summary', true );
@@ -299,7 +488,12 @@ function bitesmart_render_guide_chapter_row( $chapter_id, array $args = array() 
                         // real block-editor-authored content (this chapter's body)
                         // needs — no wpautop/wptexturize/shortcode passes to worry
                         // about skipping, since block markup already emits real HTML.
-                        echo do_blocks( $post->post_content );
+                        //
+                        // bitesmart_resolve_citation_refs() (above) then
+                        // resolves any "Cite" marks in that output to their
+                        // current live number/href/tooltip text — added
+                        // 2026-08-16, see that function's own comment.
+                        echo bitesmart_resolve_citation_refs( do_blocks( $post->post_content ) );
                         ?>
                     </div>
                 <?php else : ?>
@@ -321,9 +515,14 @@ function bitesmart_render_guide_chapter_row( $chapter_id, array $args = array() 
                     // same plain-Download-link idiom (no inline viewer/toggle)
                     // as render_coloring_book_search_card()'s Download buttons
                     // (coloring-book-display.php), since a search/browse
-                    // context is the wrong place for an inline PDF iframe, and
-                    // this same row renders in exactly that context too (see
-                    // render_guide_chapter_search_card() below).
+                    // context is the wrong place for an inline PDF iframe.
+                    // This full row (Download section included) still shows
+                    // up on the pooled Guide search/browse pages
+                    // (render_guide_chapter_pooled_card() below) — a real
+                    // Stage's search/browse results show the much lighter
+                    // render_guide_chapter_search_card() teaser instead
+                    // (added 2026-08-16), which doesn't call this function
+                    // at all, so this section never renders there.
                     ?>
                     <div class="guide-chapter-downloads">
                         <p class="guide-chapter-downloads-label"><?php esc_html_e( 'Download this chapter:', 'custom-blocks' ); ?></p>
@@ -400,6 +599,37 @@ function bitesmart_render_guide_chapter_row( $chapter_id, array $args = array() 
                     </p>
                 <?php endif; ?>
 
+                <?php
+                // The full PDF guide already prints this once, up front
+                // ("Usage Rights, Permissions & Attribution"); a single
+                // chapter — viewed on its own or downloaded as its own
+                // PDF — had no equivalent until 2026-08-16, per Janet: "i
+                // think we should somehow make people aware of this for
+                // the single chapters?" First built as a nested accordion
+                // reading a dedicated Guide field, reverted the SAME day
+                // once Janet flagged the real text needs richer formatting
+                // (lists, weblinks) than that field could hold, and that
+                // the site already has a `/legal/` Page to put this on
+                // instead ("so all the legal information is in one
+                // place"). Unconditional (no field to check anymore) —
+                // hardcoded destination, same "one known destination"
+                // idiom as the "Part of" link above (Guide is headless, no
+                // permalink of its own; here there's simply no per-Guide
+                // resolution needed at all). Last element in the body on
+                // purpose — least prominent position, matching Janet's own
+                // "towards the end... so a parent doesn't get scared away
+                // by the legal disclaimer." Janet still needs to add a
+                // "Usage Rights, Permissions & Attribution" section to
+                // /legal/ with a `guide-usage-rights` HTML Anchor (block
+                // Advanced panel) for this link to actually land somewhere
+                // — see [[be-bitesmart-guide-cpt-plan]] in memory.
+                ?>
+                <p class="guide-chapter-usage-rights-link">
+                    <a href="<?php echo esc_url( home_url( '/legal/#guide-usage-rights' ) ); ?>">
+                        <?php esc_html_e( 'Usage Rights, Permissions & Attribution', 'custom-blocks' ); ?>
+                    </a>
+                </p>
+
             </div>
         </details>
     </article>
@@ -408,36 +638,121 @@ function bitesmart_render_guide_chapter_row( $chapter_id, array $args = array() 
 }
 
 /**
- * Renders one chapter for the Learning Hub Search/Browse blocks
- * (custom/learning-search and custom/learning-browse — two SEPARATE blocks
- * as of 2026-08-16, each independently calling
- * bitesmart_build_stage_card_list() for the same Stage, see that
- * function's own comment in learning-search.php) — alongside
- * render_qa_entry_block()/render_resource_block()/render_episode_search_card()/
- * render_coloring_book_search_card() for the other content types shown
- * there.
+ * Renders one chapter for the POOLED multi-Guide Learning Hub Search/Browse
+ * pages (custom/learning-search and custom/learning-browse when
+ * `stageSlug` is the "guide" pseudo-stage — two SEPARATE blocks as of
+ * 2026-08-16, each independently calling bitesmart_build_stage_card_list()
+ * for the same Stage, see that function's own comment in learning-search.php).
  *
- * UNLIKE those, this is NOT a compact teaser — it's the exact SAME full
- * accordion row bitesmart_render_guide_chapter_row() renders everywhere
- * else (video, text, badges, all of it). Deliberate, per Janet: search
- * results here should let a visitor actually view the chapter in place,
- * not link out to read it elsewhere — see [[be-bitesmart-guide-cpt-plan]]
+ * UNLIKE every other content type's own `*_search_card()` function (Q&A/
+ * Resource/Episode/Coloring Book — see render_episode_search_card() in
+ * episode-display.php, etc.), this ISN'T a compact teaser — it's the exact
+ * SAME full accordion row bitesmart_render_guide_chapter_row() renders
+ * everywhere else on the pooled Guide page (video, text, badges, downloads,
+ * all of it). Deliberate, per Janet: on the pooled page, where every result
+ * IS a chapter, results should let a visitor actually view the chapter in
+ * place, not link out to read it elsewhere — see [[be-bitesmart-guide-cpt-plan]]
  * in memory, "Front end: one pooled, searchable accordion — not link-out
  * cards". No `accordion_group` — chapters appearing in a mixed search/
  * browse list (possibly from different Guides once a second Guide post
  * type exists) should be independently openable, not forced into a single
  * "one at a time" group the way a single Guide's own page uses.
  *
- * @param array $attributes Block-style attributes ({ chapterId }), matching
- *     the shape every other *_search_card() function in this codebase uses.
+ * Named `_pooled_card`, NOT `_search_card`, specifically so the more
+ * general `render_guide_chapter_search_card()` name below stays free for
+ * the actual compact teaser used on a REAL Stage's search/browse results —
+ * matching what `_search_card` means for every other content type in this
+ * codebase, now that a genuine teaser exists for chapters too.
+ *
+ * @param array $attributes Block-style attributes ({ chapterId }).
  * @return string
  */
-function render_guide_chapter_search_card( $attributes ) {
+function render_guide_chapter_pooled_card( $attributes ) {
     $chapter_id = isset( $attributes['chapterId'] ) ? (int) $attributes['chapterId'] : 0;
 
     return bitesmart_render_guide_chapter_row( $chapter_id, array(
         'show_guide_link' => true,
     ) );
+}
+
+/**
+ * Renders one chapter as a COMPACT TEASER for a real Stage's Learning Hub
+ * Search/Browse results (custom/learning-search / custom/learning-browse
+ * with an ordinary Stage picked, e.g. Preschool — NOT the pooled Guide
+ * pseudo-stage, which uses render_guide_chapter_pooled_card() above
+ * instead). Added 2026-08-16, per Janet: "on the stages page's the guides
+ * information should minimally appear since the video logic ect will get
+ * more complicated once we've finished it... like the video, for stages
+ * pages it should only appear as a teaser." Same "compact card reusing
+ * custom/qa-entry's own markup/classes, links out to the real thing"
+ * pattern render_episode_search_card() already uses for Episode (see
+ * episode-display.php) — same reasoning applies even more here: a
+ * chapter's full body (video iframe, do_blocks() text, PDF downloads,
+ * badges) is heavier than Episode's, and only gets heavier as the
+ * video-format logic keeps growing, so none of that belongs mixed into a
+ * dense Q&A/Resource/Episode results list. Picks up qa-entry-display's CSS
+ * (accent-card look, chevron accordion, focus styles) for free, already
+ * enqueued whenever a Learning Hub Search/Browse block is present — see
+ * bitesmart_learning_search_enqueue_card_styles() in learning-search.php.
+ *
+ * Heading is "Chapter {number}: {title}" (falls back to just the title if
+ * Chapter Number isn't filled in) — same "Chapter N" phrasing already used
+ * for this field everywhere else in wp-admin (see its TextControl `help`
+ * text in guide-chapter-panel/index.js). The revealed body shows the
+ * chapter's Summary (its own "shown even when collapsed" field — see
+ * guide-chapter-cpt.php — reused here as the teaser's own hook text) plus
+ * a single "View full chapter page" link to the chapter's real permalink
+ * (get_permalink() — same link text as bitesmart_render_guide_chapter_row()'s
+ * own self-link, added the same day). No badges, no video/text preview, no
+ * PDF download buttons — deliberately minimal, matching Janet's own
+ * wording; can always grow later if a lighter status indicator turns out
+ * to be wanted.
+ *
+ * @param array $attributes Block-style attributes ({ chapterId }), matching
+ *     the shape every other *_search_card() function in this codebase uses.
+ * @return string HTML, or '' if the chapter doesn't resolve to something
+ *     publishable.
+ */
+function render_guide_chapter_search_card( $attributes ) {
+    $chapter_id = isset( $attributes['chapterId'] ) ? (int) $attributes['chapterId'] : 0;
+    $post       = $chapter_id ? get_post( $chapter_id ) : null;
+
+    if ( ! $post || 'guide_chapter' !== $post->post_type || 'publish' !== $post->post_status ) {
+        return '';
+    }
+
+    $number  = get_post_meta( $chapter_id, '_bitesmart_chapter_number', true );
+    $summary = get_post_meta( $chapter_id, '_bitesmart_chapter_summary', true );
+    $title   = get_the_title( $post );
+
+    $heading = $number
+        /* translators: 1: chapter number, 2: chapter title */
+        ? sprintf( __( 'Chapter %1$s: %2$s', 'custom-blocks' ), $number, $title )
+        : $title;
+
+    ob_start();
+    ?>
+    <article class="wp-block-custom-qa-entry">
+        <details class="qa-entry-card-container custom-block-accent-card">
+            <summary class="qa-entry-summary">
+                <h3 class="qa-entry-question custom-block-accent-heading"><?php echo esc_html( $heading ); ?></h3>
+                <svg class="qa-entry-chevron" viewBox="0 0 20 20" width="20" height="20" aria-hidden="true" focusable="false">
+                    <polyline points="5 7.5 10 12.5 15 7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                </svg>
+            </summary>
+
+            <div class="qa-entry-body">
+                <?php if ( $summary ) : ?>
+                    <p><?php echo esc_html( $summary ); ?></p>
+                <?php endif; ?>
+                <a href="<?php echo esc_url( get_permalink( $chapter_id ) ); ?>" class="qa-entry-guide-link block-toggle-btn is-style-outline">
+                    <?php esc_html_e( 'View full chapter page', 'custom-blocks' ); ?>
+                </a>
+            </div>
+        </details>
+    </article>
+    <?php
+    return ob_get_clean();
 }
 
 /**
@@ -503,6 +818,13 @@ function bitesmart_render_guide_format_controls() {
  * see guide-cpt.php), so there's no is_singular('guide') branch; its only
  * front end is the custom/guide-single block, already covered.
  *
+ * custom/guide-description also checked here (added 2026-08-16) even
+ * though it never renders a chapter row or the format bar itself — its
+ * OWN tiny bit of CSS (.guide-description-block) lives in this same
+ * style.css file rather than a dedicated stylesheet of its own, same
+ * "minimal, piggyback on this file" precedent custom/guide-single's own
+ * output already set.
+ *
  * Same webpack entry/asset.php/style-index.css pattern as pdf-toggle (see
  * that block's own manual enqueue in the main plugin file) — this file
  * isn't a block.json-registered block, so nothing enqueues it automatically.
@@ -511,7 +833,8 @@ function bitesmart_enqueue_guide_chapter_display_assets() {
     $needs_assets = is_singular( 'guide_chapter' )
         || has_block( 'custom/learning-search' )
         || has_block( 'custom/learning-browse' )
-        || has_block( 'custom/guide-single' );
+        || has_block( 'custom/guide-single' )
+        || has_block( 'custom/guide-description' );
 
     if ( ! $needs_assets ) {
         return;

@@ -1,0 +1,12 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "custom/guide-description",
+  "title": "Guide Description",
+  "category": "widgets",
+  "description": "Displays ONLY a Guide's Description text, pulled live from wherever it's entered in wp-admin — nothing else (not the chapter list; see custom/guide-single for that). Split out 2026-08-16 so the description can be placed independently anywhere on the page, instead of being fixed to wherever custom/guide-single itself sits. No picker/attributes — the site has exactly one Guide (see guide-cpt.php), so this always shows that one automatically.",
+  "supports": {
+    "html": false
+  },
+  "editorScript": "file:./index.js"
+}

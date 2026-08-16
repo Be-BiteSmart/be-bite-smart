@@ -522,6 +522,52 @@ function guide_single_register_block() {
 add_action( 'init', 'guide_single_register_block' );
 
 // -----------------------------
+// Guide Description block — split OUT of custom/guide-single 2026-08-16
+// (see src/guide-description/guide-description.php's header comment) so
+// the Guide's Description text can be placed independently anywhere on
+// the page, not fixed to wherever custom/guide-single itself sits.
+// -----------------------------
+require_once __DIR__ . '/src/guide-description/guide-description.php';
+
+function guide_description_register_block() {
+    register_block_type( __DIR__ . '/build/guide-description', array(
+        'render_callback' => 'render_guide_description_block',
+    ) );
+}
+add_action( 'init', 'guide_description_register_block' );
+
+// -----------------------------
+// Citation admin fields (locked into the Citation CPT's canvas — see the
+// 'template'/'template_lock' args in the Custom Post Types for BBS
+// plugin's includes/citation-cpt.php)
+// -----------------------------
+
+function citation_fields_register_block() {
+    register_block_type( __DIR__ . '/build/citation-fields' );
+}
+add_action( 'init', 'citation_fields_register_block' );
+
+// custom/citation-fields isn't a display block (save() is null, and
+// Citation posts are never publicly queryable), so it needs no
+// render_callback — same reasoning as custom/resource-fields above.
+
+// -----------------------------
+// Guide References block — auto-lists every Citation belonging to the
+// site's one Guide (see src/guide-references/guide-references.php's
+// header comment). Requires citation-cpt.php's data to already exist,
+// but has no load-order dependency on this plugin's own files (it's a
+// plain WP_Query at render time, not a require-time call).
+// -----------------------------
+require_once __DIR__ . '/src/guide-references/guide-references.php';
+
+function guide_references_register_block() {
+    register_block_type( __DIR__ . '/build/guide-references', array(
+        'render_callback' => 'render_guide_references_block',
+    ) );
+}
+add_action( 'init', 'guide_references_register_block' );
+
+// -----------------------------
 // Disable Application Passwords
 // -----------------------------
 add_action( 'init', function() {

@@ -21,8 +21,16 @@ import { __ } from "@wordpress/i18n";
 // custom/guide-chapter-panel, since chapters are their own posts — see
 // [[be-bitesmart-guide-cpt-plan]] in memory). Chapters themselves are never
 // added/ordered here; they're managed from their own "All Chapters" admin
-// list (nested under Guides), each one picking its parent Guide from its
-// own sidebar panel.
+// list (nested under Guides), each one picking this guide as its parent
+// from its own sidebar panel.
+//
+// A "Usage Rights, Permissions & Attribution" field briefly lived here too
+// (2026-08-16) — removed the same day once Janet flagged the real text
+// needs richer formatting (lists, weblinks) than a plain TextareaControl
+// can hold. That content now lives as real Gutenberg blocks on the site's
+// existing /legal/ Page instead, and each chapter links straight to it —
+// see bitesmart_render_guide_chapter_row()'s own comment
+// (guide-chapter-display.php).
 
 // Featured Image is the one field that stays in the native sidebar (same
 // reasoning/mechanism as episode-fields — see that file) — auto-opened on

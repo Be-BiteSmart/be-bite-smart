@@ -1,4 +1,5 @@
 import "./style.css";
+import "./citation-tooltip.js"; // separate, self-contained script — see its own header comment; imported here so it loads under the same enqueue/webpack entry as everything else in this file
 
 // Front-end controller for:
 //  1. The shared "Show video" / "Show text" checkbox bar

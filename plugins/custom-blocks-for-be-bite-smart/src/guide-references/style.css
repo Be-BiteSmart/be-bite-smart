@@ -1,0 +1,83 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Guide References
+   Auto-lists every Citation belonging to the site's one Guide — see
+   guide-references.php's own header comment for the full feature.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.guide-references-empty {
+  font-style: italic;
+  color: var(--wp--preset--color--contrast-2, #6b6b6b);
+}
+
+.guide-references-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none; /* the visible number comes from .guide-reference-number, not a native <ol>/<ul> marker — see the PHP comment at this list's call site */
+}
+
+/* Scroll-margin so a hash-link landing directly on a citation (from a
+   chapter's own "Cite" reference) doesn't tuck it up under a sticky theme
+   header — same idea as any anchor-link target on this site, sized
+   generously since this is the one page on the site people are expected to
+   land on mid-scroll via external link clicks, not by browsing top-down. */
+.guide-reference {
+  scroll-margin-top: 24px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #d0e4eb;
+}
+
+.guide-reference:last-child {
+  border-bottom: none;
+}
+
+.guide-reference-number {
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+.guide-reference-text {
+  color: var(--wp--preset--color--contrast, #1a2e35);
+}
+
+/* DOI / HTML / PDF — replaced the old single "View Source" link
+   (.guide-reference-source) 2026-08-16 once the citation data model grew
+   to three separate optional fields. Each renders as either a link or
+   plain text (see bitesmart_render_citation_link_field() in
+   guide-references.php) — same styling either way so the row layout
+   doesn't jump around depending on which fields a given citation has. */
+.guide-reference-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-top: 4px;
+  font-size: 0.85em;
+  color: var(--wp--preset--color--contrast-2, #6b6b6b);
+}
+
+.guide-reference-link-label {
+  font-weight: 600;
+}
+
+.guide-reference-links a {
+  color: var(--wp--preset--color--accent-2, #1f6a8f);
+  word-break: break-word;
+}
+
+.guide-reference-links a:hover,
+.guide-reference-links a:focus-visible {
+  color: #154862;
+}
+
+/* Briefly highlights whichever citation was just jumped to via a hash
+   link, so a reader can immediately spot it in the full list instead of
+   having to scan for it — matches the :target pseudo-class's exact
+   intended use case, zero JS needed. */
+.guide-reference:target {
+  background: var(--wp--preset--color--base-2, #f5f4f0);
+  border-radius: 4px;
+  padding: 8px 12px;
+  margin: 0 -12px;
+}

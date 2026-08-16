@@ -166,12 +166,62 @@
   height: auto;
 }
 
+/* Inline "Cite" citation-ref links (2026-08-16) — visible number and href
+   resolved server-side, see bitesmart_resolve_citation_refs()
+   (guide-chapter-display.php). Small and unobtrusive on purpose — reads
+   as a footnote marker, not a full-weight link, so it doesn't compete
+   visually with the sentence it's attached to. .citation-ref-wrap (the
+   <sup> itself) needs no styling of its own — a <sup> already renders
+   small/raised by the browser's own UA stylesheet. */
+.citation-ref {
+  color: var(--wp--preset--color--accent-2, #1f6a8f);
+  text-decoration: none;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.citation-ref:hover,
+.citation-ref:focus-visible {
+  text-decoration: underline;
+}
+
+/* Shared accessible tooltip (citation-tooltip.js) — ONE instance for the
+   whole page, repositioned/repopulated per hover/focus rather than one per
+   citation mention — see that file's own comment for why. Positioned via
+   inline style (top/left) set by the script itself; only the LOOK lives
+   here. */
+.citation-tooltip {
+  position: absolute;
+  z-index: 100;
+  max-width: 320px;
+  padding: 10px 14px;
+  background: #1a2e35;
+  color: #fff;
+  border-radius: 6px;
+  font-size: 0.85em;
+  line-height: 1.5;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.citation-tooltip[hidden] {
+  display: none;
+}
+
+.citation-tooltip a {
+  color: #9fd3ea;
+}
+
 /* .guide-chapter-own-link (2026-08-16) is the reverse-direction sibling of
    this backlink — a chapter's link to its OWN standalone page instead of
-   to its parent Guide — grouped here since the two share an identical
-   muted/small-text treatment, not by coincidence. */
+   to its parent Guide. .guide-chapter-usage-rights-link (also 2026-08-16,
+   reverted the same day from a nested <details> accordion once the real
+   text turned out to need richer formatting than a plain meta field could
+   hold — now a plain link to the site's existing /legal/ Page instead) —
+   grouped here since all three share an identical muted/small-text
+   treatment, not by coincidence. */
 .guide-chapter-parent-link,
-.guide-chapter-own-link {
+.guide-chapter-own-link,
+.guide-chapter-usage-rights-link {
   margin-top: 16px;
   font-size: 0.85em;
   color: var(--wp--preset--color--contrast-2, #6b6b6b);
@@ -339,7 +389,14 @@ body:not(.block-editor-page) .guide-chapter-download-buttons .block-toggle-btn {
    .custom-block-border (see the theme's shared-block-styles.css).
    ───────────────────────────────────────────────────────────────────────────── */
 
-.guide-single-description {
+/* custom/guide-description's own output (guide-description.php) — was
+   .guide-single-description, rendered inline by guide-single.php itself,
+   until that paragraph was split into this genuinely separate,
+   independently-placeable block 2026-08-16. Kept in this same file/
+   enqueue rather than a new style.css of its own — same "minimal, no
+   dedicated stylesheet needed" precedent custom/guide-single's own output
+   already set (see the section header below). */
+.guide-description-block {
   font-size: 1.05em;
   margin-bottom: 20px;
 }
@@ -347,4 +404,55 @@ body:not(.block-editor-page) .guide-chapter-download-buttons .block-toggle-btn {
 .guide-single-empty {
   font-style: italic;
   color: var(--wp--preset--color--contrast-2, #6b6b6b);
+}
+
+/* Chapter-page-only breadcrumb (bitesmart_render_guide_chapter_single()),
+   added 2026-08-16 — sits above the format-toggle bar, at the very top of
+   the page. Plain link, no icon, same muted-link treatment as the
+   "Part of"/"View full chapter page" links in guide-chapter-display's own
+   style.css (.guide-chapter-parent-link/.guide-chapter-own-link) — the "‹ "
+   is a plain character in the translated string itself, not a separate
+   icon element, so it's never left orphaned if a translation omits it. */
+.guide-chapter-breadcrumb {
+  margin-bottom: 16px;
+  font-size: 0.85em;
+}
+
+.guide-chapter-breadcrumb a {
+  color: var(--wp--preset--color--contrast-2, #6b6b6b);
+}
+
+.guide-chapter-breadcrumb a:hover,
+.guide-chapter-breadcrumb a:focus-visible {
+  color: var(--wp--preset--color--accent-2, #1f6a8f);
+}
+
+/* "Share this Chapter" — the very last thing in
+   bitesmart_render_guide_chapter_single()'s own output, immediately above
+   wherever AddToAny's share buttons render next (see that function's own
+   comment for the filter-priority reasoning). Just spacing here — no
+   font-size/color override, so it reads as a real page heading using the
+   theme's own default h2 styling, not a small muted label like this
+   file's other single-post-wrapper text. */
+.guide-chapter-share-heading {
+  margin-top: 24px;
+}
+
+/* Guide Section headings between groups of chapters on the Guide's own
+   "View All Chapters" list (bitesmart_render_guide_single()), added
+   2026-08-16 — see that function's own comment for the grouping logic.
+   Real page-heading styling (theme defaults), same "no font-size/color
+   override" choice as .guide-chapter-share-heading above — these mark
+   genuine sections of the page, not small muted metadata. First heading
+   in the list sits directly under the "Show: Video/Text" bar, so its own
+   top margin already provides enough separation without doubling up; only
+   headings AFTER the first one need extra top margin to separate them
+   from the previous section's last chapter. */
+.guide-chapter-list > .guide-section-heading {
+  margin-top: 32px;
+  margin-bottom: 16px;
+}
+
+.guide-chapter-list > .guide-section-heading:first-child {
+  margin-top: 0;
 }

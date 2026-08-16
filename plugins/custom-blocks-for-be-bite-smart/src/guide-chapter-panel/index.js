@@ -1,3 +1,4 @@
+import "./citation-format";
 import { registerPlugin } from "@wordpress/plugins";
 import { PluginDocumentSettingPanel } from "@wordpress/editor";
 import { createElement as el } from "@wordpress/element";
@@ -19,6 +20,12 @@ import { getSiteLanguages } from "../shared/languages";
 // guide_chapter edit screen (see bitesmart_enqueue_guide_chapter_panel() in
 // this plugin's main PHP file), not registered as a block at all — no
 // block.json next to this file, unlike every sibling directory.
+//
+// The "./citation-format" import (2026-08-16) piggybacks on that exact
+// same enqueue for a second reason: it's not a sidebar field at all, it's
+// the "Cite" RichText format available in the chapter's own canvas text —
+// see citation-format.js's own header comment for the full "why" it lives
+// here instead of its own separate bundle.
 //
 // NO parent-Guide picker here anymore (an earlier version had a
 // ComboboxControl + a lockPostSaving()-based "must pick one" requirement,

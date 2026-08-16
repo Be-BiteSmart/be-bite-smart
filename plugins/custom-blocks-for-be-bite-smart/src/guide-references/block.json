@@ -1,0 +1,13 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "custom/guide-references",
+  "title": "Guide References",
+  "category": "widgets",
+  "description": "Auto-lists every Citation belonging to the site's one Guide, ordered by Citation Number, each with a stable anchor a chapter's inline \"Cite\" link can jump straight to. No picker/attributes — the site has exactly one Guide, so this always lists that one automatically. Place on a Page of your choosing (e.g. /learning/guide/references/ — a Page nested directly under /learning/guide/ collides with the Chapter permalink pattern and 404s unless a matching rewrite carve-out exists; see bitesmart_guide_references_rewrite_carveout() in guide-chapter-cpt.php).",
+  "supports": {
+    "html": false
+  },
+  "editorScript": "file:./index.js",
+  "style": "file:./style-index.css"
+}
