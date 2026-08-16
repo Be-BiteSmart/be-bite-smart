@@ -8,9 +8,11 @@ import { __ } from "@wordpress/i18n";
 
 // Same "stores nothing but which post to show" shape as custom/episode
 // (episode-display/index.js) — see that file's comment. Added specifically
-// so a Guide can be shown at a URL an editor picks (e.g. a Page with slug
-// exactly "guide", giving a clean /guide/ URL for THE main guide) rather
-// than only at the Guide CPT's own /guide/<slug>/ permalink — see
+// so a Guide can be shown at a URL an editor picks (any Page, any slug —
+// Janet actually placed THE main guide at /learning/guide/, not a
+// site-root /guide/ Page) rather than only at the Guide CPT's own
+// /learning/guide/<slug>/ permalink (chapters' own rewrite prefix was
+// moved to match, 2026-08-16 — see guide-chapter-cpt.php) — see
 // [[be-bitesmart-guide-cpt-plan]] in memory.
 
 function GuideSingleEdit({ attributes, setAttributes }) {

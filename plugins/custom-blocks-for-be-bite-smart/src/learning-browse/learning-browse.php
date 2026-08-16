@@ -11,7 +11,8 @@
  * in learning-search/view.js's getEnabledTypes()). Deliberately NOT placed
  * on the pooled Guide search page (Stage=Guide) — a persistent "All
  * Chapters" list there would just duplicate custom/guide-single's own
- * chapter list at /guide/, which is the entire reason this split happened.
+ * chapter list at /learning/guide/, which is the entire reason this split
+ * happened.
  *
  * Reuses learning-search.php's shared helpers as-is
  * (bitesmart_build_stage_card_list(), bitesmart_render_learning_search_data(),

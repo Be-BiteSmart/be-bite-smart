@@ -178,10 +178,11 @@ function handleLangSegmentClick(e) {
   picker.style.setProperty("--lang-index", String(Math.max(0, segments.indexOf(segment))));
 }
 
-// Landing on e.g. /guide/some-guide/#some-guide-chapter-3 (a search card's
-// "read this chapter" link — see the not-yet-built
-// render_guide_chapter_search_card()) scrolls the browser to that
-// <details> element, but a native <details> doesn't auto-open just because
+// Landing on e.g. /learning/guide/#some-guide-chapter-3 (a hash link to one
+// chapter within the Guide's own accordion page — see
+// bitesmart_guide_chapter_anchor_id() in guide-chapter-display.php) scrolls
+// the browser to that <details> element, but a native <details> doesn't
+// auto-open just because
 // IT is the fragment target (only a collapsed ancestor of the target does
 // that) — so without this, a visitor following such a link would see the
 // right chapter scrolled into view but still collapsed, one extra click

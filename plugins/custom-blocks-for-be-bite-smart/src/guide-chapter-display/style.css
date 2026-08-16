@@ -166,10 +166,64 @@
   height: auto;
 }
 
-.guide-chapter-parent-link {
+/* .guide-chapter-own-link (2026-08-16) is the reverse-direction sibling of
+   this backlink — a chapter's link to its OWN standalone page instead of
+   to its parent Guide — grouped here since the two share an identical
+   muted/small-text treatment, not by coincidence. */
+.guide-chapter-parent-link,
+.guide-chapter-own-link {
   margin-top: 16px;
   font-size: 0.85em;
   color: var(--wp--preset--color--contrast-2, #6b6b6b);
+}
+
+/* Downloadable PDF — always shown when uploaded, independent of the
+   video/text format toggles (see the PHP comment at its call site: these
+   deliberately do NOT use the .guide-chapter-format[data-format] pattern
+   format-toggle.js reads). Sits after video/text, before the "Part of"
+   backlink, at the bottom of the expanded body.
+
+   The buttons themselves are UNSTYLED here on purpose — they carry the
+   site's shared .block-toggle-btn.is-style-outline "download button" look
+   (blue outline, fills solid on hover/focus — see the theme's own
+   BUTTON SYSTEM comment in twentytwentyfive-child/style.css) instead of a
+   one-off guide-chapter-specific style, same classes
+   bitesmart_coloring_book_language_row() (coloring-book-display.php) and
+   pdf-toggle/index.js already put on every other Download link on the
+   site. .download-card-pdf-download is also what wires these into the
+   theme's existing Plausible download-click tracking
+   (twentytwentyfive-child/inc/analytics.php's track_user_interactions()) —
+   free with the same class, not extra work here. Only the layout (wrapper
+   spacing/wrapping) is this file's job. */
+.guide-chapter-downloads {
+  margin-top: 16px;
+}
+
+.guide-chapter-downloads-label {
+  margin: 0 0 8px;
+  font-size: 0.85em;
+  font-weight: 600;
+  color: var(--wp--preset--color--contrast-2, #6b6b6b);
+}
+
+.guide-chapter-download-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* .block-toggle-btn's base rule (theme style.css) ships margin-top: 1rem
+   (meant for a button sitting alone under a paragraph) at specificity
+   body:not(.block-editor-page) :is(.block-toggle-btn, ...) — higher than a
+   plain two-class selector can beat without !important. Same override,
+   same !important, as the identical problem already solved for the
+   Download buttons on /learning/downloads/ — see
+   "body:not(.block-editor-page) .download-card-language-row .block-toggle-btn"
+   in shared/download-card/style.css. Several buttons sit in a row here
+   with their own gap from the flex wrapper above, so the extra top margin
+   is unwanted either way. */
+body:not(.block-editor-page) .guide-chapter-download-buttons .block-toggle-btn {
+  margin-top: 0 !important;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -179,15 +233,21 @@
    logic.
    ───────────────────────────────────────────────────────────────────────────── */
 
+/* Top/bottom border-line wrapper, matching custom/learning-browse's own
+   "Filter by type" wrapper (.learning-search-type-filter-wrap,
+   learning-browse/style.css) — same #d0e4eb border color, same edge-to-
+   edge vertical-only padding, instead of this bar's old filled-box/
+   rounded-corner look. Per Janet: "lets have it match the border line
+   styling too that the other one has." */
 .guide-format-controls {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 16px;
-  padding: 12px 16px;
+  padding: 16px 0;
   margin-bottom: 16px;
-  background: var(--wp--preset--color--base-2, #f5f4f0);
-  border-radius: 8px;
+  border-top: 1px solid #d0e4eb;
+  border-bottom: 1px solid #d0e4eb;
 }
 
 .guide-format-controls-label {
@@ -195,11 +255,71 @@
   color: var(--wp--preset--color--contrast-2, #6b6b6b);
 }
 
+/* Pill/button look, matching custom/learning-browse's own "Filter by type"
+   checkboxes (.learning-search-type-toggle, learning-browse/style.css) —
+   same accent-3 (yellow) fill + black text while ON (checked), outlined/
+   unfilled while OFF, per Janet: "match the styling of the other filter,
+   yellow pills." Markup here was already the identical shape (a <label>
+   wrapping a real checkbox + text), so this is purely a CSS rename/reuse
+   of that same pattern, not a markup change. Filled-vs-outlined rather
+   than two different fill colors is deliberate (kept from the original):
+   WCAG 1.4.1 (Use of Color) wants state conveyed by more than color alone,
+   and a fill/outline swap reads as a distinct shape change even for a
+   colorblind visitor. The real <input type="checkbox"> stays in the DOM,
+   focusable and announced as checked/not-checked by a screen reader — only
+   visually hidden below (standard clip-based technique, NOT display:none,
+   which would remove it from the tab order). Clicking anywhere on the pill
+   still toggles it: native <label>-wraps-<input>, no JS needed for that
+   part (format-toggle.js only reacts to the resulting "change" event). */
 .guide-format-toggle {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: var(--wp--preset--color--accent-3);
+  color: #000;
+  border: 2px solid var(--wp--preset--color--accent-3);
+  font-size: 0.9rem;
+  font-weight: 600;
   cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+/* Visually hidden, not display:none — a screen reader still finds it, Tab
+   still reaches it, and the :focus-visible rule below still fires on it. */
+.guide-format-checkbox {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* OFF state — :has() reads the real checkbox state, so this can't drift
+   out of sync with what a screen reader announces. Same white-fill/dark-
+   grey-text/border combo as the type-filter pills' own OFF state. */
+.guide-format-toggle:has(.guide-format-checkbox:not(:checked)) {
+  background: #fff;
+  color: #3f3f46;
+  border-color: #71717a;
+}
+
+.guide-format-toggle:hover {
+  filter: brightness(0.95);
+}
+
+/* Focus ring on the whole pill (not just the now visually-hidden
+   checkbox) so keyboard focus is easy to see. */
+.guide-format-toggle:has(.guide-format-checkbox:focus-visible) {
+  outline: 2px solid #154862;
+  outline-offset: 2px;
 }
 
 .guide-format-warning {

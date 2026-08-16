@@ -12,7 +12,8 @@
  * produced BOTH (a) a client-side search box AND (b) a paginated "browse
  * everything" list below it. Split into two blocks that day, per Janet: the
  * pooled Guide search page's "All Chapters" browse list was a pointless
- * duplicate of custom/guide-single's own chapter list at /guide/, and on
+ * duplicate of custom/guide-single's own chapter list (at /learning/guide/
+ * — see guide-single.php), and on
  * real Stage pages the browse list disappearing while a visitor searched
  * (and being fully rebuilt via innerHTML at JS init) coupled its lifecycle
  * to the search box's for no good reason — she wanted it genuinely
@@ -524,9 +525,9 @@ function bitesmart_render_learning_search_strings( $instance_id, array $keys ) {
  * custom/learning-browse block (learning-browse.php) — place both, same
  * Stage, on a real Stage page; place only this one on the pooled Guide
  * search page (Stage=Guide), where a persistent "All Chapters" list would
- * just duplicate custom/guide-single's own chapter list at /guide/ (Stage=
- * Guide never has 2+ distinct card types anyway, so its type filter never
- * renders regardless).
+ * just duplicate custom/guide-single's own chapter list at /learning/guide/
+ * (Stage=Guide never has 2+ distinct card types anyway, so its type filter
+ * never renders regardless).
  */
 function render_learning_search_block( $attributes ) {
     $stage_slug = isset( $attributes['stageSlug'] ) ? sanitize_title( $attributes['stageSlug'] ) : '';

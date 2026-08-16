@@ -81,17 +81,54 @@ function bitesmart_guide_chapter_video_ids( $chapter_id ) {
 }
 
 /**
- * Renders ONE chapter as a native <details> row — badges always visible,
- * expand to reveal video and/or text (each independently hideable by the
- * page-level format-toggle checkboxes — see format-toggle.js). No JS
- * needed for the expand/collapse itself: same native <details>/<summary>
- * idiom as custom/qa-entry (qa-entry-display.php) and Episode's search card
- * — deliberate, since it works identically whether the row was in the
- * page's initial HTML or injected later by the pooled search page's
- * Fuse.js swap (see this file's header comment).
+ * Lang code => downloadable PDF URL map for one chapter, empty entries
+ * already dropped by bitesmart_sanitize_guide_chapter_pdfs_by_lang()
+ * (guide-chapter-cpt.php) at save time — this just reads the meta back and
+ * guards against a non-array value (e.g. a chapter created before this meta
+ * field existed, where get_post_meta() falls back to its registered
+ * default, an empty array, so this guard is mostly defensive).
  *
  * @param int $chapter_id
- * @param array{accordion_group?: string, show_guide_link?: bool} $args
+ * @return array<string, string>
+ */
+function bitesmart_guide_chapter_pdf_urls( $chapter_id ) {
+    $pdfs = get_post_meta( $chapter_id, '_bitesmart_chapter_pdf_by_lang', true );
+    return is_array( $pdfs ) ? $pdfs : array();
+}
+
+/**
+ * Short display label for a language code (e.g. "en" => "EN", "es" => "ES")
+ * — same {code => label} lookup bitesmart_site_languages() already builds
+ * for the video language picker/segmented control, just without needing a
+ * whole picker for a plain Download link's button text. Falls back to the
+ * uppercased code itself if the language isn't in the site's configured
+ * list for some reason (defensive; shouldn't normally happen since the
+ * editor UI only ever writes codes from that same list).
+ *
+ * @param string $code Short language code, e.g. 'en'.
+ * @return string
+ */
+function bitesmart_guide_chapter_lang_label( $code ) {
+    $labels = wp_list_pluck( bitesmart_site_languages(), 'label', 'code' );
+    return isset( $labels[ $code ] ) ? $labels[ $code ] : strtoupper( $code );
+}
+
+/**
+ * Renders ONE chapter as a native <details> row — badges always visible,
+ * expand to reveal video and/or text (each independently hideable by the
+ * page-level format-toggle checkboxes — see format-toggle.js), plus, at the
+ * bottom of the expanded body (2026-08-16), a Download PDF button per
+ * language that has one uploaded (see bitesmart_guide_chapter_pdf_urls()
+ * above) — always shown regardless of the video/text toggle state, not
+ * part of that system at all. No JS needed for the expand/collapse itself:
+ * same native <details>/<summary> idiom as custom/qa-entry
+ * (qa-entry-display.php) and Episode's search card — deliberate, since it
+ * works identically whether the row was in the page's initial HTML or
+ * injected later by the pooled search page's Fuse.js swap (see this file's
+ * header comment).
+ *
+ * @param int $chapter_id
+ * @param array{accordion_group?: string, show_guide_link?: bool, show_chapter_link?: bool} $args
  *     accordion_group: if set, this <details> gets a matching `name`
  *         attribute, making it part of an HTML native exclusive-accordion
  *         group (opening one auto-closes the others sharing the same
@@ -103,6 +140,16 @@ function bitesmart_guide_chapter_video_ids( $chapter_id ) {
  *         in the expanded body — true by default; a Guide's own page
  *         passes false for its own chapters, since the backlink would be
  *         redundant there.
+ *     show_chapter_link: whether to show a "View full chapter page" link
+ *         (this chapter's own real permalink — see guide-chapter-cpt.php)
+ *         in the expanded body, right after the "Part of" backlink — true
+ *         by default, since every other surface a chapter renders in
+ *         (Guide's own page, pooled/Stage search results) had NO way to
+ *         reach a chapter's standalone page at all before 2026-08-16, even
+ *         though it's always existed. A chapter's own single page (see
+ *         guide-single.php) passes false — a link to the exact page
+ *         already being viewed is redundant, same reasoning as
+ *         show_guide_link's own false case above.
  *     open: pre-expand this chapter's <details> — false by default; a
  *         chapter's own single page passes true (see guide-single.php).
  * @return string HTML, or '' if the chapter/its parent Guide doesn't
@@ -115,9 +162,10 @@ function bitesmart_render_guide_chapter_row( $chapter_id, array $args = array() 
     }
 
     $args = wp_parse_args( $args, array(
-        'accordion_group' => '',
-        'show_guide_link' => true,
-        'open'            => false, // pre-expanded — a chapter's own single page passes true, since there's nothing else on that page competing for attention.
+        'accordion_group'   => '',
+        'show_guide_link'   => true,
+        'show_chapter_link' => true,
+        'open'              => false, // pre-expanded — a chapter's own single page passes true, since there's nothing else on that page competing for attention.
     ) );
 
     $guide_id = (int) get_post_meta( $chapter_id, '_bitesmart_chapter_guide_id', true );
@@ -130,6 +178,7 @@ function bitesmart_render_guide_chapter_row( $chapter_id, array $args = array() 
     $duration    = get_post_meta( $chapter_id, '_bitesmart_chapter_video_duration', true );
     $video_ids   = bitesmart_guide_chapter_video_ids( $chapter_id );
     $has_video   = ! empty( $video_ids );
+    $pdf_urls    = bitesmart_guide_chapter_pdf_urls( $chapter_id );
     $site_lang   = bitesmart_site_lang_code();
     $anchor_id   = bitesmart_guide_chapter_anchor_id( $post );
 
@@ -259,19 +308,95 @@ function bitesmart_render_guide_chapter_row( $chapter_id, array $args = array() 
                     </p>
                 <?php endif; ?>
 
+                <?php if ( ! empty( $pdf_urls ) ) : ?>
+                    <?php
+                    // Deliberately NOT a .guide-chapter-format[data-format="..."]
+                    // element — that class/attribute pair is specifically what
+                    // format-toggle.js's applyFormatState() reads to show/hide
+                    // video/text per the "Show:" checkboxes above (see that
+                    // file), and a downloadable PDF isn't part of that video/
+                    // text toggle system at all: it's an always-available extra,
+                    // independent of whichever formats a visitor currently has
+                    // shown. One button per language that actually has a PDF —
+                    // same plain-Download-link idiom (no inline viewer/toggle)
+                    // as render_coloring_book_search_card()'s Download buttons
+                    // (coloring-book-display.php), since a search/browse
+                    // context is the wrong place for an inline PDF iframe, and
+                    // this same row renders in exactly that context too (see
+                    // render_guide_chapter_search_card() below).
+                    ?>
+                    <div class="guide-chapter-downloads">
+                        <p class="guide-chapter-downloads-label"><?php esc_html_e( 'Download this chapter:', 'custom-blocks' ); ?></p>
+                        <div class="guide-chapter-download-buttons">
+                            <?php foreach ( $pdf_urls as $lang_code => $pdf_url ) : ?>
+                                <?php
+                                // Same three classes every other Download link on the site
+                                // uses — block-toggle-btn/is-style-outline give the shared
+                                // blue "download button" look (theme's style.css), and
+                                // download-card-pdf-download is what wires this into the
+                                // theme's existing Plausible download-click tracking
+                                // (twentytwentyfive-child/inc/analytics.php) for free, same
+                                // as bitesmart_coloring_book_language_row()'s Download links
+                                // (coloring-book-display.php) and pdf-toggle/index.js.
+                                ?>
+                                <a
+                                    href="<?php echo esc_url( $pdf_url ); ?>"
+                                    download
+                                    class="block-toggle-btn is-style-outline download-card-pdf-download"
+                                    data-lang="<?php echo esc_attr( $lang_code ); ?>"
+                                >
+                                    <?php
+                                    printf(
+                                        /* translators: %s: short language label, e.g. "EN" */
+                                        esc_html__( 'Download PDF (%s)', 'custom-blocks' ),
+                                        esc_html( bitesmart_guide_chapter_lang_label( $lang_code ) )
+                                    );
+                                    ?>
+                                </a>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
                 <?php if ( $args['show_guide_link'] && $guide_ok ) : ?>
                     <p class="guide-chapter-parent-link">
                         <?php esc_html_e( 'Part of:', 'custom-blocks' ); ?>
                         <?php
-                        // Hardcoded to /guide/ rather than get_permalink($guide) — Guide
-                        // is headless now (guide-cpt.php), so it has no permalink of its
-                        // own; its one real front end is wherever an editor placed
-                        // custom/guide-single (see guide-single.php), which per Janet is
-                        // meant to be a Page at exactly this slug. Same "one known
+                        // Hardcoded to /learning/guide/ rather than get_permalink($guide)
+                        // — Guide is headless now (guide-cpt.php), so it has no permalink
+                        // of its own; its one real front end is wherever an editor placed
+                        // custom/guide-single (see guide-single.php), which Janet actually
+                        // created at /learning/guide/ (nested under the existing Learning
+                        // Hub, not a site-root /guide/ Page as originally planned — see
+                        // [[be-bitesmart-guide-cpt-plan]] in memory). Same "one known
                         // destination" idiom as Episode's hardcoded /learning/kids/ link
                         // (episode-display.php's render_episode_search_card()).
+                        // guide_chapter's OWN permalink prefix was ALSO moved to nest
+                        // under this same /learning/guide/ path as of 2026-08-16 (see
+                        // guide-chapter-cpt.php) — the two are still independently
+                        // maintained values (this link isn't derived from that rewrite
+                        // slug or vice versa), they just happen to agree on purpose now.
                         ?>
-                        <a href="<?php echo esc_url( home_url( '/guide/' ) ); ?>"><?php echo esc_html( get_the_title( $guide ) ); ?></a>
+                        <a href="<?php echo esc_url( home_url( '/learning/guide/' ) ); ?>"><?php echo esc_html( get_the_title( $guide ) ); ?></a>
+                    </p>
+                <?php endif; ?>
+
+                <?php if ( $args['show_chapter_link'] ) : ?>
+                    <?php
+                    // This chapter's own real permalink (/learning/guide/<slug>/
+                    // — see guide-chapter-cpt.php), surfaced here 2026-08-16: before
+                    // this, a chapter always rendered inline wherever it
+                    // appeared (Guide's own page, pooled/Stage search results)
+                    // with no way to reach its standalone, individually
+                    // shareable page — Janet: "theres no way someone on the
+                    // guide can get to the individual chapter pages." Plain
+                    // get_permalink() works fine here — unlike Guide,
+                    // guide_chapter has a real rewrite rule.
+                    ?>
+                    <p class="guide-chapter-own-link">
+                        <a href="<?php echo esc_url( get_permalink( $chapter_id ) ); ?>">
+                            <?php esc_html_e( 'View full chapter page', 'custom-blocks' ); ?>
+                        </a>
                     </p>
                 <?php endif; ?>
 

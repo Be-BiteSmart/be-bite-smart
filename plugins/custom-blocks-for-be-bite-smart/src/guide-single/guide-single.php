@@ -11,15 +11,22 @@
  *    reach the Guide's content — Janet's call: the site effectively has ONE
  *    Guide (a genuinely different second guide would get its own separate
  *    post type, not a second post here — see guide-cpt.php), so it doesn't
- *    need its own permalink; a normal WP Page (slug exactly "guide") with
- *    this block placed on it gives a clean `/guide/` URL using WordPress's
- *    existing Page-permalink system, no custom rewrite rules needed. Guide
- *    itself is headless (`guide-cpt.php`) — this block is its ONLY front
- *    end.
+ *    need its own permalink; a normal WP Page with this block placed on it
+ *    gives a clean URL using WordPress's existing Page-permalink system, no
+ *    custom rewrite rules needed. Originally planned as a site-root Page
+ *    (slug exactly "guide", giving `/guide/`) — Janet actually created it
+ *    nested under the existing Learning Hub instead, at `/learning/guide/`
+ *    (see the hardcoded backlink in guide-chapter-display.php's
+ *    bitesmart_render_guide_chapter_row(), and
+ *    [[be-bitesmart-guide-cpt-plan]] in memory). Guide itself is headless
+ *    (`guide-cpt.php`) — this block is its ONLY front end.
  *
- * 2. Guide Chapter's OWN real permalink (`/guide/<chapter-slug>/` — see
- *    guide-chapter-cpt.php for why nesting under the same `/guide/` prefix
- *    is safe now that Guide itself claims no rewrite rule). The child theme
+ * 2. Guide Chapter's OWN real permalink (`/learning/guide/<chapter-slug>/`
+ *    as of 2026-08-16, moved to nest under this same `/learning/guide/`
+ *    path once that's where custom/guide-single itself actually ended up
+ *    living — see guide-chapter-cpt.php for the full "why" and why nesting
+ *    a CPT one level under a real, non-headless Page's own URL is still
+ *    safe). The child theme
  *    (twentytwentyfive-child) has no templates/ directory of its own — it's
  *    a pure block theme relying entirely on parent Twenty Twenty-Five's
  *    block templates (see [[be-bitesmart-plugin-architecture]]), and a
@@ -128,8 +135,13 @@ function bitesmart_render_guide_chapter_single( $chapter_id ) {
         <?php echo bitesmart_render_guide_format_controls(); // phpcs:ignore ?>
         <?php
         echo bitesmart_render_guide_chapter_row( $chapter_id, array( // phpcs:ignore
-            'show_guide_link' => true,
-            'open'            => true,
+            'show_guide_link'   => true,
+            // Redundant here — a "View full chapter page" link to the exact
+            // page already being viewed doesn't help anyone. Same reasoning
+            // as bitesmart_render_guide_single()'s show_guide_link => false
+            // for its own chapters, just the other direction.
+            'show_chapter_link' => false,
+            'open'              => true,
         ) );
         ?>
     </div>
