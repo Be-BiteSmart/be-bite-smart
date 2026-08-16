@@ -116,22 +116,6 @@ function bitesmart_guide_chapter_parent_guide( $chapter_id ) {
 }
 
 /**
- * Lang code => downloadable PDF URL map for one chapter, empty entries
- * already dropped by bitesmart_sanitize_guide_chapter_pdfs_by_lang()
- * (guide-chapter-cpt.php) at save time — this just reads the meta back and
- * guards against a non-array value (e.g. a chapter created before this meta
- * field existed, where get_post_meta() falls back to its registered
- * default, an empty array, so this guard is mostly defensive).
- *
- * @param int $chapter_id
- * @return array<string, string>
- */
-function bitesmart_guide_chapter_pdf_urls( $chapter_id ) {
-    $pdfs = get_post_meta( $chapter_id, '_bitesmart_chapter_pdf_by_lang', true );
-    return is_array( $pdfs ) ? $pdfs : array();
-}
-
-/**
  * Short display label for a language code (e.g. "en" => "EN", "es" => "ES")
  * — same {code => label} lookup bitesmart_site_languages() already builds
  * for the video language picker/segmented control, just without needing a
@@ -312,9 +296,14 @@ function bitesmart_resolve_citation_refs( $html ) {
  * expand to reveal video and/or text (each independently hideable by the
  * page-level format-toggle checkboxes — see format-toggle.js), plus, at the
  * bottom of the expanded body (2026-08-16), a Download PDF button per
- * language that has one uploaded (see bitesmart_guide_chapter_pdf_urls()
- * above) — always shown regardless of the video/text toggle state, not
- * part of that system at all. No JS needed for the expand/collapse itself:
+ * language that has one uploaded — always shown regardless of the
+ * video/text toggle state, not part of that system at all. **Revised same
+ * day**: originally read a PER-CHAPTER PDF field; Janet decided the source
+ * PDF realistically can't be split into separate per-chapter files, so
+ * every chapter's Download button now reads its parent GUIDE's single
+ * _bitesmart_guide_pdf_by_lang field instead (bitesmart_guide_pdf_urls(),
+ * guide-cpt.php) — one upload location, same button everywhere a chapter
+ * renders. No JS needed for the expand/collapse itself:
  * same native <details>/<summary> idiom as custom/qa-entry
  * (qa-entry-display.php) and Episode's search card — deliberate, since it
  * works identically whether the row was in the page's initial HTML or
@@ -381,7 +370,12 @@ function bitesmart_render_guide_chapter_row( $chapter_id, array $args = array() 
     $duration    = get_post_meta( $chapter_id, '_bitesmart_chapter_video_duration', true );
     $video_ids   = bitesmart_guide_chapter_video_ids( $chapter_id );
     $has_video   = ! empty( $video_ids );
-    $pdf_urls    = bitesmart_guide_chapter_pdf_urls( $chapter_id );
+    // The Download PDF button is guide-level, not per-chapter (see the
+    // 2026-08-16 note below and the Download section's own comment further
+    // down) — reads the parent Guide's own _bitesmart_guide_pdf_by_lang
+    // meta via bitesmart_guide_pdf_urls() (guide-cpt.php), not anything
+    // stored on this chapter.
+    $pdf_urls    = $guide_ok ? bitesmart_guide_pdf_urls( $guide->ID ) : array();
     $site_lang   = bitesmart_site_lang_code();
     $anchor_id   = bitesmart_guide_chapter_anchor_id( $post );
 
@@ -537,9 +531,16 @@ function bitesmart_render_guide_chapter_row( $chapter_id, array $args = array() 
                     // render_guide_chapter_search_card() teaser instead
                     // (added 2026-08-16), which doesn't call this function
                     // at all, so this section never renders there.
+                    //
+                    // $pdf_urls comes from the parent GUIDE now, not this
+                    // chapter (see the $pdf_urls assignment above) — every
+                    // chapter of this Guide renders the exact SAME button(s),
+                    // since the underlying PDF is the whole guide, not a
+                    // per-chapter split. Copy reflects that: "Download the
+                    // full guide," not "Download this chapter."
                     ?>
                     <div class="guide-chapter-downloads">
-                        <p class="guide-chapter-downloads-label"><?php esc_html_e( 'Download this chapter:', 'custom-blocks' ); ?></p>
+                        <p class="guide-chapter-downloads-label"><?php esc_html_e( 'Download the full guide:', 'custom-blocks' ); ?></p>
                         <div class="guide-chapter-download-buttons">
                             <?php foreach ( $pdf_urls as $lang_code => $pdf_url ) : ?>
                                 <?php
@@ -561,7 +562,7 @@ function bitesmart_render_guide_chapter_row( $chapter_id, array $args = array() 
                                     <?php
                                     printf(
                                         /* translators: %s: short language label, e.g. "EN" */
-                                        esc_html__( 'Download PDF (%s)', 'custom-blocks' ),
+                                        esc_html__( 'Download Guide PDF (%s)', 'custom-blocks' ),
                                         esc_html( bitesmart_guide_chapter_lang_label( $lang_code ) )
                                     );
                                     ?>

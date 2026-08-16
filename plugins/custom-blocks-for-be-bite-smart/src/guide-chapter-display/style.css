@@ -10,6 +10,20 @@
   margin-bottom: 8px;
 }
 
+/* The shared .custom-block-card rule (theme's shared-block-styles.css)
+   ships margin-bottom: 5rem — sized for a single standalone card (bio-card,
+   qa-entry, resource, etc.), not a chapter, which normally sits packed
+   into a tight accordion list with several siblings (see .guide-chapter-row
+   above, already handling that spacing at 8px). Per Janet: remove that 5rem
+   gap for chapters specifically — everything else about the shared card
+   look (background/border/shadow/padding) stays. One extra class
+   (.guide-chapter-container) over the shared rule's single-class selector
+   is enough specificity to win with no !important needed, regardless of
+   which stylesheet happens to load first. */
+body:not(.block-editor-page) .guide-chapter-container.custom-block-card {
+  margin-bottom: 0;
+}
+
 .guide-chapter-summary {
   display: flex;
   align-items: flex-start;

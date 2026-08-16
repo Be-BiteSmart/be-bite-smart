@@ -3,8 +3,7 @@ import { registerPlugin } from "@wordpress/plugins";
 import { PluginDocumentSettingPanel } from "@wordpress/editor";
 import { createElement as el } from "@wordpress/element";
 import { useEntityProp } from "@wordpress/core-data";
-import { MediaUpload, MediaUploadCheck } from "@wordpress/block-editor";
-import { TextControl, TextareaControl, ToggleControl, Button } from "@wordpress/components";
+import { TextControl, TextareaControl, ToggleControl } from "@wordpress/components";
 import { __ } from "@wordpress/i18n";
 import { getSiteLanguages } from "../shared/languages";
 
@@ -47,14 +46,11 @@ function GuideChapterPanel() {
   const [meta = {}, setMeta] = useEntityProp("postType", "guide_chapter", "meta");
   const languages = getSiteLanguages();
   const videos = meta._bitesmart_chapter_videos_by_lang || {};
-  const pdfs = meta._bitesmart_chapter_pdf_by_lang || {};
   const keywords = meta._bitesmart_chapter_keywords_by_lang || {};
 
   const updateMeta = (key, value) => setMeta({ ...meta, [key]: value });
   const setVideoUrl = (code, url) =>
     updateMeta("_bitesmart_chapter_videos_by_lang", { ...videos, [code]: url });
-  const setPdfUrl = (code, url) =>
-    updateMeta("_bitesmart_chapter_pdf_by_lang", { ...pdfs, [code]: url });
   const setKeywords = (code, text) =>
     updateMeta("_bitesmart_chapter_keywords_by_lang", { ...keywords, [code]: text });
 
@@ -71,6 +67,14 @@ function GuideChapterPanel() {
       { className: "components-base-control__help", style: { marginTop: 0 } },
       __(
         "This chapter is automatically part of the site's one Guide — nothing to pick here.",
+        "custom-blocks",
+      ),
+    ),
+    el(
+      "p",
+      { className: "components-base-control__help", style: { marginTop: 0 } },
+      __(
+        "The downloadable PDF button shown at the bottom of every chapter is uploaded once, on the Guide's own edit screen — not per chapter.",
         "custom-blocks",
       ),
     ),
@@ -127,49 +131,6 @@ function GuideChapterPanel() {
       onChange: (val) => updateMeta("_bitesmart_chapter_video_duration", val),
       placeholder: __("e.g. 6 min", "custom-blocks"),
     }),
-
-    el("hr", { style: { margin: "16px 0" } }),
-
-    el("p", { style: { fontWeight: 600, marginBottom: 4 } }, __("Downloadable PDF", "custom-blocks")),
-    el(
-      "p",
-      { className: "components-base-control__help", style: { marginTop: 0 } },
-      __(
-        "Shown as a Download button at the bottom of this chapter, once expanded. Leave a language blank to skip its button.",
-        "custom-blocks",
-      ),
-    ),
-    // Same key-prefix reasoning as the Video/Keywords loops above — every
-    // languages.map() spread into this flat children array needs a
-    // per-group-prefixed key or same-lang.code children across groups
-    // collide (see the comment above the Video loop for the real bug that
-    // caused).
-    ...languages.map((lang) =>
-      el(
-        "div",
-        {
-          key: `pdf-${lang.code}`,
-          style: { display: "flex", flexDirection: "column", gap: "8px", marginBottom: "12px" },
-        },
-        el(
-          MediaUploadCheck,
-          null,
-          el(MediaUpload, {
-            onSelect: (media) => setPdfUrl(lang.code, media.url),
-            allowedTypes: ["application/pdf"],
-            value: pdfs[lang.code],
-            render: ({ open }) =>
-              el(
-                Button,
-                { onClick: open, variant: "secondary" },
-                `${pdfs[lang.code] ? __("Replace PDF", "custom-blocks") : __("Upload PDF", "custom-blocks")} (${lang.name})`,
-              ),
-          }),
-        ),
-        pdfs[lang.code] &&
-          el("span", { style: { fontSize: "12px", color: "#50575e" } }, pdfs[lang.code].split("/").pop()),
-      ),
-    ),
 
     el("hr", { style: { margin: "16px 0" } }),
 
