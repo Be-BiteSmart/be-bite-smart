@@ -189,6 +189,33 @@ function coloring_books_list_register_block() {
 }
 add_action( 'init', 'coloring_books_list_register_block' );
 
+// -------------- Book Block (CPT-backed) ------------------------ //
+
+// custom/book stores only which Book post to show and renders live from
+// it — same pattern as custom/resource and custom/coloring-book. See
+// src/book-display/book-display.php, and the Book post type in the Custom
+// Post Types for BBS plugin's includes/book-cpt.php. Must load before
+// learning-search.php further down, since bitesmart_build_stage_card_list()
+// there calls render_book_search_card() (same file).
+require_once __DIR__ . '/src/book-display/book-display.php';
+
+function book_register_block() {
+    register_block_type( __DIR__ . '/build/book-display', [
+        'render_callback' => 'render_book_block',
+    ] );
+}
+add_action( 'init', 'book_register_block' );
+
+// -------------- Book sidebar panel (NOT a locked template block) -- //
+
+// book's canvas stays open (post_content is the real recommendation body,
+// restricted to Paragraph/List — see book-cpt.php), so its other fields
+// (Price/Availability, Buy/More Info URL, Keywords) live in a sidebar
+// panel instead of a locked template block — same reasoning and mechanism
+// as src/guide-chapter-panel/. No register_block_type() call: this isn't a
+// block.
+require_once __DIR__ . '/src/book-panel/book-panel.php';
+
 // -------------- Learning Hub Search Block ------------------------ //
 
 // custom/learning-search is placed once per Stage archive page (e.g.
@@ -321,9 +348,24 @@ function custom_blocks_scripts() {
     $on_legal       = is_page( 'legal' );
     $on_partnerships     = is_page( 'partnerships' );
     $on_front      = is_front_page();
+    // /learning/kids/ (slug 'kids') hosts the episode section — one or more
+    // custom/episode blocks placed manually by an editor (see
+    // [[be-bitesmart-episode-status]] in memory) — but was missing from this
+    // condition entirely, so video-toggle.js/css (the play button, video
+    // player swap-in, and language picker logic every custom/episode embed
+    // depends on) never loaded there. Episodes rendered fine (PHP-side,
+    // has_block() isn't used for this check since these are manual enqueues,
+    // not per-block asset registration), but clicking Play did nothing.
+    $on_kids       = is_page( 'kids' );
+    // /learning/ (slug 'learning') is the Learning Hub root page — a
+    // DIFFERENT page from the legacy /learn/ (slug 'learn', $on_learn
+    // above, an older unrelated page kept as its own separate check). It
+    // hosts a custom/video-quote block, same "needs video-toggle.js to
+    // actually play" dependency as custom/episode — same bug, same fix.
+    $on_learning_hub = is_page( 'learning' );
 
 
-       if ( $on_learn || $on_front || $on_parents ) {
+       if ( $on_learn || $on_front || $on_parents || $on_kids || $on_learning_hub ) {
         $asset = include plugin_dir_path( __FILE__ ) . 'build/video-toggle.asset.php';
         wp_enqueue_style(
             'video-toggle',

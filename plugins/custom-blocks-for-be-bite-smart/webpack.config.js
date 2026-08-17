@@ -23,6 +23,8 @@ module.exports = {
     "coloring-book-fields/index": "./src/coloring-book-fields/index.js",
     "coloring-book-display/index": "./src/coloring-book-display/index.js",
     "coloring-books-list/index": "./src/coloring-books-list/index.js",
+    "book-panel/index": "./src/book-panel/index.js",
+    "book-display/index": "./src/book-display/index.js",
     "guide-fields/index": "./src/guide-fields/index.js",
     "guide-chapter-panel/index": "./src/guide-chapter-panel/index.js",
     "guide-chapter-display/format-toggle": "./src/guide-chapter-display/format-toggle.js",

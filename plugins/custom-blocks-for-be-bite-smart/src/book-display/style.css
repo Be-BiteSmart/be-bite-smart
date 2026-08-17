@@ -1,0 +1,115 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Book Block
+   Card container, border, and editor margin are handled by global CSS
+   via .custom-block-card and .custom-block-border (same convention as
+   bio-card, episode-card, resource, etc. — see those blocks' style.css
+   headers).
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.wp-block-custom-book .book-card-container {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.wp-block-custom-book .book-card-cover img {
+  display: block;
+  max-width: 160px;
+  height: auto;
+}
+
+.wp-block-custom-book .book-card-body {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
+.wp-block-custom-book .book-card-title {
+  margin: 0 0 4px;
+}
+
+/* Audience badge (bitesmart_book_audience_badge(), book-display.php) —
+   static/informational, NOT interactive, unlike Guide Chapter's similarly
+   pill-shaped .guide-chapter-badge (which is a real clickable toggle). Two
+   calm, non-alarming accent colors from the theme's existing presets — no
+   new colors introduced. Shared between the full card (here) and the
+   search card (further down) so both stay visually identical. */
+.book-audience-badge {
+  display: inline-block;
+  margin: 0 0 8px;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 0.75em;
+  font-weight: 600;
+  border: 1px solid currentColor;
+}
+
+.book-audience-badge.is-all-ages {
+  color: var(--wp--preset--color--accent-2, #1f6a8f);
+}
+
+.book-audience-badge.is-adult {
+  color: var(--wp--preset--color--accent-1, #d16b0c);
+}
+
+.wp-block-custom-book .book-card-price {
+  margin: 0 0 12px;
+  font-weight: 600;
+}
+
+.wp-block-custom-book .book-card-content {
+  margin: 0 0 16px;
+}
+
+.wp-block-custom-book .book-card-content > :last-child {
+  margin-bottom: 0;
+}
+
+.wp-block-custom-book .book-card-link {
+  display: inline-block;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Book search card — reuses custom/qa-entry's accent-card/chevron shell
+   (see render_book_search_card() in book-display.php), these rules only
+   cover the parts unique to a book (cover thumbnail + price line laid out
+   alongside the excerpt/link).
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.book-search-card-body {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.book-search-card-cover img {
+  display: block;
+  max-width: 80px;
+  height: auto;
+}
+
+.book-search-card-text {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.book-search-card-price {
+  margin: 0 0 8px;
+  font-weight: 600;
+}
+
+.book-search-card-excerpt {
+  margin: 0 0 12px;
+}
+
+/* the_content output can be several <p>/<ul> elements (see
+   render_book_search_card() in book-display.php) — drop the last one's own
+   bottom margin so it doesn't double up with .book-search-card-excerpt's. */
+.book-search-card-excerpt > :last-child {
+  margin-bottom: 0;
+}
+
+.book-search-card-link {
+  display: inline-block;
+}

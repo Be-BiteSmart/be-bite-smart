@@ -19,6 +19,9 @@
 // loads last for the same "conceptually a child of Guide" readability
 // reason — it's scoped/nested under Guide the same way guide-chapter-cpt.php
 // is, just without any taxonomy attachment to worry about ordering.
+// book-cpt.php (2026-08-16) only needs Stage/Topic, already loaded above —
+// sits with the other flat/independent content types, before the
+// Guide/Guide-Chapter/Citation "conceptually nested" group starts.
 require_once __DIR__ . '/includes/stage-taxonomy.php';
 require_once __DIR__ . '/includes/topic-taxonomy.php';
 require_once __DIR__ . '/includes/series-taxonomy.php';
@@ -27,6 +30,7 @@ require_once __DIR__ . '/includes/episode-cpt.php';
 require_once __DIR__ . '/includes/resource-cpt.php';
 require_once __DIR__ . '/includes/qa-entry-cpt.php';
 require_once __DIR__ . '/includes/coloring-book-cpt.php';
+require_once __DIR__ . '/includes/book-cpt.php';
 require_once __DIR__ . '/includes/guide-cpt.php';
 require_once __DIR__ . '/includes/guide-chapter-cpt.php';
 require_once __DIR__ . '/includes/citation-seed-data.php';

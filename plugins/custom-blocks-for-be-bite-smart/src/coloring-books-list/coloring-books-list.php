@@ -45,12 +45,51 @@ function bitesmart_downloads_page_template_version() {
 }
 
 /**
+ * Sorts Coloring Books by Episode Number ascending (1, 2, 3, ... — compared
+ * numerically, not alphabetically, so "10" doesn't sort before "2"),
+ * matching the order the episodes themselves air in.
+ *
+ * Episode Number is optional (see its help text in
+ * coloring-book-fields/index.js), so this can't just be a WP_Query
+ * meta_key/orderby=meta_value_num — that does an implicit join on the meta
+ * key and would silently drop any Coloring Book that doesn't have one from
+ * the results entirely. Since this block's whole point is showing EVERY
+ * published Coloring Book (see bitesmart_build_downloads_page_card_list()'s
+ * own comment), un-numbered books sort after every numbered one instead —
+ * alphabetically by title among themselves, the same order this list used
+ * before Episode Number ordering existed.
+ *
+ * @param WP_Post $a
+ * @param WP_Post $b
+ * @return int
+ */
+function bitesmart_coloring_book_list_order_cmp( $a, $b ) {
+    $a_number = get_post_meta( $a->ID, '_bitesmart_coloring_book_episode_number', true );
+    $b_number = get_post_meta( $b->ID, '_bitesmart_coloring_book_episode_number', true );
+
+    $a_numeric = is_numeric( $a_number );
+    $b_numeric = is_numeric( $b_number );
+
+    if ( $a_numeric && $b_numeric ) {
+        return (float) $a_number <=> (float) $b_number;
+    }
+
+    if ( $a_numeric !== $b_numeric ) {
+        return $a_numeric ? -1 : 1;
+    }
+
+    return strcasecmp( get_the_title( $a ), get_the_title( $b ) );
+}
+
+/**
  * Build (or fetch from cache) the full, ordered list of rendered coloring
  * book cards, in the current request's language. Every Coloring Book
- * published, alphabetical by title — unlike bitesmart_build_stage_card_list(),
- * NOT filtered by Stage: /learning/downloads/ is meant to be the one place
- * every coloring book lives, regardless of which Stage(s) it's also tagged
- * with for search purposes.
+ * published, ordered by Episode Number ascending (see
+ * bitesmart_coloring_book_list_order_cmp()) — unlike
+ * bitesmart_build_stage_card_list(), NOT filtered by Stage:
+ * /learning/downloads/ is meant to be the one place every coloring book
+ * lives, regardless of which Stage(s) it's also tagged with for search
+ * purposes.
  *
  * @param string $lang Short language code (bitesmart_site_lang_code()) — part of the cache key only; the card markup itself has no language branching of its own (PDFs are just EN/ES URLs, not translated text), but TranslatePress still needs a fresh cache per language since the button labels ("View PDF (ENG)", etc.) are translatable strings.
  * @return array<int, string> Rendered card HTML, one per Coloring Book.
@@ -68,13 +107,14 @@ function bitesmart_build_downloads_page_card_list( $lang ) {
         'post_type'      => 'coloring_book',
         'post_status'    => 'publish',
         'posts_per_page' => -1,
-        'orderby'        => 'title',
-        'order'          => 'ASC',
         'no_found_rows'  => true,
     ) );
 
+    $posts = $query->posts;
+    usort( $posts, 'bitesmart_coloring_book_list_order_cmp' );
+
     $cards = array();
-    foreach ( $query->posts as $post ) {
+    foreach ( $posts as $post ) {
         $html = render_coloring_book_block( array( 'coloringBookId' => $post->ID ) );
         if ( $html ) {
             $cards[] = $html;

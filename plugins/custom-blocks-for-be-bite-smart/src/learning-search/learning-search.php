@@ -150,11 +150,13 @@ function bitesmart_stage_cards_bump_generation() {
  * which REAL Stage's list it appears in, AND (since every chapter also
  * auto-carries the "Guide" pseudo-stage term — see
  * [[be-bitesmart-guide-cpt-plan]] in memory) editing a chapter always
- * affects the pooled Guide-pseudo-stage list too.
+ * affects the pooled Guide-pseudo-stage list too. Book is included for the
+ * same reason as Episode/Coloring Book (see render_book_search_card() in
+ * book-display.php).
  */
 function bitesmart_stage_cards_maybe_bump( $post_id, $post = null ) {
     $post_type = $post ? $post->post_type : get_post_type( $post_id );
-    if ( in_array( $post_type, array( 'qa_entry', 'resource', 'episode', 'coloring_book', 'guide_chapter' ), true ) ) {
+    if ( in_array( $post_type, array( 'qa_entry', 'resource', 'episode', 'coloring_book', 'guide_chapter', 'book' ), true ) ) {
         bitesmart_stage_cards_bump_generation();
     }
 }
@@ -163,6 +165,7 @@ add_action( 'save_post_resource', 'bitesmart_stage_cards_maybe_bump', 10, 2 );
 add_action( 'save_post_episode', 'bitesmart_stage_cards_maybe_bump', 10, 2 );
 add_action( 'save_post_coloring_book', 'bitesmart_stage_cards_maybe_bump', 10, 2 );
 add_action( 'save_post_guide_chapter', 'bitesmart_stage_cards_maybe_bump', 10, 2 );
+add_action( 'save_post_book', 'bitesmart_stage_cards_maybe_bump', 10, 2 );
 add_action( 'delete_post', 'bitesmart_stage_cards_maybe_bump' );
 
 function bitesmart_stage_cards_maybe_bump_terms( $object_id, $terms, $tt_ids, $taxonomy ) {
@@ -184,10 +187,11 @@ add_action( 'set_object_terms', 'bitesmart_stage_cards_maybe_bump_terms', 10, 4 
  * shown in this search can match on more than just their synthesized
  * question text, same as Q&A Entry's Synonyms / Resource's Keywords.
  * Guide Chapter's (`_bitesmart_chapter_keywords_by_lang`) added the same
- * way — see [[be-bitesmart-guide-cpt-plan]] in memory.
+ * way — see [[be-bitesmart-guide-cpt-plan]] in memory. Book's
+ * (`_bitesmart_book_keywords_by_lang`) added the same way, 2026-08-16.
  *
  * @param int    $post_id Post ID.
- * @param string $type    'qa_entry', 'resource', 'episode', 'coloring_book', or 'guide_chapter'.
+ * @param string $type    'qa_entry', 'resource', 'episode', 'coloring_book', 'guide_chapter', or 'book'.
  * @param string $lang    Short language code.
  * @return string
  */
@@ -198,6 +202,7 @@ function bitesmart_stage_card_keywords( $post_id, $type, $lang ) {
         'episode'       => '_bitesmart_episode_keywords_by_lang',
         'coloring_book' => '_bitesmart_coloring_book_keywords_by_lang',
         'guide_chapter' => '_bitesmart_chapter_keywords_by_lang',
+        'book'          => '_bitesmart_book_keywords_by_lang',
     );
 
     if ( ! isset( $meta_keys[ $type ] ) ) {
@@ -232,6 +237,7 @@ function bitesmart_stage_cards_template_version() {
         __DIR__ . '/../episode-display/episode-display.php', // holds render_episode_search_card() too, not just render_episode_block()
         __DIR__ . '/../coloring-book-display/coloring-book-display.php', // holds render_coloring_book_search_card() too, not just render_coloring_book_block()
         __DIR__ . '/../guide-chapter-display/guide-chapter-display.php', // holds render_guide_chapter_search_card()/render_guide_chapter_pooled_card() too, not just bitesmart_render_guide_chapter_row()
+        __DIR__ . '/../book-display/book-display.php', // holds render_book_search_card() too, not just render_book_block()
     );
 
     $stamps = array_map(
@@ -247,8 +253,11 @@ function bitesmart_stage_cards_template_version() {
 /**
  * Build (or fetch from cache) the full, ordered list of rendered cards for
  * one Stage, in the current request's language. Every Q&A Entry + Resource
- * + Episode + Coloring Book + Guide Chapter published and tagged with
- * $stage_slug, alphabetical by title. Episode is included as a compact
+ * + Episode + Coloring Book + Guide Chapter + Book published and tagged with
+ * $stage_slug, alphabetical by title. Book is included as a compact card
+ * (see render_book_search_card() in book-display.php) with no Stage
+ * default of its own — an editor tags it manually, since which Stage(s)
+ * fit varies a lot per book. Episode is included as a compact
  * synthesized-question card (see render_episode_search_card() in
  * episode-display.php), not its full video-player embed — Episodes already
  * default to the Preschool stage term on save (see episode-cpt.php), so
@@ -312,7 +321,7 @@ function bitesmart_build_stage_card_list( $stage_slug, $lang ) {
         ) );
     } else {
         $query = new WP_Query( array(
-            'post_type'      => array( 'qa_entry', 'resource', 'episode', 'coloring_book', 'guide_chapter' ),
+            'post_type'      => array( 'qa_entry', 'resource', 'episode', 'coloring_book', 'guide_chapter', 'book' ),
             'post_status'    => 'publish',
             'posts_per_page' => -1,
             'orderby'        => 'title',
@@ -337,6 +346,8 @@ function bitesmart_build_stage_card_list( $stage_slug, $lang ) {
             $html = render_resource_block( array( 'resourceId' => $post->ID ) );
         } elseif ( 'coloring_book' === $post->post_type ) {
             $html = render_coloring_book_search_card( array( 'coloringBookId' => $post->ID ) );
+        } elseif ( 'book' === $post->post_type ) {
+            $html = render_book_search_card( array( 'bookId' => $post->ID ) );
         } elseif ( 'guide_chapter' === $post->post_type ) {
             // Full accordion row on the pooled Guide pseudo-stage (every
             // result there IS a chapter); a compact link-out teaser on a
@@ -424,6 +435,7 @@ function bitesmart_learning_search_type_labels() {
         'episode'       => __( 'Episodes', 'custom-blocks' ),
         'coloring_book' => __( 'Coloring Books', 'custom-blocks' ),
         'guide_chapter' => __( 'Guide Chapters', 'custom-blocks' ),
+        'book'          => __( 'Books', 'custom-blocks' ),
     );
 }
 
