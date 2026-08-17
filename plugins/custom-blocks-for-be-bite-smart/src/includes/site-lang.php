@@ -36,12 +36,28 @@ function bitesmart_short_lang_code( $full_code ) {
  */
 function bitesmart_site_languages() {
     if ( function_exists( 'trp_get_languages' ) ) {
-        $overrides = get_option( 'bitesmart_video_languages', array() );
-        $languages = array();
+        $overrides   = get_option( 'bitesmart_video_languages', array() );
+        $languages   = array();
+        $seen_codes  = array(); // guards against the dedup bug below
 
         foreach ( trp_get_languages() as $full_code => $name ) {
             $short_code = bitesmart_short_lang_code( $full_code );
-            $override   = isset( $overrides[ $short_code ] ) ? $overrides[ $short_code ] : array();
+
+            // trp_get_languages() returns one entry per full TranslatePress
+            // locale (e.g. "en_US", "es_ES", "es_MX") — if a site has more
+            // than one regional variant of the same language configured,
+            // bitesmart_short_lang_code() collapses them to the SAME short
+            // code, and without this guard every per-language field on the
+            // site (Vimeo URL, Keywords/Synonyms, etc. — everything that
+            // calls bitesmart_site_languages()/getSiteLanguages()) would
+            // render one duplicate row per extra regional variant. First
+            // configured locale for a given short code wins.
+            if ( isset( $seen_codes[ $short_code ] ) ) {
+                continue;
+            }
+            $seen_codes[ $short_code ] = true;
+
+            $override = isset( $overrides[ $short_code ] ) ? $overrides[ $short_code ] : array();
 
             $languages[] = array(
                 'code'       => $short_code,
@@ -156,6 +172,32 @@ function bitesmart_vimeo_id_from_url( $url ) {
 }
 
 /**
+ * Convert a lang code => Vimeo URL map into a lang code => Vimeo ID map,
+ * dropping any entry whose URL doesn't resolve to a numeric Vimeo ID.
+ *
+ * Shared by the legacy episode-card render_block filter (via
+ * bitesmart_episode_vimeo_ids_from_attrs() below) and the CPT-backed
+ * `custom/episode` block's render_callback — both need the exact same
+ * URL-to-ID resolution, just starting from a different source of the
+ * lang-code => URL map.
+ *
+ * @param array<string, mixed> $videos_by_lang Lang code => Vimeo URL.
+ * @return array<string, string> Lang code => Vimeo ID.
+ */
+function bitesmart_vimeo_ids_by_lang_map( array $videos_by_lang ) {
+    $videos = array();
+
+    foreach ( $videos_by_lang as $code => $url ) {
+        $id = bitesmart_vimeo_id_from_url( $url );
+        if ( $id ) {
+            $videos[ (string) $code ] = $id;
+        }
+    }
+
+    return $videos;
+}
+
+/**
  * Build lang code => Vimeo ID map from episode-card block attributes.
  *
  * @param array<string, mixed> $attrs Block attributes.
@@ -165,12 +207,7 @@ function bitesmart_episode_vimeo_ids_from_attrs( $attrs ) {
     $videos = array();
 
     if ( ! empty( $attrs['videosByLang'] ) && is_array( $attrs['videosByLang'] ) ) {
-        foreach ( $attrs['videosByLang'] as $code => $url ) {
-            $id = bitesmart_vimeo_id_from_url( $url );
-            if ( $id ) {
-                $videos[ (string) $code ] = $id;
-            }
-        }
+        $videos = bitesmart_vimeo_ids_by_lang_map( $attrs['videosByLang'] );
     }
 
     if ( empty( $videos ) ) {
@@ -178,12 +215,7 @@ function bitesmart_episode_vimeo_ids_from_attrs( $attrs ) {
             'en' => $attrs['vimeoUrlEn'] ?? '',
             'es' => $attrs['vimeoUrlEs'] ?? '',
         );
-        foreach ( $legacy as $code => $url ) {
-            $id = bitesmart_vimeo_id_from_url( $url );
-            if ( $id ) {
-                $videos[ $code ] = $id;
-            }
-        }
+        $videos = bitesmart_vimeo_ids_by_lang_map( $legacy );
     }
 
     return $videos;
@@ -631,10 +663,12 @@ function bitesmart_complementary_landmark_labels( $block_content, $block ) {
 add_filter( 'render_block', 'bitesmart_complementary_landmark_labels', 10, 2 );
 
 /**
- * Editor: pass site language config into episode-card AND video-quote
- * scripts, so both blocks' "Available Languages" checkboxes reflect
- * bitesmart_site_languages() (TranslatePress-derived) instead of falling
- * back to the hardcoded DEFAULT_SITE_LANGUAGES in shared/languages.js.
+ * Editor: pass site language config into episode-card, video-quote,
+ * episode-fields, resource-fields, AND qa-entry-fields scripts, so each
+ * block's per-language UI (Available Languages checkboxes, the Vimeo URL
+ * field per language, or the Keywords/Synonyms field per language)
+ * reflects bitesmart_site_languages() (TranslatePress-derived) instead of
+ * falling back to the hardcoded DEFAULT_SITE_LANGUAGES in shared/languages.js.
  */
 function bitesmart_localize_video_language_editors() {
     if ( ! function_exists( 'generate_block_asset_handle' ) ) {
@@ -651,7 +685,14 @@ function bitesmart_localize_video_language_editors() {
         );
     }
 
-    $block_names = array( 'custom/episode-card', 'custom/video-quote' );
+    $block_names = array(
+        'custom/episode-card',
+        'custom/video-quote',
+        'custom/episode-fields',
+        'custom/resource-fields',
+        'custom/qa-entry-fields',
+        'custom/coloring-book-fields',
+    );
 
     foreach ( $block_names as $block_name ) {
         $handle = generate_block_asset_handle( $block_name, 'editorScript' );

@@ -570,6 +570,41 @@ html
   }
 }
 
+/* Title + subtitle brand block: a Site Title ("Be BiteSmart") + a tagline
+   paragraph ("Learning Center"), wrapped together in a vertical Group under
+   a Site Logo. Reused in multiple places on the page (footer, header/mobile
+   navbar, etc.) — Janet added the "learning-hub-title-subtitle" class
+   (Block settings > Advanced > Additional CSS class(es)) to every instance
+   of this Group so one shared rule styles all of them, and so it doesn't
+   rely on WordPress's own auto-generated per-instance layout hash class
+   (unstable — regenerates if a Group's layout settings are ever re-saved,
+   and wasn't guaranteed to match across separately-configured instances
+   anyway).
+
+   WordPress's own auto-generated gap on that Group (from its layout
+   settings) plus the tagline paragraph's own default top margin were
+   stacking together into a big gap, so the tagline read as floating below
+   the title instead of sitting cleanly under it as one title+subtitle
+   unit. !important needed to win over WordPress's own higher-specificity
+   generated container rule — same reasoning as .footer-nav-group above. */
+.learning-hub-title-subtitle {
+  gap: 0 !important;
+}
+
+.learning-hub-title-subtitle .wp-block-site-title {
+  margin-bottom: 0 !important;
+}
+
+/* Small negative margin on top of the zeroed gap above — the Site Title's
+   xx-large font-size has its own line-height, which leaves visible empty
+   space below the letters themselves even with zero gap/margin between the
+   two blocks. Pulls the tagline up into that empty space so it reads as
+   truly close under the title, not just "no gap between boxes." */
+.learning-hub-title-subtitle .wp-block-paragraph {
+  margin-top: -8px !important;
+  margin-bottom: 0 !important;
+}
+
 /* responsive emotional impact image on homepage */
 #emotional-impact-image img {
   max-height: 250px;

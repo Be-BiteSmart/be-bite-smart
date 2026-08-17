@@ -1,0 +1,22 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "custom/learning-search",
+  "title": "Learning Hub Search",
+  "category": "widgets",
+  "icon": "search",
+  "textdomain": "custom-blocks",
+  "description": "Live search box (Fuse.js) over every Q&A Entry, Resource, Episode, Coloring Book, and Guide Chapter tagged with one Stage. Place once per Stage archive page — pair with a custom/learning-browse block set to the same Stage for a persistent \"All X\" browse list too (its type filter also narrows this block's search results).",
+  "attributes": {
+    "stageSlug": {
+      "type": "string",
+      "default": ""
+    }
+  },
+  "supports": {
+    "html": false
+  },
+  "editorScript": "file:./index.js",
+  "viewScript": "file:./view.js",
+  "style": "file:./style-index.css"
+}

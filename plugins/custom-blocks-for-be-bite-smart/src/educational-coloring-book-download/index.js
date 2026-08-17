@@ -9,6 +9,7 @@ registerDownloadCardBlock({
     "Coloring book PDFs per episode — View PDF and Download in EN/ES rows when uploaded.",
   wrapperClassName: "educational-coloring-book-download-block",
   blockIdPrefix: "ecd",
+  anchorPrefix: "coloring-books",
   features: {
     pdf: true,
     downloadLinks: false,

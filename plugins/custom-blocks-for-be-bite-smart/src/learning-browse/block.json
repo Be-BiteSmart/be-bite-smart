@@ -1,0 +1,19 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "custom/learning-browse",
+  "title": "Learning Hub Browse",
+  "category": "widgets",
+  "icon": "list-view",
+  "textdomain": "custom-blocks",
+  "description": "Type-filter checkboxes + a persistent, paginated \"All X\" browse list of every Q&A Entry, Resource, Episode, Coloring Book, and Guide Chapter tagged with one Stage. Place alongside a custom/learning-search block set to the same Stage — its type filter also narrows that block's live search results.",
+  "attributes": {
+    "stageSlug": { "type": "string", "default": "" }
+  },
+  "supports": {
+    "html": false
+  },
+  "editorScript": "file:./index.js",
+  "viewScript": "file:./browse.js",
+  "style": "file:./style-index.css"
+}

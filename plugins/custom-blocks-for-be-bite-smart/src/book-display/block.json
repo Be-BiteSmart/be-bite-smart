@@ -1,0 +1,16 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "custom/book",
+  "title": "Book",
+  "category": "widgets",
+  "description": "Displays a Book recommendation as a full card (cover, recommendation text, price/availability, Buy/More Info link). Pulls its content live from the chosen Book — nothing is duplicated into the block itself.",
+  "attributes": {
+    "bookId": { "type": "number" }
+  },
+  "supports": {
+    "html": false
+  },
+  "editorScript": "file:./index.js",
+  "style": "file:./style-index.css"
+}

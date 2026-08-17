@@ -55,6 +55,13 @@ export function DownloadCardSave({ attributes, config }) {
     "section",
     {
       ...blockProps,
+      // Stable per-instance anchor so a Resource entry's URL can link
+      // straight to this block wherever it's placed on a page — same
+      // "give the real embed a stable anchor id, link to it" pattern as
+      // Episode's bitesmart_episode_anchor_id(). blockId is set once in
+      // edit.js and persisted in the saved attributes, so it survives
+      // re-saves.
+      id: blockId,
       ...(features.pdf && attributes.trackingId
         ? { "data-track": attributes.trackingId }
         : {}),

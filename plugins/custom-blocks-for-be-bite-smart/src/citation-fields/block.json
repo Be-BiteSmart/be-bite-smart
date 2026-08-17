@@ -1,0 +1,14 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "custom/citation-fields",
+  "title": "Citation Fields",
+  "category": "widgets",
+  "description": "Number, reference text, and optional source URL for a Citation post. Only ever appears via the Citation post type's locked content template (see citation-cpt.php) — not meant to be inserted anywhere else.",
+  "supports": {
+    "inserter": false,
+    "html": false,
+    "multiple": false
+  },
+  "editorScript": "file:./index.js"
+}

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "custom/guide-fields",
+  "title": "Guide Fields",
+  "category": "widgets",
+  "description": "Description for a Guide post. Only ever appears via the Guide post type's locked content template (see guide-cpt.php) — not meant to be inserted anywhere else. A Guide's chapters are NOT edited here — see custom/guide-chapter-panel, which lives on each Guide Chapter post instead.",
+  "supports": {
+    "inserter": false,
+    "html": false,
+    "multiple": false
+  },
+  "editorScript": "file:./index.js"
+}

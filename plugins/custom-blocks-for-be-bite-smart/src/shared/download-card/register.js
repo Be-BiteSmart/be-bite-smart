@@ -15,6 +15,9 @@ import { DownloadCardSave } from "./save";
  * @param {string} options.blockIdPrefix - Stable id prefix for toggles/viewers
  * @param {{ pdf: boolean, downloadLinks: boolean, trackingSlug?: boolean, comingSoonWhenEmpty?: boolean }} options.features
  * @param {string} [options.editorHelp] - Inspector sidebar help text
+ * @param {string} [options.anchorPrefix] - When set (e.g. "coloring-books"), the block's
+ *   anchor id is auto-derived from the Series + Episode # instead of a random id — see
+ *   computeSeriesAnchorId() in anchor-id.js.
  */
 export function registerDownloadCardBlock({
   name,
@@ -25,6 +28,7 @@ export function registerDownloadCardBlock({
   blockIdPrefix,
   features,
   editorHelp,
+  anchorPrefix,
 }) {
   const config = {
     wrapperClassName,
@@ -35,6 +39,7 @@ export function registerDownloadCardBlock({
       ...features,
     },
     editorHelp,
+    anchorPrefix,
   };
 
   registerBlockType(name, {

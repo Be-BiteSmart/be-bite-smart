@@ -1,0 +1,473 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Guide Chapter row
+   Card container/border reuse the global .custom-block-card/.custom-block-border
+   convention (same as bio-card, episode-card, qa-entry, etc. — see those
+   blocks' style.css headers). Expand/collapse is native <details>/<summary>,
+   no JS — same reasoning as custom/qa-entry (see qa-entry-display.php).
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.guide-chapter-row {
+  margin-bottom: 8px;
+}
+
+/* The shared .custom-block-card rule (theme's shared-block-styles.css)
+   ships margin-bottom: 5rem — sized for a single standalone card (bio-card,
+   qa-entry, resource, etc.), not a chapter, which normally sits packed
+   into a tight accordion list with several siblings (see .guide-chapter-row
+   above, already handling that spacing at 8px). Per Janet: remove that 5rem
+   gap for chapters specifically — everything else about the shared card
+   look (background/border/shadow/padding) stays. One extra class
+   (.guide-chapter-container) over the shared rule's single-class selector
+   is enough specificity to win with no !important needed, regardless of
+   which stylesheet happens to load first. */
+body:not(.block-editor-page) .guide-chapter-container.custom-block-card {
+  margin-bottom: 0;
+}
+
+.guide-chapter-summary {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+  list-style: none; /* removes Firefox's default marker */
+}
+
+.guide-chapter-summary::-webkit-details-marker {
+  display: none; /* removes Chrome/Safari's default marker */
+}
+
+.guide-chapter-index {
+  font-family: var(--wp--preset--font-family--monospace, monospace);
+  font-size: 0.85em;
+  color: var(--wp--preset--color--contrast-2, #6b6b6b);
+  flex-shrink: 0;
+  padding-top: 0.2em;
+}
+
+.guide-chapter-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.guide-chapter-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.guide-chapter-title {
+  font-weight: 500;
+  margin: 0;
+}
+
+.guide-chapter-badges {
+  display: flex;
+  gap: 6px;
+}
+
+/* Real <button>s now (see guide-chapter-display.php) — this resets the
+   browser's default button chrome (font, background, appearance) back to
+   matching what the old <span> version looked like, then layers the
+   active/off/inactive states on top. */
+.guide-chapter-badge {
+  display: inline-flex;
+  align-items: center;
+  font: inherit;
+  font-size: 0.75em;
+  padding: 2px 9px;
+  border-radius: 20px;
+  border: 1px solid transparent;
+  background: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.guide-chapter-badge:disabled {
+  cursor: default;
+}
+
+.guide-chapter-badge:focus-visible {
+  outline: 2px solid var(--wp--preset--color--accent-1, #d16b0c);
+  outline-offset: 2px;
+}
+
+.guide-chapter-badge.is-active {
+  background: var(--wp--preset--color--accent-1, #d16b0c);
+  color: #fff;
+}
+
+/* This chapter HAS this format, but a visitor toggled it off just for this
+   chapter (format-toggle.js) — same color family as .is-active (still
+   reads as "this exists"), just muted, so it's visually distinct from
+   .is-inactive below ("doesn't exist at all for this chapter"). */
+.guide-chapter-badge.is-off {
+  background: var(--wp--preset--color--accent-1, #d16b0c);
+  color: #fff;
+  opacity: 0.35;
+}
+
+.guide-chapter-badge.is-inactive {
+  background: transparent;
+  border-color: currentColor;
+  color: var(--wp--preset--color--contrast-2, #6b6b6b);
+  opacity: 0.7;
+}
+
+.guide-chapter-summary-text {
+  display: block;
+  font-size: 0.9em;
+  color: var(--wp--preset--color--contrast-2, #6b6b6b);
+}
+
+.guide-chapter-chevron {
+  flex-shrink: 0;
+  margin-top: 2px;
+  transition: transform 0.2s ease;
+}
+
+/* Same rotate-on-open technique as custom/qa-entry's chevron (see
+   qa-entry-display/style.css) — keyed off <details>'s native [open]
+   attribute. */
+.guide-chapter-container[open] .guide-chapter-chevron {
+  transform: rotate(180deg);
+}
+
+.guide-chapter-body {
+  margin-top: 16px;
+  padding-left: 32px;
+}
+
+.guide-chapter-missing-note {
+  font-size: 0.9em;
+  color: var(--wp--preset--color--contrast-2, #6b6b6b);
+  font-style: italic;
+}
+
+.guide-chapter-video {
+  margin-bottom: 16px;
+}
+
+.guide-chapter-video-duration {
+  font-size: 0.85em;
+  color: var(--wp--preset--color--contrast-2, #6b6b6b);
+  margin: 4px 0;
+}
+
+.guide-chapter-video-frame {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  margin-top: 8px;
+}
+
+.guide-chapter-video-frame iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.guide-chapter-text {
+  font-size: 0.95em;
+  line-height: 1.7;
+}
+
+/* Chapter body images shouldn't overflow the card on narrow screens — see
+   artifact-design-style responsive-image conventions used elsewhere in this
+   plugin (e.g. download-card/style.css). */
+.guide-chapter-text img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Inline "Cite" citation-ref links (2026-08-16) — visible number and href
+   resolved server-side, see bitesmart_resolve_citation_refs()
+   (guide-chapter-display.php). Small and unobtrusive on purpose — reads
+   as a footnote marker, not a full-weight link, so it doesn't compete
+   visually with the sentence it's attached to. .citation-ref-wrap (the
+   <sup> itself) needs no styling of its own — a <sup> already renders
+   small/raised by the browser's own UA stylesheet. */
+.citation-ref {
+  color: var(--wp--preset--color--accent-2, #1f6a8f);
+  text-decoration: none;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.citation-ref:hover,
+.citation-ref:focus-visible {
+  text-decoration: underline;
+}
+
+/* Shared accessible tooltip (citation-tooltip.js) — ONE instance for the
+   whole page, repositioned/repopulated per hover/focus rather than one per
+   citation mention — see that file's own comment for why. Positioned via
+   inline style (top/left) set by the script itself; only the LOOK lives
+   here. */
+.citation-tooltip {
+  position: absolute;
+  z-index: 100;
+  max-width: 320px;
+  padding: 10px 14px;
+  background: #1a2e35;
+  color: #fff;
+  border-radius: 6px;
+  font-size: 0.85em;
+  line-height: 1.5;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.citation-tooltip[hidden] {
+  display: none;
+}
+
+.citation-tooltip a {
+  color: #9fd3ea;
+}
+
+/* .guide-chapter-own-link (2026-08-16) is the reverse-direction sibling of
+   this backlink — a chapter's link to its OWN standalone page instead of
+   to its parent Guide. .guide-chapter-usage-rights-link (also 2026-08-16,
+   reverted the same day from a nested <details> accordion once the real
+   text turned out to need richer formatting than a plain meta field could
+   hold — now a plain link to the site's existing /legal/ Page instead) —
+   grouped here since all three share an identical muted/small-text
+   treatment, not by coincidence. */
+.guide-chapter-parent-link,
+.guide-chapter-own-link,
+.guide-chapter-usage-rights-link {
+  margin-top: 16px;
+  font-size: 0.85em;
+  color: var(--wp--preset--color--contrast-2, #6b6b6b);
+}
+
+/* Downloadable PDF — always shown when uploaded, independent of the
+   video/text format toggles (see the PHP comment at its call site: these
+   deliberately do NOT use the .guide-chapter-format[data-format] pattern
+   format-toggle.js reads). Sits after video/text, before the "Part of"
+   backlink, at the bottom of the expanded body.
+
+   The buttons themselves are UNSTYLED here on purpose — they carry the
+   site's shared .block-toggle-btn.is-style-outline "download button" look
+   (blue outline, fills solid on hover/focus — see the theme's own
+   BUTTON SYSTEM comment in twentytwentyfive-child/style.css) instead of a
+   one-off guide-chapter-specific style, same classes
+   bitesmart_coloring_book_language_row() (coloring-book-display.php) and
+   pdf-toggle/index.js already put on every other Download link on the
+   site. .download-card-pdf-download is also what wires these into the
+   theme's existing Plausible download-click tracking
+   (twentytwentyfive-child/inc/analytics.php's track_user_interactions()) —
+   free with the same class, not extra work here. Only the layout (wrapper
+   spacing/wrapping) is this file's job. */
+.guide-chapter-downloads {
+  margin-top: 16px;
+}
+
+.guide-chapter-downloads-label {
+  margin: 0 0 8px;
+  font-size: 0.85em;
+  font-weight: 600;
+  color: var(--wp--preset--color--contrast-2, #6b6b6b);
+}
+
+.guide-chapter-download-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* .block-toggle-btn's base rule (theme style.css) ships margin-top: 1rem
+   (meant for a button sitting alone under a paragraph) at specificity
+   body:not(.block-editor-page) :is(.block-toggle-btn, ...) — higher than a
+   plain two-class selector can beat without !important. Same override,
+   same !important, as the identical problem already solved for the
+   Download buttons on /learning/downloads/ — see
+   "body:not(.block-editor-page) .download-card-language-row .block-toggle-btn"
+   in shared/download-card/style.css. Several buttons sit in a row here
+   with their own gap from the flex wrapper above, so the extra top margin
+   is unwanted either way. */
+body:not(.block-editor-page) .guide-chapter-download-buttons .block-toggle-btn {
+  margin-top: 0 !important;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Shared format-toggle controls bar
+   Rendered once per page by bitesmart_render_guide_format_controls() —
+   never per chapter. See format-toggle.js for the localStorage/visibility
+   logic.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* Top/bottom border-line wrapper, matching custom/learning-browse's own
+   "Filter by type" wrapper (.learning-search-type-filter-wrap,
+   learning-browse/style.css) — same #d0e4eb border color, same edge-to-
+   edge vertical-only padding, instead of this bar's old filled-box/
+   rounded-corner look. Per Janet: "lets have it match the border line
+   styling too that the other one has." */
+.guide-format-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 16px 0;
+  margin-bottom: 16px;
+  border-top: 1px solid #d0e4eb;
+  border-bottom: 1px solid #d0e4eb;
+}
+
+.guide-format-controls-label {
+  font-size: 0.85em;
+  color: var(--wp--preset--color--contrast-2, #6b6b6b);
+}
+
+/* Pill/button look, matching custom/learning-browse's own "Filter by type"
+   checkboxes (.learning-search-type-toggle, learning-browse/style.css) —
+   same accent-3 (yellow) fill + black text while ON (checked), outlined/
+   unfilled while OFF, per Janet: "match the styling of the other filter,
+   yellow pills." Markup here was already the identical shape (a <label>
+   wrapping a real checkbox + text), so this is purely a CSS rename/reuse
+   of that same pattern, not a markup change. Filled-vs-outlined rather
+   than two different fill colors is deliberate (kept from the original):
+   WCAG 1.4.1 (Use of Color) wants state conveyed by more than color alone,
+   and a fill/outline swap reads as a distinct shape change even for a
+   colorblind visitor. The real <input type="checkbox"> stays in the DOM,
+   focusable and announced as checked/not-checked by a screen reader — only
+   visually hidden below (standard clip-based technique, NOT display:none,
+   which would remove it from the tab order). Clicking anywhere on the pill
+   still toggles it: native <label>-wraps-<input>, no JS needed for that
+   part (format-toggle.js only reacts to the resulting "change" event). */
+.guide-format-toggle {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: var(--wp--preset--color--accent-3);
+  color: #000;
+  border: 2px solid var(--wp--preset--color--accent-3);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+/* Visually hidden, not display:none — a screen reader still finds it, Tab
+   still reaches it, and the :focus-visible rule below still fires on it. */
+.guide-format-checkbox {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* OFF state — :has() reads the real checkbox state, so this can't drift
+   out of sync with what a screen reader announces. Same white-fill/dark-
+   grey-text/border combo as the type-filter pills' own OFF state. */
+.guide-format-toggle:has(.guide-format-checkbox:not(:checked)) {
+  background: #fff;
+  color: #3f3f46;
+  border-color: #71717a;
+}
+
+.guide-format-toggle:hover {
+  filter: brightness(0.95);
+}
+
+/* Focus ring on the whole pill (not just the now visually-hidden
+   checkbox) so keyboard focus is easy to see. */
+.guide-format-toggle:has(.guide-format-checkbox:focus-visible) {
+  outline: 2px solid #154862;
+  outline-offset: 2px;
+}
+
+.guide-format-warning {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 0.85em;
+  color: var(--wp--preset--color--contrast-2, #6b6b6b);
+}
+
+.guide-format-warning[hidden] {
+  display: none;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Single-post wrappers (guide-single.php) — minimal, mostly just spacing;
+   the real visual weight is each chapter row's .custom-block-card/
+   .custom-block-border (see the theme's shared-block-styles.css).
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* custom/guide-description's own output (guide-description.php) — was
+   .guide-single-description, rendered inline by guide-single.php itself,
+   until that paragraph was split into this genuinely separate,
+   independently-placeable block 2026-08-16. Kept in this same file/
+   enqueue rather than a new style.css of its own — same "minimal, no
+   dedicated stylesheet needed" precedent custom/guide-single's own output
+   already set (see the section header below). */
+.guide-description-block {
+  font-size: 1.05em;
+  margin-bottom: 20px;
+}
+
+.guide-single-empty {
+  font-style: italic;
+  color: var(--wp--preset--color--contrast-2, #6b6b6b);
+}
+
+/* Chapter-page-only breadcrumb (bitesmart_render_guide_chapter_single()),
+   added 2026-08-16 — sits above the format-toggle bar, at the very top of
+   the page. Plain link, no icon, same muted-link treatment as the
+   "Part of"/"View full chapter page" links in guide-chapter-display's own
+   style.css (.guide-chapter-parent-link/.guide-chapter-own-link) — the "‹ "
+   is a plain character in the translated string itself, not a separate
+   icon element, so it's never left orphaned if a translation omits it. */
+.guide-chapter-breadcrumb {
+  margin-bottom: 16px;
+  font-size: 0.85em;
+}
+
+.guide-chapter-breadcrumb a {
+  color: var(--wp--preset--color--contrast-2, #6b6b6b);
+}
+
+.guide-chapter-breadcrumb a:hover,
+.guide-chapter-breadcrumb a:focus-visible {
+  color: var(--wp--preset--color--accent-2, #1f6a8f);
+}
+
+/* "Share this Chapter" — the very last thing in
+   bitesmart_render_guide_chapter_single()'s own output, immediately above
+   wherever AddToAny's share buttons render next (see that function's own
+   comment for the filter-priority reasoning). Just spacing here — no
+   font-size/color override, so it reads as a real page heading using the
+   theme's own default h2 styling, not a small muted label like this
+   file's other single-post-wrapper text. */
+.guide-chapter-share-heading {
+  margin-top: 24px;
+}
+
+/* Guide Section headings between groups of chapters on the Guide's own
+   "View All Chapters" list (bitesmart_render_guide_single()), added
+   2026-08-16 — see that function's own comment for the grouping logic.
+   Real page-heading styling (theme defaults), same "no font-size/color
+   override" choice as .guide-chapter-share-heading above — these mark
+   genuine sections of the page, not small muted metadata. First heading
+   in the list sits directly under the "Show: Video/Text" bar, so its own
+   top margin already provides enough separation without doubling up; only
+   headings AFTER the first one need extra top margin to separate them
+   from the previous section's last chapter. */
+.guide-chapter-list > .guide-section-heading {
+  margin-top: 32px;
+  margin-bottom: 16px;
+  padding: 20px 0;
+}
+
+.guide-chapter-list > .guide-section-heading:first-child {
+  margin-top: 0;
+}

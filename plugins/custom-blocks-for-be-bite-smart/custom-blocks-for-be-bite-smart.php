@@ -4,8 +4,16 @@
  * Description: Adds custom blocks including Research Article and Bio Card
  * Version: 1.0
  * Author: Janet Spellman-Marsh
- * Requires Plugins: TranslatePress
+ * Requires Plugins: TranslatePress, custom-post-types-for-bbs
  */
+
+// The Episode post type, its meta fields, and the Stage taxonomy are all
+// registered in the separate "Custom Post Types for BBS" plugin (see its
+// includes/episode-cpt.php and includes/stage-taxonomy.php) — that plugin
+// owns the content model, this one owns the blocks that read/write it
+// (custom/episode-fields, custom/episode, further down). The "Requires
+// Plugins" header above makes that a real dependency: WordPress won't let
+// this plugin activate without that one already active.
 
 // Shared helpers (TranslatePress site language, etc.)
 require_once __DIR__ . '/src/includes/site-lang.php';
@@ -99,6 +107,169 @@ function documentary_video_register_block() {
     ] );
 }
 add_action( 'init', 'documentary_video_register_block' );
+
+// -------------- Episode Block (CPT-backed) ------------------------ //
+
+// custom/episode is the CPT-backed replacement for custom/episode-card:
+// it stores only which Episode post to show and renders live from that
+// post, so the same episode can appear on multiple pages without
+// duplicating content. Registered as a NEW block name alongside the old
+// one (not replacing it) — custom/episode-card stays exactly as it is
+// below, untouched, so existing pages using it keep working during the
+// transition. See src/episode-display/episode-display.php.
+require_once __DIR__ . '/src/episode-display/episode-display.php';
+
+function episode_register_block() {
+    register_block_type( __DIR__ . '/build/episode-display', [
+        'render_callback' => 'render_episode_block',
+    ] );
+}
+add_action( 'init', 'episode_register_block' );
+
+// -------------- Resource Block (CPT-backed) ------------------------ //
+
+// custom/resource stores only which Resource post to show and renders
+// live from that post — same pattern as custom/episode. See
+// src/resource-display/resource-display.php, and the Resource post type
+// in the Custom Post Types for BBS plugin's includes/resource-cpt.php.
+require_once __DIR__ . '/src/resource-display/resource-display.php';
+
+function resource_register_block() {
+    register_block_type( __DIR__ . '/build/resource-display', [
+        'render_callback' => 'render_resource_block',
+    ] );
+}
+add_action( 'init', 'resource_register_block' );
+
+// -------------- Q&A Entry Block (CPT-backed) ------------------------ //
+
+// custom/qa-entry stores only which Q&A Entry post to show and renders
+// live from that post — same pattern as custom/episode and custom/resource.
+// See src/qa-entry-display/qa-entry-display.php, and the Q&A Entry post
+// type in the Custom Post Types for BBS plugin's includes/qa-entry-cpt.php.
+require_once __DIR__ . '/src/qa-entry-display/qa-entry-display.php';
+
+function qa_entry_register_block() {
+    register_block_type( __DIR__ . '/build/qa-entry-display', [
+        'render_callback' => 'render_qa_entry_block',
+    ] );
+}
+add_action( 'init', 'qa_entry_register_block' );
+
+// -------------- Coloring Book Block (CPT-backed) ------------------------ //
+
+// custom/coloring-book stores only which Coloring Book post to show and
+// renders live from that post — same pattern as custom/episode and
+// custom/resource. See src/coloring-book-display/coloring-book-display.php,
+// and the Coloring Book post type in the Custom Post Types for BBS
+// plugin's includes/coloring-book-cpt.php. Most pages should use
+// custom/coloring-books-list (registered further down) instead of placing
+// these one at a time.
+require_once __DIR__ . '/src/coloring-book-display/coloring-book-display.php';
+
+function coloring_book_register_block() {
+    register_block_type( __DIR__ . '/build/coloring-book-display', [
+        'render_callback' => 'render_coloring_book_block',
+    ] );
+}
+add_action( 'init', 'coloring_book_register_block' );
+
+// -------------- Coloring Books List Block ------------------------ //
+
+// custom/coloring-books-list auto-lists every published Coloring Book —
+// see src/coloring-books-list/coloring-books-list.php. Requires
+// coloring-book-display.php (just above) to already be loaded, since its
+// render callback calls render_coloring_book_block() for each item.
+require_once __DIR__ . '/src/coloring-books-list/coloring-books-list.php';
+
+function coloring_books_list_register_block() {
+    register_block_type( __DIR__ . '/build/coloring-books-list', [
+        'render_callback' => 'render_coloring_books_list_block',
+    ] );
+}
+add_action( 'init', 'coloring_books_list_register_block' );
+
+// -------------- Book Block (CPT-backed) ------------------------ //
+
+// custom/book stores only which Book post to show and renders live from
+// it — same pattern as custom/resource and custom/coloring-book. See
+// src/book-display/book-display.php, and the Book post type in the Custom
+// Post Types for BBS plugin's includes/book-cpt.php. Must load before
+// learning-search.php further down, since bitesmart_build_stage_card_list()
+// there calls render_book_search_card() (same file).
+require_once __DIR__ . '/src/book-display/book-display.php';
+
+function book_register_block() {
+    register_block_type( __DIR__ . '/build/book-display', [
+        'render_callback' => 'render_book_block',
+    ] );
+}
+add_action( 'init', 'book_register_block' );
+
+// -------------- Book sidebar panel (NOT a locked template block) -- //
+
+// book's canvas stays open (post_content is the real recommendation body,
+// restricted to Paragraph/List — see book-cpt.php), so its other fields
+// (Price/Availability, Buy/More Info URL, Keywords) live in a sidebar
+// panel instead of a locked template block — same reasoning and mechanism
+// as src/guide-chapter-panel/. No register_block_type() call: this isn't a
+// block.
+require_once __DIR__ . '/src/book-panel/book-panel.php';
+
+// -------------- Learning Hub Search Block ------------------------ //
+
+// custom/learning-search is placed once per Stage archive page (e.g.
+// /learning/stages/preschool/) — see [[be-bitesmart-content-hub-plan]] in
+// memory. Handles ONLY the search box + live Fuse.js results as of the
+// 2026-08-16 split — the paginated "browse all" list moved to the sibling
+// custom/learning-browse block just below (place both, same Stage, on a
+// real Stage page). It reuses render_qa_entry_block() / render_resource_block()
+// / render_coloring_book_search_card() (registered just above) to build the
+// data its front-end Fuse.js search reads, so require order matters here:
+// this file must load after qa-entry-display.php, resource-display.php,
+// and coloring-book-display.php, which it does.
+require_once __DIR__ . '/src/learning-search/learning-search.php';
+
+// Logs zero-result searches from that same block — its own file since it
+// has a different lifecycle (rest_api_init, not a block render_callback)
+// and no ordering dependency on learning-search.php itself, just grouped
+// here for locality. See its own header comment for the full picture.
+require_once __DIR__ . '/src/learning-search/zero-result-log.php';
+
+function learning_search_register_block() {
+    register_block_type( __DIR__ . '/build/learning-search', array(
+        'render_callback' => 'render_learning_search_block',
+    ) );
+}
+add_action( 'init', 'learning_search_register_block' );
+
+// -------------- Learning Hub Browse Block ------------------------ //
+
+// custom/learning-browse holds the type-filter checkboxes + paginated
+// "All X" browse list split OUT of custom/learning-search on 2026-08-16 —
+// see src/learning-browse/learning-browse.php's header comment for the
+// full "why" (short version: a persistent, independently-styled block
+// instead of a section that disappeared while the sibling search block's
+// live search was active). Reuses learning-search.php's shared helpers
+// (bitesmart_build_stage_card_list(), bitesmart_render_learning_search_type_filter(),
+// bitesmart_render_learning_search_data(), bitesmart_render_learning_search_strings(),
+// bitesmart_learning_search_headings()) — those are only ever CALLED at
+// render time (this block's own init-registered callback), not at
+// file-require time, so exact require order relative to learning-search.php
+// doesn't functionally matter, but it's required right after it here for
+// readability (same "runtime vs. require-time" fact already true of
+// guide-chapter-display.php's bitesmart_render_guide_format_controls(),
+// required much later in this file yet still safely callable from
+// learning-search.php above).
+require_once __DIR__ . '/src/learning-browse/learning-browse.php';
+
+function learning_browse_register_block() {
+    register_block_type( __DIR__ . '/build/learning-browse', array(
+        'render_callback' => 'render_learning_browse_block',
+    ) );
+}
+add_action( 'init', 'learning_browse_register_block' );
+
 // -----------------------------
 // static save blocks:
 // ----------------------------
@@ -177,9 +348,24 @@ function custom_blocks_scripts() {
     $on_legal       = is_page( 'legal' );
     $on_partnerships     = is_page( 'partnerships' );
     $on_front      = is_front_page();
+    // /learning/kids/ (slug 'kids') hosts the episode section — one or more
+    // custom/episode blocks placed manually by an editor (see
+    // [[be-bitesmart-episode-status]] in memory) — but was missing from this
+    // condition entirely, so video-toggle.js/css (the play button, video
+    // player swap-in, and language picker logic every custom/episode embed
+    // depends on) never loaded there. Episodes rendered fine (PHP-side,
+    // has_block() isn't used for this check since these are manual enqueues,
+    // not per-block asset registration), but clicking Play did nothing.
+    $on_kids       = is_page( 'kids' );
+    // /learning/ (slug 'learning') is the Learning Hub root page — a
+    // DIFFERENT page from the legacy /learn/ (slug 'learn', $on_learn
+    // above, an older unrelated page kept as its own separate check). It
+    // hosts a custom/video-quote block, same "needs video-toggle.js to
+    // actually play" dependency as custom/episode — same bug, same fix.
+    $on_learning_hub = is_page( 'learning' );
 
 
-       if ( $on_learn || $on_front || $on_parents ) {
+       if ( $on_learn || $on_front || $on_parents || $on_kids || $on_learning_hub ) {
         $asset = include plugin_dir_path( __FILE__ ) . 'build/video-toggle.asset.php';
         wp_enqueue_style(
             'video-toggle',
@@ -213,10 +399,24 @@ function custom_blocks_scripts() {
     $asset = include plugin_dir_path( __FILE__ ) . 'build/pdf-toggle/index.asset.php';
     wp_enqueue_style( 'pdf-toggle-style', plugins_url( 'build/pdf-toggle/style-index.css', __FILE__ ), array(), $asset['version'] );
 
-    // Shared by learnal-*-download blocks. Webpack only emits one style chunk per
+    // Shared by educational-*-download blocks (and now coloring-book-display/
+    // coloring-books-list — see below). Webpack only emits one style chunk per
     // shared import path, so video/coloring block.json style files are not generated.
     // Shared download-card CSS (webpack emits one chunk from the first block entry).
-    $download_card_css = plugin_dir_path( __FILE__ ) . 'build/learnal-content-download/style-index.css';
+    //
+    // NOTE: this file_exists() guard used to check a typo'd path
+    // ("build/learnal-content-download/...") that never existed, so this
+    // enqueue silently never ran — harmless before now, since each of the
+    // three educational-*-download blocks gets this same CSS anyway via its
+    // own block.json's automatic per-block enqueue whenever that block is
+    // literally present on a page. It matters now because
+    // render_coloring_book_search_card() (coloring-book-display.php) is
+    // injected into custom/learning-search's output via PHP, the same way
+    // render_qa_entry_block()/render_resource_block() are — WordPress's
+    // automatic has_block() detection can't see it, so it needs an explicit
+    // enqueue. Fixed to point at the real path instead of adding yet
+    // another special case.
+    $download_card_css = plugin_dir_path( __FILE__ ) . 'build/educational-content-download/style-index.css';
     if ( file_exists( $download_card_css ) ) {
         $download_card_asset = include plugin_dir_path( __FILE__ ) . 'build/educational-content-download/index.asset.php';
         wp_enqueue_style(
@@ -230,6 +430,184 @@ function custom_blocks_scripts() {
 
 
 add_action( 'wp_enqueue_scripts', 'custom_blocks_scripts' );
+
+// -----------------------------
+// Episode admin fields (locked into the Episode CPT's canvas — see the
+// 'template'/'template_lock' args in the Custom Post Types for BBS
+// plugin's includes/episode-cpt.php)
+// -----------------------------
+
+function episode_fields_register_block() {
+    register_block_type( __DIR__ . '/build/episode-fields' );
+}
+add_action( 'init', 'episode_fields_register_block' );
+
+// custom/episode-fields isn't a display block (save() is null, and Episode
+// posts are never publicly queryable), so it needs no render_callback —
+// but its editor script still needs the same TranslatePress-derived
+// language list episode-card/video-quote get via
+// bitesmart_localize_video_language_editors() (site-lang.php). That
+// function keys off generate_block_asset_handle(), so it already covers
+// this block too as long as it's in its $block_names list — see site-lang.php.
+
+// -----------------------------
+// Resource admin fields (locked into the Resource CPT's canvas — see the
+// 'template'/'template_lock' args in the Custom Post Types for BBS
+// plugin's includes/resource-cpt.php)
+// -----------------------------
+
+function resource_fields_register_block() {
+    register_block_type( __DIR__ . '/build/resource-fields' );
+}
+add_action( 'init', 'resource_fields_register_block' );
+
+// custom/resource-fields isn't a display block (save() is null, and
+// Resource posts are never publicly queryable), so it needs no
+// render_callback — but its editor script still needs the same
+// TranslatePress-derived language list, for its per-language Keywords
+// fields. Added to bitesmart_localize_video_language_editors()'s
+// $block_names list — see site-lang.php.
+
+// -----------------------------
+// Q&A Entry admin fields (locked into the Q&A Entry CPT's canvas — see the
+// 'template'/'template_lock' args in the Custom Post Types for BBS
+// plugin's includes/qa-entry-cpt.php)
+// -----------------------------
+
+function qa_entry_fields_register_block() {
+    register_block_type( __DIR__ . '/build/qa-entry-fields' );
+}
+add_action( 'init', 'qa_entry_fields_register_block' );
+
+// custom/qa-entry-fields isn't a display block (save() is null, and Q&A
+// Entry posts are never publicly queryable), so it needs no
+// render_callback — but its editor script still needs the same
+// TranslatePress-derived language list, for its per-language Synonyms
+// fields. Added to bitesmart_localize_video_language_editors()'s
+// $block_names list — see site-lang.php.
+
+// -----------------------------
+// Coloring Book admin fields (locked into the Coloring Book CPT's canvas —
+// see the 'template'/'template_lock' args in the Custom Post Types for BBS
+// plugin's includes/coloring-book-cpt.php)
+// -----------------------------
+
+function coloring_book_fields_register_block() {
+    register_block_type( __DIR__ . '/build/coloring-book-fields' );
+}
+add_action( 'init', 'coloring_book_fields_register_block' );
+
+// custom/coloring-book-fields isn't a display block (save() is null, and
+// Coloring Book posts are never publicly queryable), so it needs no
+// render_callback — but its editor script still needs the same
+// TranslatePress-derived language list, for its per-language Keywords
+// fields. Added to bitesmart_localize_video_language_editors()'s
+// $block_names list — see site-lang.php.
+
+// -----------------------------
+// Guide admin fields (locked into the Guide CPT's canvas — see the
+// 'template'/'template_lock' args in the Custom Post Types for BBS
+// plugin's includes/guide-cpt.php)
+// -----------------------------
+
+function guide_fields_register_block() {
+    register_block_type( __DIR__ . '/build/guide-fields' );
+}
+add_action( 'init', 'guide_fields_register_block' );
+
+// custom/guide-fields isn't a display block (save() is null) — UNLIKE the
+// other *-fields blocks above, Guide posts ARE publicly queryable now (see
+// [[be-bitesmart-guide-cpt-plan]] in memory), but the front end renders a
+// real single-guide template reading this post's chapters directly, not
+// this block's saved output, so no render_callback is needed here either.
+// No per-language fields on this one (Description only — Video/Keywords
+// live on each chapter's own custom/guide-chapter-panel instead), so unlike
+// resource-fields/episode-fields/qa-entry-fields/coloring-book-fields it
+// does NOT need adding to bitesmart_localize_video_language_editors()'s
+// $block_names list in site-lang.php.
+
+// -----------------------------
+// Guide Chapter sidebar panel (NOT a locked template block — guide_chapter's
+// canvas stays open for its real rich-text body. See
+// src/guide-chapter-panel/guide-chapter-panel.php for the full explanation
+// of why this needs its own manual enqueue/localize instead of the usual
+// register_block_type()-from-block.json + bitesmart_localize_video_language_editors()
+// combo every other fields UI in this plugin gets.)
+// -----------------------------
+require_once __DIR__ . '/src/guide-chapter-panel/guide-chapter-panel.php';
+
+// -----------------------------
+// Guide Chapter shared front-end rendering (bitesmart_render_guide_chapter_row(),
+// bitesmart_render_guide_format_controls()) + its format-toggle.js/style.css
+// enqueue. See src/guide-chapter-display/guide-chapter-display.php's header
+// comment — used by a Guide's own page, a chapter's own page, and the
+// pooled multi-Guide search page (none of which are built yet). Not a
+// registered block (no block.json) — nothing here is ever inserted via the
+// block editor.
+// -----------------------------
+require_once __DIR__ . '/src/guide-chapter-display/guide-chapter-display.php';
+
+// -----------------------------
+// Guide + Guide Chapter single-post front end (the_content filter, no new
+// theme template files — see src/guide-single/guide-single.php's header
+// comment for why). Requires guide-chapter-display.php above to already be
+// loaded, since it calls bitesmart_render_guide_chapter_row()/
+// bitesmart_render_guide_format_controls().
+// -----------------------------
+require_once __DIR__ . '/src/guide-single/guide-single.php';
+
+function guide_single_register_block() {
+    register_block_type( __DIR__ . '/build/guide-single', array(
+        'render_callback' => 'render_guide_single_block',
+    ) );
+}
+add_action( 'init', 'guide_single_register_block' );
+
+// -----------------------------
+// Guide Description block — split OUT of custom/guide-single 2026-08-16
+// (see src/guide-description/guide-description.php's header comment) so
+// the Guide's Description text can be placed independently anywhere on
+// the page, not fixed to wherever custom/guide-single itself sits.
+// -----------------------------
+require_once __DIR__ . '/src/guide-description/guide-description.php';
+
+function guide_description_register_block() {
+    register_block_type( __DIR__ . '/build/guide-description', array(
+        'render_callback' => 'render_guide_description_block',
+    ) );
+}
+add_action( 'init', 'guide_description_register_block' );
+
+// -----------------------------
+// Citation admin fields (locked into the Citation CPT's canvas — see the
+// 'template'/'template_lock' args in the Custom Post Types for BBS
+// plugin's includes/citation-cpt.php)
+// -----------------------------
+
+function citation_fields_register_block() {
+    register_block_type( __DIR__ . '/build/citation-fields' );
+}
+add_action( 'init', 'citation_fields_register_block' );
+
+// custom/citation-fields isn't a display block (save() is null, and
+// Citation posts are never publicly queryable), so it needs no
+// render_callback — same reasoning as custom/resource-fields above.
+
+// -----------------------------
+// Guide References block — auto-lists every Citation belonging to the
+// site's one Guide (see src/guide-references/guide-references.php's
+// header comment). Requires citation-cpt.php's data to already exist,
+// but has no load-order dependency on this plugin's own files (it's a
+// plain WP_Query at render time, not a require-time call).
+// -----------------------------
+require_once __DIR__ . '/src/guide-references/guide-references.php';
+
+function guide_references_register_block() {
+    register_block_type( __DIR__ . '/build/guide-references', array(
+        'render_callback' => 'render_guide_references_block',
+    ) );
+}
+add_action( 'init', 'guide_references_register_block' );
 
 // -----------------------------
 // Disable Application Passwords
