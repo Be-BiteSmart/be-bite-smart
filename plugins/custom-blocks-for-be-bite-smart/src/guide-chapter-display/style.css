@@ -465,6 +465,7 @@ body:not(.block-editor-page) .guide-chapter-download-buttons .block-toggle-btn {
 .guide-chapter-list > .guide-section-heading {
   margin-top: 32px;
   margin-bottom: 16px;
+  padding: 20px 0;
 }
 
 .guide-chapter-list > .guide-section-heading:first-child {
