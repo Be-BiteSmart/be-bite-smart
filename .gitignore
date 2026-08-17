@@ -9,8 +9,11 @@
 !plugins/
 !plugins/custom-blocks-for-be-bite-smart/ 
 !plugins/custom-blocks-for-be-bite-smart/**
+!plugins/custom-post-types-for-bbs/
+!plugins/custom-post-types-for-bbs/**
 # ← re-ignore the node_modules though
 plugins/custom-blocks-for-be-bite-smart/node_modules/  
+
 # re-ignore node_modules
 themes/twentytwentyfive-child/node_modules/  
 !.github/
