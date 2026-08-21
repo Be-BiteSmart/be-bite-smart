@@ -115,7 +115,10 @@ function render_episode_block( $attributes ) {
                         <div class="video-thumbnail">
                             <?php echo $thumbnail; ?>
                             <div class="video-overlay">
-                                <button class="play-button" aria-label="Play video" type="button"></button>
+                                <button class="play-button" type="button">
+                                    <span class="play-button-icon" aria-hidden="true"></span>
+                                    <span class="play-button-label"><?php esc_html_e( 'Watch Now', 'custom-blocks' ); ?></span>
+                                </button>
                             </div>
                         </div>
                         <div class="video-player"></div>
@@ -133,13 +136,11 @@ function render_episode_block( $attributes ) {
                         <p class="episode-description"><?php echo esc_html( $description ); ?></p>
                     <?php endif; ?>
 
-                    <div class="episode-controls">
-                        <?php echo $lang_picker_html; ?>
-
-                        <button class="watch-now-button block-toggle-btn" type="button">
-                            <span><?php esc_html_e( 'Watch Now', 'custom-blocks' ); ?></span>
-                        </button>
-                    </div>
+                    <?php if ( $lang_picker_html ) : ?>
+                        <div class="episode-controls">
+                            <?php echo $lang_picker_html; ?>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
 

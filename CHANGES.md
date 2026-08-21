@@ -1,5 +1,32 @@
 # Change log
 
+## 2026-08-20 — Merge "Watch Now" / "Watch the Mini-Documentary" buttons into the play-button pill
+
+**What was built and why:** Episode cards and the video-quote (mini-documentary) block each had two separate playback triggers doing the same job — a plain circular `.play-button` over the thumbnail, and a separate text button (`.watch-now-button` / `.video-quote-watch-button`) below it that had to be hidden once playback started. Consolidated to a single trigger: the play-button overlay is now a pill containing a `.play-button-icon` (the triangle, previously a `::after` pseudo-element) and a `.play-button-label` text span ("Watch Now" / "Watch the Mini-Documentary"), so there's one button, one click handler, and no "hide the dead button once playing" logic to maintain in two places.
+
+**Files modified:**
+
+- `plugins/custom-blocks-for-be-bite-smart/src/episode-card/index.js` — play-button now renders icon + label spans instead of an empty button; `episode-controls` wrapper (and language picker) only renders when a language picker exists, since the watch-now-button that used to fill the other side is gone
+- `plugins/custom-blocks-for-be-bite-smart/src/episode-display/episode-display.php` — same play-button markup change server-side; `episode-controls` div now conditional on `$lang_picker_html`
+- `plugins/custom-blocks-for-be-bite-smart/src/video-quote/video-quote.php` — same play-button markup change; removed the two `.video-quote-watch-button` renders (with-language-picker and no-language-picker branches)
+- `plugins/custom-blocks-for-be-bite-smart/src/video-toggle.js` — removed `watchButton` lookup, its `hidden`-class toggle on play, and its separate click listener; play-button's own listener now covers what both used to do (a click on `.play-button-label` still bubbles to the button)
+- `plugins/custom-blocks-for-be-bite-smart/src/episode-card/style.css` — dropped `.watch-now-button` rules; `.episode-controls` centers its one remaining child (language picker) instead of `space-between`
+- `plugins/custom-blocks-for-be-bite-smart/src/video-quote/style.css` — dropped all `.video-quote-watch-button` rules; play-button padding override updated for the wider pill shape
+- `themes/twentytwentyfive-child/css/shared-block-styles.css` — shared `.play-button` is now `inline-flex` with `.play-button-icon` (real element, same CSS-triangle technique) + `.play-button-label` children; `border-radius` changed from `9999px` to a fixed `2.5rem` so a two-line-wrapped label doesn't collapse the pill into a lozenge; `max-width: min(85%, 22rem)` keeps it from stretching edge-to-edge on narrow viewports
+- `themes/twentytwentyfive-child/inc/analytics.php` — Plausible click-tracking selectors for documentary and episode plays no longer include the removed `.video-quote-watch-button` / `.watch-now-button` classes
+- `tests/analytics/helpers/plausible.js`, `tests/videos/loading.spec.js` — updated to click/query `.play-button` (and `.play-button .play-button-label` where text content is asserted) instead of the removed watch-button selectors; retitled tests accordingly
+
+**Accessibility note:** the old markup relied on `aria-label="Play video"` on an otherwise-empty button. Since the button now has visible text content (`.play-button-label`), the `aria-label` was dropped in favor of the button's own accessible name from its text — same pattern already used elsewhere in the codebase.
+
+**Problems encountered and how they were fixed:**
+
+- Found the plugin and theme `build/` output were stale relative to `src/` (still contained `watch-now-button` and `Play video` strings) when picking this branch back up — ran `pnpm run build` in both `plugins/custom-blocks-for-be-bite-smart` and `themes/twentytwentyfive-child` to regenerate them. Confirmed no `watch-now-button` / `video-quote-watch-button` / `Play video` strings remain anywhere under either `build/` directory.
+- Checked `guide-chapter-display.php` (also has `.play-button` in a doc-comment) — it doesn't render the shared play-button markup at all, so it wasn't affected by the shared CSS change.
+
+**Verification:** Both `pnpm run build` runs completed successfully (exit code 0). Have not yet run Playwright against a deployed environment — `tests/videos/loading.spec.js` and `tests/analytics/helpers/plausible.js` hit `PLAYWRIGHT_BASE_URL`/production by default and won't reflect this change until deployed.
+
+**What the next logical step would be:** Deploy plugin + theme (PHP, CSS, and rebuilt `build/` output) to staging, purge cache, then run `pnpm exec playwright test tests/videos/loading.spec.js` against staging to confirm the consolidated play-button pill loads Vimeo embeds correctly and Plausible tracking still fires.
+
 ## 2026-06-29 — PR Branch Deployment to Staging + Playwright Basic Auth Fix
 
 **What was built and why:**

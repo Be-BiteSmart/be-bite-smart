@@ -217,7 +217,7 @@ function track_user_interactions() {
 
     // Mini-documentary play buttons (home + education pages) — no language variant
     $track_documentary = "
-        document.querySelectorAll('.video-quote-watch-button, .video-quote-block .play-button').forEach(function(btn) {
+        document.querySelectorAll('.video-quote-block .play-button').forEach(function(btn) {
             btn.addEventListener('click', function() {
                 track('documentary-watched');
             });
@@ -304,7 +304,7 @@ function track_user_interactions() {
         });
 
         // Episode video plays — getLang reads the active EN/ES toggle on the card
-        document.querySelectorAll('.watch-now-button, .video-episode-block .play-button').forEach(function(btn) {
+        document.querySelectorAll('.video-episode-block .play-button').forEach(function(btn) {
             btn.addEventListener('click', function() {
                 const lang = getLang(btn);
                 if (!lang) return;

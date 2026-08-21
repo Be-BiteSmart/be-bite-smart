@@ -8,7 +8,7 @@ import {
 
 test.describe("Documentary video (video-quote block)", () => {
   for (const path of ["/", EDUCATION_PATH]) {
-    test(`${path} Watch button loads Vimeo embed`, async ({ page }, testInfo) => {
+    test(`${path} play button pill loads Vimeo embed`, async ({ page }, testInfo) => {
       await gotoExpectOk(page, path);
 
       const block = page.locator(".video-quote-block").first();
@@ -19,7 +19,7 @@ test.describe("Documentary video (video-quote block)", () => {
 
       const vimeoId = await block.getAttribute("data-quote-vimeo-id");
       const siteLang = (await block.getAttribute("data-site-lang")) || "en";
-      const trigger = block.locator(".video-quote-watch-button");
+      const trigger = block.locator(".play-button");
 
       // Intercept Plausible events to prevent sending to actual service
       await spyOnPlausible(page);
@@ -36,13 +36,13 @@ test.describe("Documentary video (video-quote block)", () => {
       });
     });
 
-    test(`${path} thumbnail play button loads Vimeo embed`, async ({ page }) => {
+    test(`${path} thumbnail click loads Vimeo embed`, async ({ page }) => {
       await gotoExpectOk(page, path);
 
       const block = page.locator(".video-quote-block").first();
       const vimeoId = await block.getAttribute("data-quote-vimeo-id");
       const siteLang = (await block.getAttribute("data-site-lang")) || "en";
-      const trigger = block.locator(".play-button");
+      const trigger = block.locator(".video-thumbnail");
 
       // Intercept Plausible events to prevent sending to actual service
       await spyOnPlausible(page);
@@ -84,14 +84,14 @@ test.describe("Documentary video (video-quote block)", () => {
 
     await spyOnPlausible(page);
 
-    await assertVimeoPlayerLoads(page, block, block.locator(".video-quote-watch-button"), {
+    await assertVimeoPlayerLoads(page, block, block.locator(".play-button"), {
       vimeoId,
       lang: "es",
       forceCaptions: true,
     });
   });
 
-  test(`${EDUCATION_PATH} watch button text stays the same across language switches`, async ({
+  test(`${EDUCATION_PATH} play button label text stays the same across language switches`, async ({
     page,
   }, testInfo) => {
     await gotoExpectOk(page, EDUCATION_PATH);
@@ -106,17 +106,17 @@ test.describe("Documentary video (video-quote block)", () => {
       return;
     }
 
-    const watchButton = block.locator(".video-quote-watch-button");
-    const originalText = (await watchButton.textContent())?.trim();
-    expect(originalText, "watch button has no text").toBeTruthy();
+    const playButtonLabel = block.locator(".play-button .play-button-label");
+    const originalText = (await playButtonLabel.textContent())?.trim();
+    expect(originalText, "play button has no label text").toBeTruthy();
 
-    // The watch button text is now a static, site-language string — it must
+    // The play button label is a static, site-language string — it must
     // never swap based on which language pill is selected (that per-language
     // watch-label behavior was deliberately removed).
     for (let i = 0; i < segmentCount; i++) {
       await segments.nth(i).click();
       await expect(segments.nth(i)).toHaveClass(/active/);
-      await expect(watchButton).toHaveText(originalText);
+      await expect(playButtonLabel).toHaveText(originalText);
     }
   });
 
@@ -143,7 +143,7 @@ test.describe("Documentary video (video-quote block)", () => {
     const iframe = await assertVimeoPlayerLoads(
       page,
       block,
-      block.locator(".video-quote-watch-button"),
+      block.locator(".play-button"),
       { vimeoId, lang: siteLang, forceCaptions: true },
     );
     const srcBeforeSwitch = await iframe.getAttribute("src");
@@ -171,7 +171,7 @@ test.describe("Documentary video (video-quote block)", () => {
 });
 
 test.describe("Episode videos (education page)", () => {
-  test("Watch Now loads the correct Vimeo embed for every language", async ({
+  test("play button loads the correct Vimeo embed for every language", async ({
     page,
   }, testInfo) => {
     test.setTimeout(180_000);
@@ -231,7 +231,7 @@ test.describe("Episode videos (education page)", () => {
         const iframe = await assertVimeoPlayerLoads(
           page,
           episode,
-          episode.locator(".watch-now-button"),
+          episode.locator(".play-button"),
           { vimeoId, lang },
         );
 

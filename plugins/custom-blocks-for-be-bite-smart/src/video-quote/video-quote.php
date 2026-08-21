@@ -63,7 +63,10 @@ function render_video_quote_block( $attributes ) {
                             <div class="video-thumbnail">
                                 <?php echo $thumbnail; ?>
                                 <div class="video-overlay">
-                                    <button class="play-button" aria-label="Play video" type="button"></button>
+                                    <button class="play-button" type="button">
+                                        <span class="play-button-icon" aria-hidden="true"></span>
+                                        <span class="play-button-label">Watch the Mini-Documentary</span>
+                                    </button>
                                 </div>
                             </div>
                             <div class="video-player"></div>
@@ -79,14 +82,7 @@ function render_video_quote_block( $attributes ) {
                     <div class="video-quote-controls">
                         <?php echo bitesmart_render_lang_picker_html( $available_languages, $active_lang ); ?>
                         <p class="video-quote-track-note" role="status" aria-live="polite"></p>
-                        <button class="video-quote-watch-button block-toggle-btn" type="button">
-                            <span>Watch the Mini-Documentary</span>
-                        </button>
                     </div>
-                <?php else : ?>
-                    <button class="video-quote-watch-button block-toggle-btn" type="button">
-                        <span>Watch the Mini-Documentary</span>
-                    </button>
                 <?php endif; ?>
 
                 <?php if ( $quote ) : ?>

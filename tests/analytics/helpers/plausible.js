@@ -243,11 +243,11 @@ export async function testEpisodeLanguage(page, testInfo, episode, lang) {
   });
   await expect(segment).toHaveClass(/active/);
 
-  // Click Watch Now and spy
+  // Click the play button and spy
 
   // Spy fresh for this click
   await spyOnPlausible(page);
-  await episode.locator(".watch-now-button").click();
+  await episode.locator(".play-button").click();
 
   // ****** Part 2: Check iframe loaded after click was done  ********
 
@@ -336,11 +336,11 @@ export async function testMiniDocPlay(page, testInfo, url) {
   const baseURL = testInfo.project.use?.baseURL ?? "https://www.bebitesmart.org";
   await gotoExpectOk(page, url, baseURL);
 
-  const playButton = page.locator(".video-quote-watch-button");
+  const playButton = page.locator(".video-quote-block .play-button");
   const watchCount = await playButton.count();
   const blockCount = await page.locator(".video-quote-block").count();
   await testInfo.attach(`${url} documentary markup`, {
-    body: `video-quote-watch-button: ${watchCount}, video-quote-block: ${blockCount}`,
+    body: `video-quote-block .play-button: ${watchCount}, video-quote-block: ${blockCount}`,
     contentType: "text/plain",
   });
   expect(

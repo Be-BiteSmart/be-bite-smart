@@ -241,9 +241,6 @@ document.addEventListener("DOMContentLoaded", function () {
     const thumbnail = block.querySelector(".video-thumbnail");
     const videoPlayer = block.querySelector(".video-player");
     const playButton = block.querySelector(".play-button");
-    const watchButton = block.querySelector(
-      ".watch-now-button, .video-quote-watch-button",
-    );
 
     const langSegments = getLangSegments(block);
     const langPicker = getLangPicker(block);
@@ -303,7 +300,6 @@ document.addEventListener("DOMContentLoaded", function () {
       videoPlayer.innerHTML = "";
       videoPlayer.appendChild(iframe);
       thumbnail.classList.add("hidden");
-      if (watchButton) watchButton.classList.add("hidden");
       isPlaying = true;
 
       if (!isQuoteBlock) {
@@ -421,24 +417,19 @@ document.addEventListener("DOMContentLoaded", function () {
       });
     }
 
-    // These three are all "start playback" triggers — once a video is
-    // already playing, clicking any of them again should do nothing rather
-    // than tear down and rebuild the iframe from scratch (loadVideo() always
-    // replaces videoPlayer's contents unconditionally). This is separate
-    // from the confirmed-language-restart path in handleLangSegmentClick(),
-    // which calls loadVideo() directly and deliberately still reloads.
+    // These two are both "start playback" triggers — once a video is
+    // already playing, clicking either of them again should do nothing
+    // rather than tear down and rebuild the iframe from scratch (loadVideo()
+    // always replaces videoPlayer's contents unconditionally). This is
+    // separate from the confirmed-language-restart path in
+    // handleLangSegmentClick(), which calls loadVideo() directly and
+    // deliberately still reloads. playButton's label span is just a DOM
+    // child of the button — a click on it bubbles here normally, no
+    // separate handling needed.
     if (playButton) {
       playButton.addEventListener("click", function (e) {
         e.preventDefault();
         e.stopPropagation();
-        if (isPlaying) return;
-        loadVideo();
-      });
-    }
-
-    if (watchButton) {
-      watchButton.addEventListener("click", function (e) {
-        e.preventDefault();
         if (isPlaying) return;
         loadVideo();
       });

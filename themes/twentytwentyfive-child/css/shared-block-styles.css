@@ -101,12 +101,26 @@ body:not(.block-editor-page) .custom-block-card .pdf-viewer-container iframe {
 
 /* Orange play button */
 
-/* ── Play Button (shared) ── */
+/* ── Play Button (shared) ──
+   Icon + label pill: a real .play-button-icon element (not a ::after
+   pseudo-element) drawn with the same CSS-triangle border trick, followed by
+   a .play-button-label text span — both are children of the button so a
+   click anywhere on either bubbles to the button's own click listener
+   (video-toggle.js) with no extra wiring needed. border-radius is a fixed
+   rem value rather than 9999px: once the label wraps to 2 lines on a narrow
+   viewport the box's height can exceed its width, and 9999px rounds to
+   min(width,height)/2 in that case — an odd lozenge, not a stable pill. */
 .play-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  max-width: min(85%, 22rem);
+  box-sizing: border-box;
   background: var(--wp--preset--color--accent-1);
   color: white;
-  padding: 0.75rem;
-  border-radius: 9999px;
+  padding: 0.75rem 1.25rem;
+  border-radius: 2.5rem;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
   border: none;
   cursor: pointer;
@@ -132,22 +146,19 @@ body:not(.block-editor-page) .custom-block-card .pdf-viewer-container iframe {
     0 4px 6px rgba(0, 0, 0, 0.2);
 }
 
-.play-button svg {
-  pointer-events: none;
-  display: block;
-  width: 20px;
-  height: 20px;
-}
-
-.play-button::after {
-  content: "";
+.play-button-icon {
   display: block;
   width: 0;
   height: 0;
   border-style: solid;
   border-width: 8px 0 8px 16px;
   border-color: transparent transparent transparent white;
-  margin-left: 3px;
+  flex-shrink: 0;
+}
+
+.play-button-label {
+  text-align: center;
+  line-height: 1.3;
 }
 
 /*  Video thumbnail, overlay and player */

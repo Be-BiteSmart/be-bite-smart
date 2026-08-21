@@ -211,7 +211,11 @@
 
 @media (min-width: 601px) {
   .episode-controls {
-    justify-content: space-between;
+    /* Was space-between to balance the language picker against a watch
+       button on the other side; that button is gone (its CTA text now
+       lives on the thumbnail's play-button pill instead), so center the
+       lone remaining child the same way mobile already does. */
+    justify-content: center;
     max-width: 430px;
     width: auto;
   }
@@ -221,18 +225,6 @@
    Moved to ../shared/lang-picker.css (imported from index.js) so a
    video-quote-only page also gets these styles without depending on
    episode-card being present. */
-
-/* ── Watch Now Button ── */
-.episode-controls .watch-now-button.block-toggle-btn {
-  margin-top: 0 !important; /* global adds 1rem; not wanted here */
-}
-
-/* Once playback starts, the button is a dead trigger (loadVideo() no-ops
-   while isPlaying) — hide it same as the thumbnail's .hidden treatment in
-   video-toggle.js, since the Vimeo iframe has its own play/pause controls. */
-.episode-controls .watch-now-button.hidden {
-  display: none !important;
-}
 
 /* ── Download Buttons ── */
 .download-buttons {
