@@ -117,7 +117,7 @@ function render_episode_block( $attributes ) {
                             <div class="video-overlay">
                                 <button class="play-button" type="button">
                                     <span class="play-button-icon" aria-hidden="true"></span>
-                                    <span class="play-button-label"><?php esc_html_e( 'Watch Now', 'custom-blocks' ); ?></span>
+                                    <span class="play-button-label"><?php esc_html_e( 'Watch', 'custom-blocks' ); ?></span>
                                 </button>
                             </div>
                         </div>

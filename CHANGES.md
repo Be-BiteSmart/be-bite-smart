@@ -1,5 +1,20 @@
 # Change log
 
+## 2026-08-21 — Play-button label: "Watch Now" / "Watch the Mini-Documentary" → "Watch"
+
+**What was built and why:** Shortened the play-button pill's label text to just "Watch" on both episode cards and the video-quote (mini-documentary) block, for a terser CTA.
+
+**Files modified:**
+
+- `plugins/custom-blocks-for-be-bite-smart/src/episode-card/index.js` — `__("Watch Now", "custom-blocks")` → `__("Watch", "custom-blocks")`
+- `plugins/custom-blocks-for-be-bite-smart/src/episode-display/episode-display.php` — same string, PHP `esc_html_e()` side
+- `plugins/custom-blocks-for-be-bite-smart/src/video-quote/video-quote.php` — `"Watch the Mini-Documentary"` → `"Watch"`
+- `plugins/custom-blocks-for-be-bite-smart/build/**` — rebuilt via `pnpm run build`
+
+**Scope note:** left the test title `"Watch Now fires episodes-watched..."` (`tests/analytics/events.spec.js`) and the descriptive "Watch Now" mentions in `README.md`/`analytics.php` comments as-is — those describe the click action generically, not the literal rendered label, and don't assert exact button text.
+
+**Verification:** Build completed successfully; confirmed no remaining "Watch Now" / "Watch the Mini-Documentary" strings under `plugins/custom-blocks-for-be-bite-smart/build/`.
+
 ## 2026-08-20 — Play-button pill: orange → accent-2 (blue) for contrast
 
 **What was built and why:** The new play-button pill (white icon + white label text on an orange `accent-1` fill, `#D16B0C`) fails WCAG AA color contrast for normal text — white-on-`#D16B0C` is ~3.6:1, below the 4.5:1 minimum. Switched the pill's background (base and `:hover`) to `accent-2`, the same CSS custom property the language toggle/picker already uses at this identical white-text/white-icon-on-fill pairing (`lang-picker.css`), so the fix reuses an already-accessible color instead of picking a new one and re-deriving contrast.

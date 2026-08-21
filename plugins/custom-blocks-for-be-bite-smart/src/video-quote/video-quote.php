@@ -65,7 +65,7 @@ function render_video_quote_block( $attributes ) {
                                 <div class="video-overlay">
                                     <button class="play-button" type="button">
                                         <span class="play-button-icon" aria-hidden="true"></span>
-                                        <span class="play-button-label">Watch the Mini-Documentary</span>
+                                        <span class="play-button-label">Watch</span>
                                     </button>
                                 </div>
                             </div>

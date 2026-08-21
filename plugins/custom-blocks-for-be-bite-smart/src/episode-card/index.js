@@ -95,7 +95,7 @@ function EpisodeCardSave({ attributes }) {
                   wp.element.createElement(
                     "span",
                     { className: "play-button-label" },
-                    __("Watch Now", "custom-blocks"),
+                    __("Watch", "custom-blocks"),
                   ),
                 ),
               ),
