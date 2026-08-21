@@ -1,5 +1,18 @@
 # Change log
 
+## 2026-08-20 — Play-button pill: orange → accent-2 (blue) for contrast
+
+**What was built and why:** The new play-button pill (white icon + white label text on an orange `accent-1` fill, `#D16B0C`) fails WCAG AA color contrast for normal text — white-on-`#D16B0C` is ~3.6:1, below the 4.5:1 minimum. Switched the pill's background (base and `:hover`) to `accent-2`, the same CSS custom property the language toggle/picker already uses at this identical white-text/white-icon-on-fill pairing (`lang-picker.css`), so the fix reuses an already-accessible color instead of picking a new one and re-deriving contrast.
+
+**Files modified:**
+
+- `themes/twentytwentyfive-child/css/shared-block-styles.css` — `.play-button` and `.play-button:hover` now reference `--wp--preset--color--accent-2` instead of `--wp--preset--color--accent-1`
+- `themes/twentytwentyfive-child/build/shared-blocks.css`, `shared-blocks-rtl.css`, `shared-blocks.asset.php` — rebuilt via `pnpm run build`
+
+**Verification:** Build completed successfully; confirmed `accent-2` (not `accent-1`) in the rebuilt `build/shared-blocks.css` output. Visual/contrast check still needs to happen in the browser (Local) since `accent-2`'s actual rendered value can be overridden by Global Styles in the database, not just `theme.json`.
+
+**What the next logical step would be:** Load the site in Local and eyeball the play-button pill on the home/`/learn/` pages to confirm it now matches the language toggle's blue and reads clearly; re-run an axe/contrast check once deployed.
+
 ## 2026-08-20 — Merge "Watch Now" / "Watch the Mini-Documentary" buttons into the play-button pill
 
 **What was built and why:** Episode cards and the video-quote (mini-documentary) block each had two separate playback triggers doing the same job — a plain circular `.play-button` over the thumbnail, and a separate text button (`.watch-now-button` / `.video-quote-watch-button`) below it that had to be hidden once playback started. Consolidated to a single trigger: the play-button overlay is now a pill containing a `.play-button-icon` (the triangle, previously a `::after` pseudo-element) and a `.play-button-label` text span ("Watch Now" / "Watch the Mini-Documentary"), so there's one button, one click handler, and no "hide the dead button once playing" logic to maintain in two places.

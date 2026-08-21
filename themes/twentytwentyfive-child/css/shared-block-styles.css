@@ -117,7 +117,14 @@ body:not(.block-editor-page) .custom-block-card .pdf-viewer-container iframe {
   gap: 0.6rem;
   max-width: min(85%, 22rem);
   box-sizing: border-box;
-  background: var(--wp--preset--color--accent-1);
+  /* accent-2, not accent-1 (orange): orange failed color-contrast for
+     white icon/label text at this size (~3.6:1, below the 4.5:1 AA
+     minimum for normal text). accent-2 is already used at this same
+     white-on-fill combination by the language toggle/picker
+     (lang-picker.css), so reusing it keeps the play-button visually
+     consistent with an already-accessible pairing instead of picking a
+     new color and re-deriving contrast from scratch. */
+  background: var(--wp--preset--color--accent-2);
   color: white;
   padding: 0.75rem 1.25rem;
   border-radius: 2.5rem;
@@ -130,7 +137,7 @@ body:not(.block-editor-page) .custom-block-card .pdf-viewer-container iframe {
 }
 
 .play-button:hover {
-  background: color-mix(in srgb, var(--wp--preset--color--accent-1) 70%, black);
+  background: color-mix(in srgb, var(--wp--preset--color--accent-2) 70%, black);
   transform: scale(1.1);
 }
 
