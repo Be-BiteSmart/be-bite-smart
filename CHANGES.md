@@ -1,5 +1,29 @@
 # Change log
 
+## 2026-08-25 — Fix `.no-underline-link` not removing the Learning Hub title link's underline
+
+**What was built and why:** Janet turned the Learning Hub site title into a paragraph containing a link (so it points to `/learn/` instead of the default homepage) and added a `no-underline-link` "Additional CSS class" to remove the link's underline, but the underline still showed even though DevTools confirmed the class was present.
+
+**Problems encountered, why they happened, and how they were fixed:** WordPress's "Additional CSS class(es)" setting applies to the block's own wrapper element — here, the paragraph — not to a link nested inside it. `text-decoration-line` isn't inherited the normal way: a browser's default `<a>` underline is a separate decoration from anything declared on its parent, so `.no-underline-link { text-decoration-thickness: 0 !important; }` had nothing to act on when the class sat on the `<p>` and not the `<a>`. Also, `text-decoration-thickness: 0` alone is a fragile way to hide an underline, since some browsers can round a 0 thickness back up to a visible minimum instead of rendering nothing. Fixed by also targeting `.no-underline-link a` and switching to `text-decoration: none !important`, which reliably turns the line off regardless of which element (wrapper or link) actually carries the class.
+
+**Files modified:**
+
+- `themes/twentytwentyfive-child/style.css` — `.no-underline-link` rule now also matches `.no-underline-link a`, and uses `text-decoration: none !important` instead of `text-decoration-thickness: 0px !important`
+
+**Verification:** Not yet confirmed in the browser (Local) — next step is to reload the Learning Hub header and check the title link no longer shows an underline.
+
+**Follow-up — cache-busting gap found while testing this fix:** After the CSS edit, the browser kept showing the parent theme's `a { text-decoration-thickness: 1px !important }` (from `themes/twentytwentyfive/style.css`) as if the new rule weren't there at all — not a specificity problem (`.no-underline-link a` is more specific and also `!important`), but a stale-cache one. `twentytwentyfive-child`'s enqueued `style.css` is versioned from `build/style.asset.php` (`functions.php`), and that hash comes from `@wordpress/dependency-extraction-webpack-plugin` hashing the compiled **JS** entry (`src/style.js`, a near-empty file that just imports `style.css`) — not the CSS content. Ran `pnpm run build` expecting it to refresh the hash and confirmed it did not: `build/style.asset.php`'s version (`70bdde6439205150e1b9`) was identical before and after the build, because the JS entry never changed. So this project's version-hash cache-busting silently does nothing for CSS-only edits to `style.css`, `css/navbar.css`, `css/forminator.css`, or `css/shared-block-styles.css` — a hard browser refresh (or cache purge on deployed environments) is the only thing that reliably shows a pure-CSS change right now.
+
+**Fix applied:** Replaced `get_asset()` (which read `build/*.asset.php`'s webpack-JS-derived hash) with `get_css_version( $relative_path )`, which returns `substr( md5_file( $full ), 0, 20 )` of the actual enqueued CSS file — falling back to `'1.0.0'` if the file is missing, same as before. Updated all four `wp_enqueue_style()` calls (`style.css`, `css/navbar.css`, `css/forminator.css`, `css/shared-block-styles.css`) to use it. This is git-safe (unlike `filemtime()`, which the original code's comment already noted was rejected because git stamps every file with checkout time on `git pull`, busting cache for every stylesheet on every deploy whether it changed or not) — the version string now only changes when a CSS file's actual bytes change.
+
+**Files modified:**
+
+- `themes/twentytwentyfive-child/functions.php` — `get_asset()` → `get_css_version()`; all four CSS `wp_enqueue_style()` calls now pass `get_css_version( <relative path> )` instead of an asset-file version; removed the now-stale comment about the asset.php hash being sufficient for cache-busting
+
+**Verification:** Confirmed `md5sum style.css | cut -c1-20` matches what `get_css_version('style.css')` will compute (`f06573dccf2010517f51`), and that this value already reflects the `.no-underline-link` fix above. `php -l` wasn't available in this shell to lint the file directly, so verification was by careful re-read of the edited `functions.php` rather than a syntax-checker run. Not yet confirmed via an actual page load in Local.
+
+**What the next logical step would be:** Load the site in Local, confirm the Learning Hub title link's `<link>` tag now carries a fresh `?ver=` value and the underline is gone; the `build/*.asset.php` files are no longer read for CSS versioning at all (still produced by `pnpm run build` since JS entries still exist, just unused for this purpose) — worth deciding later whether to drop those unused JS entries/asset files entirely, but out of scope for this fix.
+
 ## 2026-08-21 — Play-button label: "Watch Now" / "Watch the Mini-Documentary" → "Watch"
 
 **What was built and why:** Shortened the play-button pill's label text to just "Watch" on both episode cards and the video-quote (mini-documentary) block, for a terser CTA.

@@ -49,9 +49,22 @@ strong {
   *
   * !important is required to override the core block styles.
  */
+
+/* Also targets a descendant `a` because the "Additional CSS class" WordPress
+   applies to a block lands on the block's own wrapper element (e.g. the
+   Site Title paragraph), not on a link nested inside it. A link's own
+   default underline is a separate text-decoration from its parent's, so a
+   rule on the parent alone never touches it. text-decoration-thickness: 0
+   was also unreliable on its own (browsers can round a 0 thickness back up
+   to a visible minimum) — text-decoration: none turns the line off outright. */
+.no-underline-link,
+.no-underline-link a {
+  text-decoration: none !important;
+}
+
 .wp-block-group.alignfull.has-global-padding:first-child {
   padding-top: 0 !important;
-  padding-bottom: 0 !important;   /*   padding-bottom & padding: 0 !important; to remove the bottom padding that the 1st div inside main gets added to it, which pushes down the footer oddly, which would lead to a huge gap between the content and main */
+  padding-bottom: 0 !important; /*   padding-bottom & padding: 0 !important; to remove the bottom padding that the 1st div inside main gets added to it, which pushes down the footer oddly, which would lead to a huge gap between the content and main */
 }
 
 /* hide the "homepage" title visually, but keep it for accessibility 
