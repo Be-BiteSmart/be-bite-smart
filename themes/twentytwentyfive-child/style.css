@@ -147,8 +147,9 @@ p.ages-badge {
   outline: none;
 }
 
-/* Add small "SM" after the site title */
-.wp-block-site-title::after {
+/* Add small "SM" after the site title, and after anything with .service-mark */
+.wp-block-site-title::after,
+.service-mark::after {
   content: "SM";
   display: inline !important;
   white-space: nowrap;
