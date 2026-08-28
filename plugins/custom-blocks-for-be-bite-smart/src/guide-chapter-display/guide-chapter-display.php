@@ -710,10 +710,16 @@ function render_guide_chapter_pooled_card( $attributes ) {
  * enqueued whenever a Learning Hub Search/Browse block is present — see
  * bitesmart_learning_search_enqueue_card_styles() in learning-search.php.
  *
- * Heading is "Chapter {number}: {title}" (falls back to just the title if
- * Chapter Number isn't filled in) — same "Chapter N" phrasing already used
- * for this field everywhere else in wp-admin (see its TextControl `help`
- * text in guide-chapter-panel/index.js). The revealed body shows the
+ * Heading is a real, editor-authored Question (_bitesmart_chapter_question,
+ * guide-chapter-cpt.php), falling back to the plain chapter title when
+ * Question hasn't been filled in — NOT the "Chapter {number}: {title}"
+ * phrasing this used before 2026-08-28 (that sprintf() logic was removed
+ * entirely, not just bypassed). This is scoped to THIS compact Stage-page
+ * teaser only — render_guide_chapter_pooled_card() /
+ * bitesmart_render_guide_chapter_row() below (the pooled multi-Guide search
+ * page's full chapter accordion) are untouched and still show "Chapter
+ * {number}: {title}" via _bitesmart_chapter_number, per Janet's decision to
+ * keep that page's rich chapter view as-is. The revealed body shows the
  * chapter's Summary (its own "shown even when collapsed" field — see
  * guide-chapter-cpt.php — reused here as the teaser's own hook text) plus
  * a single "View full chapter page" link to the chapter's real permalink
@@ -736,21 +742,19 @@ function render_guide_chapter_search_card( $attributes ) {
         return '';
     }
 
-    $number  = get_post_meta( $chapter_id, '_bitesmart_chapter_number', true );
-    $summary = get_post_meta( $chapter_id, '_bitesmart_chapter_summary', true );
-    $title   = get_the_title( $post );
-
-    $heading = $number
-        /* translators: 1: chapter number, 2: chapter title */
-        ? sprintf( __( 'Chapter %1$s: %2$s', 'custom-blocks' ), $number, $title )
-        : $title;
+    $summary  = get_post_meta( $chapter_id, '_bitesmart_chapter_summary', true );
+    $title    = get_the_title( $post );
+    $question = get_post_meta( $chapter_id, '_bitesmart_chapter_question', true );
+    if ( ! $question ) {
+        $question = $title; // no editor-authored Question yet — plain title, not "Chapter N: Title".
+    }
 
     ob_start();
     ?>
     <article class="wp-block-custom-qa-entry">
         <details class="qa-entry-card-container custom-block-accent-card">
             <summary class="qa-entry-summary">
-                <h3 class="qa-entry-question custom-block-accent-heading"><?php echo esc_html( $heading ); ?></h3>
+                <h3 class="qa-entry-question custom-block-accent-heading"><?php echo esc_html( $question ); ?></h3>
                 <svg class="qa-entry-chevron" viewBox="0 0 20 20" width="20" height="20" aria-hidden="true" focusable="false">
                     <polyline points="5 7.5 10 12.5 15 7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline>
                 </svg>

@@ -272,11 +272,14 @@ function bitesmart_sanitize_guide_chapter_videos_by_lang( $value ) {
 }
 
 /**
- * Sanitize the per-language search-matching Keywords map — identical
+ * Sanitize the per-language search-matching Synonyms map — identical
  * shape/reasoning to bitesmart_sanitize_episode_keywords_by_lang() in
- * episode-cpt.php. Feeds bitesmart_stage_card_keywords() (learning-search.php)
- * once the chapter's search card is wired in, same as Q&A Entry's
- * Synonyms / Resource's Keywords / Episode's Keywords.
+ * episode-cpt.php. Feeds bitesmart_stage_card_keywords() (learning-search.php),
+ * same as Q&A Entry's Synonyms / Resource's Keywords / Episode's Synonyms.
+ * Labeled "Synonyms" in the editing UI (guide-chapter-panel/index.js) as of
+ * 2026-08-28, to match Q&A Entry's naming — the meta key itself
+ * (_bitesmart_chapter_keywords_by_lang) and this function's name were
+ * deliberately left unchanged, this was a user-facing label-only rename.
  *
  * @param mixed $value Raw value.
  * @return array<string, string>
@@ -347,6 +350,29 @@ function bitesmart_register_guide_chapter_meta() {
         'auth_callback'     => 'bitesmart_guide_chapter_meta_auth_callback',
     ) );
 
+    // Real editor-authored question shown as the H3 heading on this
+    // chapter's compact Stage-page search-result card
+    // (render_guide_chapter_search_card(), guide-chapter-display.php) —
+    // added 2026-08-28, same field/reasoning as Episode's
+    // _bitesmart_episode_question (episode-cpt.php): replaces an earlier
+    // "Chapter {number}: {title}" sprintf() heading. Single plain string
+    // (not per-language), since it renders as real visible text and
+    // TranslatePress picks it up normally. Deliberately does NOT affect the
+    // pooled multi-Guide search page's full chapter accordion
+    // (render_guide_chapter_pooled_card() -> bitesmart_render_guide_chapter_row(),
+    // guide-chapter-display.php), which still shows "Chapter {number}:
+    // {title}" exactly as before — this field is read only by the compact
+    // Stage-page teaser. Left blank, the render function falls back to the
+    // plain post title (get_the_title()).
+    register_post_meta( 'guide_chapter', '_bitesmart_chapter_question', array(
+        'type'              => 'string',
+        'single'            => true,
+        'default'           => '',
+        'sanitize_callback' => 'sanitize_text_field',
+        'show_in_rest'      => true,
+        'auth_callback'     => 'bitesmart_guide_chapter_meta_auth_callback',
+    ) );
+
     // Per-language Vimeo URLs for this chapter's video version — identical
     // shape to Episode's _bitesmart_episode_videos_by_lang. An empty map
     // means this chapter has no video version (drives the "video" badge
@@ -408,6 +434,8 @@ function bitesmart_register_guide_chapter_meta() {
     // rendered as visible page text, so TranslatePress won't auto-translate
     // it (same caveat as every other content type's Keywords/Synonyms
     // field). Same shape as Episode's _bitesmart_episode_keywords_by_lang.
+    // Labeled "Synonyms" in the editing UI as of 2026-08-28 to match Q&A
+    // Entry's naming; meta key kept as-is.
     register_post_meta( 'guide_chapter', '_bitesmart_chapter_keywords_by_lang', array(
         'type'              => 'object',
         'single'            => true,

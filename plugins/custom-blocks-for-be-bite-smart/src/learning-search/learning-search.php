@@ -93,10 +93,15 @@
  * custom/resource's block.json were registered on init — no guessing at
  * the handle string.
  *
- * Episode cards (render_episode_search_card() in episode-display.php) need
- * nothing added here — they deliberately reuse custom/qa-entry's own
- * markup/classes rather than custom/episode's, so qa-entry's style handle
- * (already enqueued below) covers them too.
+ * Episode cards (render_episode_search_card() in episode-display.php)
+ * mostly reuse custom/qa-entry's own markup/classes rather than
+ * custom/episode's, so qa-entry's style handle (enqueued below) covers most
+ * of their look — EXCEPT the thumbnail/Q&A-description layout added
+ * 2026-08-28 (.episode-search-card-thumbnail/-description), which lives in
+ * custom/episode's own style.css instead (episode-display/style.css) — see
+ * that file's own comment. That's why 'custom/episode' is now in the array
+ * below too, alongside qa-entry/resource, even though this card's markup
+ * still isn't custom/episode's own card markup.
  */
 function bitesmart_learning_search_enqueue_card_styles() {
     if ( ! function_exists( 'generate_block_asset_handle' ) ) {
@@ -110,7 +115,7 @@ function bitesmart_learning_search_enqueue_card_styles() {
         return;
     }
 
-    foreach ( array( 'custom/qa-entry', 'custom/resource' ) as $block_name ) {
+    foreach ( array( 'custom/qa-entry', 'custom/resource', 'custom/episode' ) as $block_name ) {
         $handle = generate_block_asset_handle( $block_name, 'style' );
         if ( wp_style_is( $handle, 'registered' ) ) {
             wp_enqueue_style( $handle );
@@ -180,15 +185,20 @@ function bitesmart_stage_cards_maybe_bump_terms( $object_id, $terms, $tt_ids, $t
 add_action( 'set_object_terms', 'bitesmart_stage_cards_maybe_bump_terms', 10, 4 );
 
 /**
- * Per-language search-matching keywords for one post, plain string,
- * '' if none filled in for that language. Reads whichever of the per-
- * language meta keys applies to the post's type — Episode's
- * (`_bitesmart_episode_keywords_by_lang`) added 2026-08-13 so Episodes
- * shown in this search can match on more than just their synthesized
- * question text, same as Q&A Entry's Synonyms / Resource's Keywords.
- * Guide Chapter's (`_bitesmart_chapter_keywords_by_lang`) added the same
- * way — see [[be-bitesmart-guide-cpt-plan]] in memory. Book's
- * (`_bitesmart_book_keywords_by_lang`) added the same way, 2026-08-16.
+ * Per-language search-matching Synonyms/Keywords for one post, plain
+ * string, '' if none filled in for that language. Reads whichever of the
+ * per-language meta keys applies to the post's type — Q&A Entry's
+ * (`_bitesmart_qa_synonyms_by_lang`), Episode's
+ * (`_bitesmart_episode_keywords_by_lang`, added 2026-08-13) and Guide
+ * Chapter's (`_bitesmart_chapter_keywords_by_lang`) all feed this exact
+ * same mechanism, so a Synonyms/Keywords match works identically for all
+ * three — this already covers Episode and Guide Chapter, not just Q&A
+ * Entry, with no extra wiring. Episode's and Guide Chapter's fields were
+ * labeled "Keywords" in the editing UI until 2026-08-28, when they were
+ * relabeled "Synonyms" to match Q&A Entry's naming (meta keys unchanged).
+ * Resource keeps the "Keywords" label (a deliberately different field, not
+ * renamed). Book's (`_bitesmart_book_keywords_by_lang`) added the same way,
+ * 2026-08-16.
  *
  * @param int    $post_id Post ID.
  * @param string $type    'qa_entry', 'resource', 'episode', 'coloring_book', 'guide_chapter', or 'book'.
@@ -258,7 +268,7 @@ function bitesmart_stage_cards_template_version() {
  * (see render_book_search_card() in book-display.php) with no Stage
  * default of its own — an editor tags it manually, since which Stage(s)
  * fit varies a lot per book. Episode is included as a compact
- * synthesized-question card (see render_episode_search_card() in
+ * Question/title card (see render_episode_search_card() in
  * episode-display.php), not its full video-player embed — Episodes already
  * default to the Preschool stage term on save (see episode-cpt.php), so
  * this "just works" for the Preschool page's search/browse list without

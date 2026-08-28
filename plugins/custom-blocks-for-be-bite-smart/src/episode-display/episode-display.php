@@ -184,32 +184,37 @@ function render_episode_block( $attributes ) {
  * other two content types shown there) — NOT the full video-player card
  * render_episode_block() above builds. That one's too heavy for a dense
  * results/browse list (thumbnail, video player, language picker, funding
- * credit); this one synthesizes a Q&A-style "question" from the episode's
- * title + description instead — description leads (the parent-relevant
- * hook), episode title follows as a subtitle: "{description} — Watch:
- * {name}". Deliberately not "Watch {name}, lesson: {description}" (the
- * original phrasing) — leading with the title read as an instruction, out
- * of step with every other card in this list, which are all literal
- * questions a parent might be asking; leading with the description instead
- * puts the reason to care first, and reads closer to that same voice.
- * Reuses custom/qa-entry's own markup/classes (.wp-block-custom-qa-entry,
- * .qa-entry-card-container, etc.) rather than inventing new ones — that
- * means it picks up qa-entry-display's CSS (accent-card look, chevron
- * accordion, centered link, focus styles, all already enqueued whenever
- * this search block is present — see
- * bitesmart_learning_search_enqueue_card_styles() in learning-search.php)
- * with nothing new to build or enqueue.
+ * credit); this one shows a real, editor-authored Question
+ * (_bitesmart_episode_question, episode-cpt.php) as its heading instead.
+ * Falls back to the plain episode title when Question hasn't been filled
+ * in — NOT the algorithmically-synthesized "{description}. Watch: {title}"
+ * phrasing this used before 2026-08-28; that synthesis logic was removed
+ * entirely, not just bypassed, once a real Question field existed to
+ * author the heading directly. Reuses custom/qa-entry's own markup/classes
+ * (.wp-block-custom-qa-entry, .qa-entry-card-container, etc.) rather than
+ * inventing new ones — that means it picks up qa-entry-display's CSS
+ * (accent-card look, chevron accordion, centered link, focus styles, all
+ * already enqueued whenever this search block is present — see
+ * bitesmart_learning_search_enqueue_card_styles() in learning-search.php).
  *
- * The revealed body only has a "Watch Episode" link, no separate answer
- * text — the synthesized question already carries the description, unlike
- * a real Q&A Entry's Short/Long Answer split. Links to
- * /learning/kids/#episode-{number}-{title-slug} — the exact episode's own
- * anchor id (bitesmart_episode_anchor_id() above), set on the real
- * custom/episode embed wherever it's actually placed (currently always
- * /learning/kids/ per the content hub plan, see
- * [[be-bitesmart-content-hub-plan]] in memory — this link doesn't
- * hardcode that page by accident, it's just the one true home for episode
- * embeds right now).
+ * The revealed body shows the episode's Featured Image (if set), then a
+ * short editor-authored Q&A Description (_bitesmart_episode_qa_description,
+ * episode-cpt.php — added 2026-08-28, deliberately separate from
+ * _bitesmart_episode_description, which is written for the full
+ * render_episode_block() card instead), then the "Watch Episode" link —
+ * unlike a real Q&A Entry's Short/Long Answer split. Both the thumbnail and
+ * description are optional (a still-blank Q&A Description just omits that
+ * paragraph, same as every other optional field in this codebase); this
+ * card's own style rules (episode-search-card-thumbnail/-description, in
+ * this block's own style.css) need `custom/episode`'s style handle enqueued
+ * too, not just qa-entry's — see the 2026-08-28 addition to
+ * bitesmart_learning_search_enqueue_card_styles() in learning-search.php.
+ * Links to /learning/kids/#episode-{number}-{title-slug} — the exact
+ * episode's own anchor id (bitesmart_episode_anchor_id() above), set on the
+ * real custom/episode embed wherever it's actually placed (currently always
+ * /learning/kids/ per the content hub plan — this link doesn't hardcode
+ * that page by accident, it's just the one true home for episode embeds
+ * right now).
  */
 function render_episode_search_card( $attributes ) {
     $episode_id = isset( $attributes['episodeId'] ) ? (int) $attributes['episodeId'] : 0;
@@ -219,27 +224,14 @@ function render_episode_search_card( $attributes ) {
         return '';
     }
 
-    $description = get_post_meta( $episode_id, '_bitesmart_episode_description', true );
-    $title       = get_the_title( $post );
-
-    // A period joins the two parts as two short sentences, rather than a
-    // dash — simplest, most universal separator, and translates cleanly
-    // across languages with no special punctuation character to carry
-    // over. Ensures the description ends with terminal punctuation (adds a
-    // period only if it doesn't already end with one — a "?" or "!" an
-    // editor wrote on purpose is left alone).
-    $description_lead = rtrim( $description );
-    if ( $description_lead && ! in_array( substr( $description_lead, -1 ), array( '.', '!', '?' ), true ) ) {
-        $description_lead .= '.';
+    $title    = get_the_title( $post );
+    $question = get_post_meta( $episode_id, '_bitesmart_episode_question', true );
+    if ( ! $question ) {
+        $question = $title; // no editor-authored Question yet — plain title, not a synthesized phrase.
     }
 
-    $question = $description
-        /* translators: 1: episode description (already ends with . / ! / ?), 2: episode title */
-        ? sprintf( __( '%1$s Watch: %2$s', 'custom-blocks' ), $description_lead, $title )
-        /* translators: %s: episode title */
-        : sprintf( __( 'Watch %s', 'custom-blocks' ), $title );
-
-    $watch_url = home_url( '/learning/kids/' ) . '#' . bitesmart_episode_anchor_id( $post );
+    $qa_description = get_post_meta( $episode_id, '_bitesmart_episode_qa_description', true );
+    $watch_url      = home_url( '/learning/kids/' ) . '#' . bitesmart_episode_anchor_id( $post );
 
     ob_start();
     ?>
@@ -253,6 +245,16 @@ function render_episode_search_card( $attributes ) {
             </summary>
 
             <div class="qa-entry-body">
+                <?php if ( has_post_thumbnail( $post ) ) : ?>
+                    <div class="episode-search-card-thumbnail">
+                        <?php echo get_the_post_thumbnail( $post, 'medium', array( 'loading' => 'lazy' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- core-generated, already-escaped markup ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php if ( $qa_description ) : ?>
+                    <p class="episode-search-card-description"><?php echo esc_html( $qa_description ); ?></p>
+                <?php endif; ?>
+
                 <a href="<?php echo esc_url( $watch_url ); ?>" class="qa-entry-guide-link block-toggle-btn is-style-outline">
                     <?php esc_html_e( 'Watch Episode', 'custom-blocks' ); ?>
                 </a>

@@ -90,6 +90,28 @@ function EpisodeFieldsEdit() {
       help: __("Short description shown below the title.", "custom-blocks"),
     }),
 
+    el(TextControl, {
+      label: __("Question", "custom-blocks"),
+      value: meta._bitesmart_episode_question || "",
+      onChange: (val) => updateMeta("_bitesmart_episode_question", val),
+      placeholder: __("e.g. Why does my dog growl at strangers?", "custom-blocks"),
+      help: __(
+        "Shown as the heading on this episode's compact search-result card in the Learning Hub Search. Leave blank to use the episode title instead.",
+        "custom-blocks",
+      ),
+    }),
+
+    el(TextareaControl, {
+      label: __("Q&A Description", "custom-blocks"),
+      value: meta._bitesmart_episode_qa_description || "",
+      onChange: (val) => updateMeta("_bitesmart_episode_qa_description", val),
+      placeholder: __("e.g. Learn what your dog's growl is trying to tell you.", "custom-blocks"),
+      help: __(
+        "Shown below the thumbnail on this episode's compact search-result card, under the Question above — separate from the Description field above, which is for the full episode card instead.",
+        "custom-blocks",
+      ),
+    }),
+
     el("h3", { className: "episode-fields-subheading" }, __("Videos", "custom-blocks")),
     // key is prefixed "video-" — this map() and the Keywords one below both
     // key by lang.code, and since both spread directly into this SAME flat
@@ -147,19 +169,19 @@ function EpisodeFieldsEdit() {
 
     el("hr", { style: { margin: "24px 0" } }),
 
-    el("h3", { className: "episode-fields-subheading" }, __("Search Keywords", "custom-blocks")),
+    el("h3", { className: "episode-fields-subheading" }, __("Search Synonyms", "custom-blocks")),
     el(
       "p",
       { className: "episode-fields-hint" },
       __(
-        "Internal search-matching phrases, not shown to visitors — not automatically translated, so fill in each language directly. Helps this episode turn up in the Learning Hub Search even when a parent's wording doesn't match the description above.",
+        "Internal search-matching phrases, not shown to visitors — not automatically translated, so fill in each language directly. Helps this episode turn up in the Learning Hub Search even when a parent's wording doesn't match the question/description above.",
         "custom-blocks",
       ),
     ),
     ...languages.map((lang) =>
       el(TextControl, {
         key: `keyword-${lang.code}`,
-        label: `${__("Keywords", "custom-blocks")} (${lang.name})`,
+        label: `${__("Synonyms", "custom-blocks")} (${lang.name})`,
         value: keywords[lang.code] || "",
         onChange: (val) => setKeywords(lang.code, val),
         placeholder: __("e.g. stress signals, body language, calming signs", "custom-blocks"),

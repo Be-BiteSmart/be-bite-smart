@@ -4,3 +4,32 @@
    style here. A few editor-only rules from episode-card come along unused;
    harmless dead CSS, simpler than forking the stylesheet. */
 @import "../episode-card/style.css";
+
+/* render_episode_search_card()'s compact Learning Hub Search card (added
+   2026-08-28) — thumbnail, then Q&A Description, then the "Watch Episode"
+   button, stacked top to bottom inside the shared .qa-entry-body (see
+   qa-entry-display/style.css for that shared card's base rules). This
+   handle needs to actually be enqueued on real Stage pages for these rules
+   to apply — see the 2026-08-28 addition to
+   bitesmart_learning_search_enqueue_card_styles() in learning-search.php. */
+.episode-search-card-thumbnail {
+  margin: 0 0 12px;
+}
+
+.episode-search-card-thumbnail img {
+  display: block;
+  width: 100%; /* fills the card on narrow/mobile viewports, where a fixed
+                  or percentage cap would otherwise render too small to be
+                  useful */
+  max-width: 420px; /* caps it on wider cards instead of a flat 50%, which
+                        read fine on desktop but shrank to nearly nothing on
+                        a narrow phone-width card */
+  height: auto;
+  margin: 0 auto; /* centers it once max-width kicks in and it's narrower
+                      than the card */
+  border-radius: 0.375rem;
+}
+
+.episode-search-card-description {
+  margin: 0 0 16px;
+}

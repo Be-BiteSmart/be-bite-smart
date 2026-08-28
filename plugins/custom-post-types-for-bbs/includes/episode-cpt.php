@@ -210,13 +210,16 @@ function bitesmart_sanitize_episode_videos_by_lang( $value ) {
 }
 
 /**
- * Sanitize the per-language search-matching Keywords map — same shape and
+ * Sanitize the per-language search-matching Synonyms map — same shape and
  * same reasoning as bitesmart_sanitize_resource_keywords_by_lang() in
  * resource-cpt.php (free-form comma-separated phrases per language). Added
  * 2026-08-13 so Episodes shown in the Learning Hub Search's Fuse.js search
- * (see [[be-bitesmart-search-status]] in memory) can match on more than
- * just their synthesized question text — same reasoning as Q&A Entry's
- * Synonyms / Resource's Keywords.
+ * can match on more than just their Question/title text — same reasoning as
+ * Q&A Entry's Synonyms / Resource's Keywords. Labeled "Synonyms" in the
+ * editing UI (episode-fields/index.js) as of 2026-08-28, to match Q&A
+ * Entry's naming — the meta key itself
+ * (_bitesmart_episode_keywords_by_lang) and this function's name were
+ * deliberately left unchanged, this was a user-facing label-only rename.
  *
  * @param mixed $value Raw value.
  * @return array<string, string>
@@ -263,6 +266,48 @@ function bitesmart_register_episode_meta() {
         'auth_callback'     => 'bitesmart_episode_meta_auth_callback',
     ) );
 
+    // Real editor-authored question shown as the H3 heading on this
+    // episode's compact search-result card (render_episode_search_card(),
+    // episode-display.php) — added 2026-08-28 to replace an earlier version
+    // that algorithmically SYNTHESIZED that heading from Description + title
+    // (sprintf('%1$s Watch: %2$s', ...)). Single plain string, NOT a
+    // per-language _by_lang map: unlike Keywords/Synonyms below (invisible
+    // internal search data), this renders as real visible page text — same
+    // reasoning as Description above — so TranslatePress translates it the
+    // normal way once it's on the page, no _by_lang plumbing needed. Left
+    // blank on an existing, already-published Episode, the render function
+    // falls back to the plain post title (get_the_title()), NOT the old
+    // synthesized phrasing — that logic was removed entirely, not bypassed.
+    register_post_meta( 'episode', '_bitesmart_episode_question', array(
+        'type'              => 'string',
+        'single'            => true,
+        'default'           => '',
+        'sanitize_callback' => 'sanitize_text_field',
+        'show_in_rest'      => true,
+        'auth_callback'     => 'bitesmart_episode_meta_auth_callback',
+    ) );
+
+    // Short description shown on this episode's compact search-result card
+    // (render_episode_search_card(), episode-display.php), below its
+    // thumbnail — added 2026-08-28. Deliberately separate from
+    // _bitesmart_episode_description above: that field is written for the
+    // full video-player card (render_episode_block()) and doesn't
+    // necessarily read well as an answer to the Question field right above
+    // it on this same card, so editors get a dedicated field scoped to this
+    // one spot instead of reusing/overloading Description. Labeled "Q&A
+    // Description" in the editing UI specifically so it's clear which card
+    // it's for. Single plain string (not per-language), same reasoning as
+    // Question/Description: renders as real visible text, TranslatePress
+    // translates it the normal way.
+    register_post_meta( 'episode', '_bitesmart_episode_qa_description', array(
+        'type'              => 'string',
+        'single'            => true,
+        'default'           => '',
+        'sanitize_callback' => 'sanitize_textarea_field', // preserves line breaks, strips tags
+        'show_in_rest'      => true,
+        'auth_callback'     => 'bitesmart_episode_meta_auth_callback',
+    ) );
+
     register_post_meta( 'episode', '_bitesmart_episode_videos_by_lang', array(
         'type'              => 'object',
         'single'            => true,
@@ -281,8 +326,8 @@ function bitesmart_register_episode_meta() {
     // body language" — plain internal data, NOT rendered as visible page
     // text (unlike Description, which does render), so TranslatePress
     // won't auto-translate it automatically — same caveat as Q&A Entry's
-    // Synonyms / Resource's Keywords (see
-    // [[be-bitesmart-qa-resource-data-model]] in memory).
+    // Synonyms / Resource's Keywords. Labeled "Synonyms" in the editing UI
+    // as of 2026-08-28 to match Q&A Entry's naming; meta key kept as-is.
     register_post_meta( 'episode', '_bitesmart_episode_keywords_by_lang', array(
         'type'              => 'object',
         'single'            => true,
