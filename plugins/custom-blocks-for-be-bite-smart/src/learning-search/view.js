@@ -4,11 +4,14 @@ import Fuse from "fuse.js";
 // Fuse.js results, as of the 2026-08-16 split (see learning-search.php's
 // file-level comment for the full "why"). The paginated "All X" browse
 // list this used to also own now lives in the sibling custom/learning-
-// browse block instead (browse.js). The type-filter checkboxes can render
-// in EITHER block's own output (or both) — see getEnabledTypes() and
-// syncTypeCheckboxes() below for how this file keeps every copy on the
-// page in sync and correctly applies whichever one a visitor touches,
-// wherever it lives.
+// browse block instead (browse.js). The type-filter checkboxes rendered in
+// EITHER block's own output (or both) between 2026-08-16 and 2026-08-28;
+// as of 2026-08-28 they render ONLY in this block's own output (browse's
+// redundant copy was dropped — see learning-search.php's
+// bitesmart_render_learning_search_type_filter() docblock), but
+// getEnabledTypes() and syncTypeCheckboxes() below still read/sync
+// page-wide rather than assuming where they live, so nothing here would
+// need to change if that moves again.
 //
 // Deliberately NOT a fetch()/REST call: every card for this block's Stage
 // is already embedded in the page as a <script type="application/json">
@@ -26,8 +29,10 @@ const LOG_DEBOUNCE_MS = 700; // separate, longer "typing settled" delay before a
 
 // Keeps every .learning-search-type-checkbox with the same data-type in
 // sync with whichever one a visitor just toggled — this block's own copy
-// (added 2026-08-16) and/or a sibling custom/learning-browse block's copy,
-// however many of each are on the page. Assumes one Stage's worth of
+// is the only one rendered as of 2026-08-28 (a sibling custom/learning-
+// browse block's copy existed 2026-08-16 through 2026-08-28), but this
+// stays page-wide rather than assuming that, same reasoning as
+// getEnabledTypes() below. Assumes one Stage's worth of
 // checkboxes per page (this codebase's existing convention — see e.g.
 // custom/learning-search being "placed once per Stage archive page"), so
 // no data-stage scoping here, same as format-toggle.js's own page-wide
@@ -41,6 +46,21 @@ function syncTypeCheckboxes(source) {
   const type = source.dataset.type;
   document.querySelectorAll(`.learning-search-type-checkbox[data-type="${type}"]`).forEach((cb) => {
     if (cb !== source) cb.checked = source.checked;
+  });
+}
+
+// Hides/shows every "browse everything" list on the page while a search is
+// active — restored 2026-08-28. Pre-2026-08-16 split, this queried a single
+// `.learning-search-browse` INSIDE this same block (browse lived in
+// custom/learning-search itself); now that the browse list lives in a
+// sibling custom/learning-browse block (see this file's header + browse.js),
+// this is a page-wide query instead, same "any copy, any block" pattern as
+// getEnabledTypes()/syncTypeCheckboxes() above. A no-op when no
+// custom/learning-browse block is on the page (e.g. the pooled Guide search
+// page never places one — see learning-browse.php's file header).
+function setBrowseListsHidden(hidden) {
+  document.querySelectorAll(".learning-search-browse").forEach((el) => {
+    el.hidden = hidden;
   });
 }
 
@@ -77,13 +97,12 @@ function initLearningSearchBlock(block) {
     minMatchCharLength: MIN_QUERY_LENGTH,
   });
 
-  // Type-filter checkboxes can render in THIS block's own output AND in a
-  // sibling custom/learning-browse block's output (both call
-  // bitesmart_render_learning_search_type_filter() independently — see
-  // learning-search.php). Reading every copy on the page and keeping them
-  // all in sync (see syncTypeCheckboxes() below) means it doesn't matter
-  // which copy a visitor actually touches, or whether a browse block is
-  // even present — recomputed fresh on every call (cheap — a couple of
+  // Type-filter checkboxes render in THIS block's own output only as of
+  // 2026-08-28 (a sibling custom/learning-browse block briefly rendered its
+  // own copy too — see learning-search.php's
+  // bitesmart_render_learning_search_type_filter() docblock). Still reading
+  // every .learning-search-type-checkbox on the page rather than just this
+  // block's own — recomputed fresh on every call (cheap — a couple of
   // querySelectors, not a hot loop). Degrades to null ("no filtering") on
   // a page with no type-filter checkboxes at all — e.g. the pooled Guide
   // search page, which is 100% one type so the filter never renders there.
@@ -113,6 +132,7 @@ function initLearningSearchBlock(block) {
       lastRawFuseCount = null;
       results.innerHTML = "";
       status.textContent = "";
+      setBrowseListsHidden(false);
       return;
     }
 
@@ -149,11 +169,15 @@ function initLearningSearchBlock(block) {
       const countFallback = matches.length === 1 ? "1 result" : "{count} results";
       status.textContent = stringFor(countKey, countFallback).replace("{count}", matches.length);
     }
+
+    // While actively searching, the "browse everything" list is redundant
+    // noise for the parent — hide it, it comes back once the search box is
+    // cleared or drops below MIN_QUERY_LENGTH (see the early-return branch
+    // above).
+    setBrowseListsHidden(true);
   }
 
-  // Type-filter checkboxes aren't guaranteed to live inside `block` (a
-  // sibling custom/learning-browse block can have its own copy too), so
-  // this is delegated on document rather than bound to specific checkbox
+  // Delegated on document rather than bound to specific checkbox
   // elements at init. Syncs every same-type checkbox on the page first
   // (see syncTypeCheckboxes() above), then re-runs the search using
   // getEnabledTypes()'s now-consistent page-wide read.

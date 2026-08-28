@@ -778,18 +778,30 @@ function render_guide_chapter_search_card( $attributes ) {
  * The shared "Show video" / "Show text" checkbox bar + zero-formats-picked
  * warning — rendered once per BLOCK that needs it (never per chapter), read
  * by format-toggle.js. Only rendered where the surrounding content is 100%
- * chapters: the main Guide page/chapter page (guide-single.php, always) and
- * the pooled Guide search+browse pages (stage_slug === 'guide', in
- * learning-search.php / learning-browse.php). Deliberately NOT rendered on
- * real Stage pages, where chapters are at most a small slice of a mixed
- * Q&A/Resource/Episode list and a global control would apply to almost
- * nothing on screen — those pages rely solely on each chapter's own
- * per-chapter badges instead. Because custom/learning-search and
- * custom/learning-browse are separate blocks that could both legitimately
- * sit on the pooled Guide page at once, up to two copies can still render
- * on one page — format-toggle.js already treats every `.guide-format-checkbox`
- * on the page as one synchronized group regardless of how many copies
- * exist, so that's a deliberate, accepted redundancy, not a bug. Both
+ * chapters: a chapter's own single page (guide-single.php,
+ * bitesmart_render_guide_chapter_single()) and the pooled Guide-stage
+ * custom/learning-search block (stage_slug === 'guide', in
+ * learning-search.php). Deliberately NOT rendered on real Stage pages,
+ * where chapters are at most a small slice of a mixed Q&A/Resource/Episode
+ * list and a global control would apply to almost nothing on screen —
+ * those pages rely solely on each chapter's own per-chapter badges instead.
+ *
+ * NOT rendered by the main Guide page (guide-single.php,
+ * bitesmart_render_guide_single()) as of 2026-08-28 — that page is placed
+ * on the SAME page as the pooled Guide-stage custom/learning-search block
+ * above, whose own copy of this bar is enough; Janet's call, same "one
+ * filter is enough" reasoning as custom/learning-browse's dropped "Filter
+ * by type" copy (see learning-browse.php). Before that, guide-single.php
+ * rendered its own copy unconditionally ("always") and up to two copies
+ * could render on that pooled page at once (this bar being idempotent/
+ * synchronized regardless of copy count — see below — made that a
+ * deliberate, accepted redundancy at the time, not a bug); now there's
+ * only ever the one.
+ *
+ * format-toggle.js treats every `.guide-format-checkbox` on the page as one
+ * synchronized group regardless of how many copies of this bar exist, so
+ * nothing else needed to change when guide-single.php's copy was dropped —
+ * this remains true for the two surfaces that still render it. Both
  * checked by default, preference persisted per-browser via localStorage (no
  * accounts on this site — see [[be-bitesmart-guide-cpt-plan]] in memory) —
  * the actual default/restore logic lives client-side in format-toggle.js;
@@ -803,8 +815,8 @@ function render_guide_chapter_search_card( $attributes ) {
 function bitesmart_render_guide_format_controls() {
     ob_start();
     ?>
-    <div class="guide-format-controls">
-        <span class="guide-format-controls-label"><?php esc_html_e( 'Show:', 'custom-blocks' ); ?></span>
+    <div class="guide-format-controls custom-block-filter-bar">
+        <span class="guide-format-controls-label custom-block-filter-bar-legend"><?php esc_html_e( 'Show:', 'custom-blocks' ); ?></span>
         <label class="guide-format-toggle">
             <input type="checkbox" class="guide-format-checkbox" data-format="video" checked>
             <?php esc_html_e( 'Video', 'custom-blocks' ); ?>

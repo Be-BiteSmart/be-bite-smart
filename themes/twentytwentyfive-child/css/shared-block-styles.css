@@ -294,3 +294,55 @@ body:not(.block-editor-page) .article-headline {
   font-weight: 700;
   font-size: var(--wp--preset--font-size--large);
 }
+
+/* ── Filter/controls bar (shared spacing + flex row) ──
+   custom/learning-search's/custom/learning-browse's "Filter by type" row
+   (.learning-search-type-filter-wrap, learning-browse/style.css) and
+   custom/guide-single's/custom/learning-*'s "Show: Video/Text" bar
+   (.guide-format-controls, guide-chapter-display/style.css) are the same
+   kind of element — a horizontal control row sitting above content — and
+   Janet asked for them to fully share this look (2026-08-28), including
+   the flex row itself: this class's flex/gap values are
+   .learning-search-type-filter's (learning-browse/style.css) own — the
+   "Filter by type" row's values win wherever the two used to differ
+   (padding/margin already unified in earlier passes today; gap was the
+   last one, 8px 10px here vs. .guide-format-controls' old 16px).
+   .guide-format-controls is a plain <div> with no children between it and
+   its Video/Text toggle buttons, so it gets this flex row directly. The
+   "Filter by type" side is one level removed — .learning-search-type-
+   filter-wrap (the <div> this class attaches to) wraps a <fieldset> that
+   is the ACTUAL flex row for the checkboxes (kept, own rule, own
+   fieldset-reset properties this class has no business owning); putting
+   flex on the wrap div too just makes it a flex container with that one
+   fieldset as its sole item — harmless (nothing to wrap/space with only
+   one item) and lets both callers point at one flex definition instead of
+   each hand-declaring their own. Added alongside the caller's own class in
+   markup (e.g. class="guide-format-controls custom-block-filter-bar"). */
+body:not(.block-editor-page) .custom-block-filter-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  padding: 16px 0;
+  margin-bottom: 20px;
+}
+
+/* ── Filter/controls bar label (shared) ──
+   The "Filter by type"/"Show:" label sitting above each bar's pill row —
+   Janet asked for the "Show:" one (.guide-format-controls-label,
+   guide-chapter-display/style.css) to match "Filter by type"'s own look
+   (.learning-search-type-filter-legend, learning-browse/style.css)
+   (2026-08-28): bold, own full-width line above the pills, rather than
+   "Show:"'s previous small/grey inline look sitting on the same line as
+   its buttons. width:100% is what forces the own-line layout — inside the
+   flex-wrap row .custom-block-filter-bar above establishes, a full-width
+   item always wraps onto its own line before whatever follows it. No color
+   override (inherits normal text color) — the small/grey treatment
+   "Show:" used to have is dropped, not carried over. Added alongside the
+   caller's own class in markup (e.g.
+   class="guide-format-controls-label custom-block-filter-bar-legend"). */
+body:not(.block-editor-page) .custom-block-filter-bar-legend {
+  font-weight: 600;
+  padding: 0 0 10px 0;
+  width: 100%;
+}

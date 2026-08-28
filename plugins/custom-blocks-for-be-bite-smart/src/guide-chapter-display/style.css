@@ -297,27 +297,31 @@ body:not(.block-editor-page) .guide-chapter-download-buttons .block-toggle-btn {
    logic.
    ───────────────────────────────────────────────────────────────────────────── */
 
-/* Top/bottom border-line wrapper, matching custom/learning-browse's own
-   "Filter by type" wrapper (.learning-search-type-filter-wrap,
-   learning-browse/style.css) — same #d0e4eb border color, same edge-to-
-   edge vertical-only padding, instead of this bar's old filled-box/
-   rounded-corner look. Per Janet: "lets have it match the border line
-   styling too that the other one has." */
-.guide-format-controls {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 16px;
-  padding: 16px 0;
-  margin-bottom: 16px;
-  border-top: 1px solid #d0e4eb;
-  border-bottom: 1px solid #d0e4eb;
-}
+/* No .guide-format-controls rule of its own left here as of 2026-08-28 —
+   its flex layout, padding, AND bottom margin all moved into the theme's
+   shared .custom-block-filter-bar class (shared-block-styles.css, added
+   alongside this class in guide-chapter-display.php's markup), once Janet
+   asked for this bar to fully match custom/learning-search's/
+   custom/learning-browse's own "Filter by type" wrapper
+   (.learning-search-type-filter-wrap, learning-browse/style.css) — that
+   other wrapper's own values won throughout (20px margin, 8px 10px gap);
+   see the shared class's own comment for the full reasoning. This bar's
+   own border-top/border-bottom (previously matching that other wrapper's
+   too) was deliberately dropped by Janet earlier today, not moved
+   anywhere. The class name is kept in markup for its semantic meaning,
+   even though it carries no CSS of its own right now. */
 
-.guide-format-controls-label {
-  font-size: 0.85em;
-  color: var(--wp--preset--color--contrast-2, #6b6b6b);
-}
+/* No .guide-format-controls-label rule of its own left here as of
+   2026-08-28 — its previous small/grey inline look (font-size, color) is
+   GONE, not moved: Janet asked for this label to match
+   custom/learning-search's/custom/learning-browse's own "Filter by type"
+   legend (.learning-search-type-filter-legend, learning-browse/style.css)
+   instead, which is bold and sits on its own line above the pill row. That
+   look now lives in the theme's shared .custom-block-filter-bar-legend
+   class (shared-block-styles.css, added alongside this class in
+   guide-chapter-display.php's markup) — see that class's own comment. The
+   class name is kept in markup for its semantic meaning, even though it
+   carries no CSS of its own right now. */
 
 /* Pill/button look, matching custom/learning-browse's own "Filter by type"
    checkboxes (.learning-search-type-toggle, learning-browse/style.css) —

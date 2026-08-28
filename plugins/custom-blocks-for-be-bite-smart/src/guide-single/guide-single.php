@@ -113,7 +113,19 @@ function bitesmart_render_guide_single( $guide_id ) {
     ?>
     <div class="guide-single">
         <?php if ( $chapters->have_posts() ) : ?>
-            <?php echo bitesmart_render_guide_format_controls(); // phpcs:ignore ?>
+            <?php
+            // NOT rendering bitesmart_render_guide_format_controls() here as
+            // of 2026-08-28 (was, always, before that) — Janet confirmed this
+            // block is placed on the SAME page as the pooled Guide-stage
+            // custom/learning-search block (stage_slug === 'guide'), which
+            // renders its own copy of this exact bar; that sibling copy is
+            // enough, same "one filter is enough" call as
+            // custom/learning-browse's now-dropped "Filter by type" copy
+            // (see learning-browse.php). See
+            // bitesmart_render_guide_format_controls()'s own docblock
+            // (guide-chapter-display.php) for the full up-to-date picture of
+            // where this bar renders.
+            ?>
             <div class="guide-chapter-list">
                 <?php
                 // Guide Section headings between groups of chapters (added

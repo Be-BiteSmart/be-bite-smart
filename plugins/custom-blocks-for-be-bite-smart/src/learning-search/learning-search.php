@@ -497,15 +497,21 @@ function bitesmart_learning_search_media_type_labels() {
  * feature that's an enhancement on top of an already fully-JS-dependent
  * live search.
  *
- * Called from BOTH custom/learning-search's and custom/learning-browse's
- * render callbacks as of 2026-08-16 (each independently, own copy — same
- * "each block works correctly on its own" reasoning as
- * bitesmart_render_guide_format_controls()) — the legend text is
- * deliberately generic ("Filter by type", not "...the list below...")
- * since it no longer only ever sits above a list. view.js and browse.js
- * keep every copy's checked state in sync with each other and both re-apply
- * their own filtering whenever ANY copy changes, the same way
- * format-toggle.js already keeps multiple "Show video/text" bars in sync.
+ * Called from custom/learning-search's render callback only as of
+ * 2026-08-28 — briefly called from BOTH custom/learning-search's and
+ * custom/learning-browse's render callbacks between 2026-08-16 and
+ * 2026-08-28 (each independently, own copy), but once the browse list
+ * started auto-hiding while a search is active (see view.js's
+ * setBrowseListsHidden()), a visitor could see this same checkbox row
+ * rendered twice on one Stage page (once above the search results, again
+ * above the now-hidden browse list) — the search block's copy is the only
+ * one still needed, so custom/learning-browse's copy was dropped. The
+ * legend text stays deliberately generic ("Filter by type", not "...the
+ * list below...") since it still affects two blocks even though it only
+ * renders in one of them. view.js's getEnabledTypes()/syncTypeCheckboxes()
+ * and browse.js's own copies still read/sync checkboxes page-wide (not
+ * scoped to "this block's own"), so browse.js's filtering keeps working
+ * correctly off this one remaining copy with no code changes needed there.
  *
  * Only rendered when this Stage actually has 2+ distinct Media Types present
  * across its cards — a single checkbox with nothing to compare against isn't
@@ -539,10 +545,10 @@ function bitesmart_render_learning_search_type_filter( array $cards ) {
     }
 
     ?>
-    <?php /* The border/divider look lives on THIS wrapper, not the <fieldset> below — a <fieldset> with a <legend> child natively "cuts a notch" out of its own top border where the legend sits (that's how a fieldset caption is meant to render). With the legend forced to 100% width so it stacks on its own line, that notch would span the fieldset's entire top edge and hide the border completely. Keeping <fieldset>/<legend> for their real accessibility grouping semantics, just not for this visual treatment. */ ?>
-    <div class="learning-search-type-filter-wrap">
+    <?php /* Padding lives on THIS wrapper (.custom-block-filter-bar, the theme's shared-block-styles.css — see that file, shared with custom/guide-single's/custom/learning-*'s own "Show: Video/Text" bar), not the <fieldset> below — keeping the vertical spacing here rather than on the fieldset avoids fighting a <fieldset>'s own UA-default padding/border box model. */ ?>
+    <div class="learning-search-type-filter-wrap custom-block-filter-bar">
         <fieldset class="learning-search-type-filter">
-            <legend class="learning-search-type-filter-legend"><?php esc_html_e( 'Filter by type', 'custom-blocks' ); ?></legend>
+            <legend class="learning-search-type-filter-legend custom-block-filter-bar-legend"><?php esc_html_e( 'Filter by type', 'custom-blocks' ); ?></legend>
             <?php foreach ( bitesmart_learning_search_media_type_labels() as $type => $label ) : ?>
                 <?php if ( in_array( $type, $present_types, true ) ) : // don't offer an "Image" checkbox on a Stage with none, etc. ?>
                     <label class="learning-search-type-toggle">

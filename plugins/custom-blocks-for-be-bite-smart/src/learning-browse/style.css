@@ -17,31 +17,41 @@
 }
 
 /* "Filter search & the list below by type" — see
-   bitesmart_render_learning_search_type_filter() in learning-search.php
-   (reused as-is by this block's own learning-browse.php). Rendered FIRST,
-   above .learning-search-browse — sitting above everything is stable
-   regardless of result count, and still reads as governing both this
-   block's own list AND the sibling custom/learning-search block's live
-   results (see that block's view.js). No top margin (unlike the bottom)
-   since this is the block's first child — .learning-browse-block's own
-   32px outer margin already provides that spacing; adding more here would
-   just double it up.
-   The border/spacing lives on THIS wrapper rather than the <fieldset>
-   inside it — see the PHP comment at the call site for why: a <fieldset>
-   with a full-width <legend> would have the legend's native
-   border-cutout behavior hide the entire top border, not just a notch
-   under the caption text. */
-.learning-search-type-filter-wrap {
-  margin: 0 0 20px 0;
-  padding: 16px 0;
-  border-top: 1px solid #d0e4eb;
-  border-bottom: 1px solid #d0e4eb;
-}
+   bitesmart_render_learning_search_type_filter() in learning-search.php.
+   Rendered from the sibling custom/learning-search block's own render
+   callback only as of 2026-08-28 (was also rendered here, from this
+   block's own learning-browse.php, between 2026-08-16 and 2026-08-28 — see
+   that PHP file's docblock) — this file's rules stay live regardless,
+   since the checkbox markup's classes are the same wherever it renders and
+   both blocks' stylesheets are always paired on a real Stage page (see
+   learning-browse.php's own file header). Governs both the sibling
+   block's live search results AND this block's own browse list (see that
+   block's view.js / this block's browse.js).
+   No .learning-search-type-filter-wrap rule of its own left here as of
+   2026-08-28 — its padding, bottom margin, AND flex layout all moved into
+   the theme's shared .custom-block-filter-bar class
+   (shared-block-styles.css, added alongside this class in the PHP markup)
+   once Janet asked for this wrapper's look to fully match
+   custom/guide-single's/custom/learning-*'s own "Show: Video/Text" bar
+   (.guide-format-controls, guide-chapter-display/style.css) — this
+   wrapper's own values won throughout (20px margin, and this rule's own
+   flex/gap below is what the shared class's flex is copied from); see the
+   shared class's own comment for the full reasoning, including why making
+   the wrap div a flex container too is harmless alongside the fieldset
+   below (its own separate, real flex row) rather than a conflict. The
+   .learning-search-type-filter-wrap class name itself is kept in markup
+   for its semantic meaning/as a future hook, even though it carries no CSS
+   of its own right now. */
 
 /* Reset to plain flex row — the <fieldset>/<legend> pair here is for its
    built-in "these checkboxes are one group" accessibility semantics only,
    not for its default bordered-box appearance (that's the wrapper above)
-   or default margin/padding (browsers give fieldset its own by default). */
+   or default margin/padding (browsers give fieldset its own by default).
+   This is the checkboxes' ACTUAL flex row (unlike the wrap div one level
+   up, which has no children besides this single fieldset) — left
+   untouched, not merged into .custom-block-filter-bar, since it's also
+   where this rule's own flex/gap values were copied FROM for that shared
+   class (see the comment above). */
 .learning-search-type-filter {
   display: flex;
   flex-wrap: wrap;
@@ -53,11 +63,18 @@
   min-width: 0; /* fieldset's UA default is min-width: min-content, which can force unwanted overflow in a flex/grid ancestor */
 }
 
-.learning-search-type-filter-legend {
-  font-weight: 600;
-  padding: 0 0 10px 0;
-  width: 100%; /* own line above the button row, rather than squeezed inline before it */
-}
+/* No .learning-search-type-filter-legend rule of its own left here as of
+   2026-08-28 — its bold/own-line look (font-weight, width:100% so it wraps
+   onto its own line above the button row rather than squeezing inline
+   before it, bottom padding) moved into the theme's shared
+   .custom-block-filter-bar-legend class (shared-block-styles.css, added
+   alongside this class in the PHP markup), once Janet asked for
+   custom/guide-single's/custom/learning-*'s own "Show:" label
+   (.guide-format-controls-label, guide-chapter-display/style.css) to match
+   this legend's look — this legend's own values won (guide's previous
+   small/grey inline look was dropped, not merged). The class name is kept
+   in markup for its semantic meaning, even though it carries no CSS of its
+   own right now. */
 
 /* Pill/button look, per Janet — accent-3 (yellow) fill with black text
    while ON (checked), an outlined/unfilled look while OFF ("clicked off").
