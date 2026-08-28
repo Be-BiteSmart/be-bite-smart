@@ -70,6 +70,26 @@
   color: var(--wp--preset--color--accent-2);
 }
 
+/* ── Transient "language changed" status ──
+   Always present in the DOM (aria-live="polite"); only text/opacity
+   change, same shape as video-quote's own .video-quote-track-note, but a
+   neutral/muted tone since this is a plain confirmation, not a problem —
+   and the two are never visible at the same time (see
+   showLangChangeStatus()'s call sites in video-toggle.js). */
+.lang-change-status {
+  min-height: 1.2em; /* avoids layout jump when text appears/disappears */
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--wp--preset--color--foreground, #4b5563);
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.lang-change-status.is-visible {
+  opacity: 0.75;
+}
+
 /* Legacy EN/ES toggle (saved HTML until re-saved) */
 .language-toggle-container {
   display: flex;

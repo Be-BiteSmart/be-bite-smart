@@ -23,7 +23,7 @@ header .wp-block-navigation__container > li::before {
 }
 
 /* Hide pipes on small screens (mobile) */
-@media (max-width: 599px) {
+@media (max-width: 680px) {
   header .wp-block-navigation__container > li::before {
     content: "";
     margin: 0;
@@ -86,7 +86,7 @@ header
 }
 
 /* Mobile: add padding to the donate button. !important because WP's default classes override it */
-@media (max-width: 599px) {
+@media (max-width: 680px) {
   header
     .wp-block-navigation__container
     > .wp-block-navigation-item:last-child
@@ -103,6 +103,44 @@ header
   a:focus-visible {
   outline: 3px solid var(--wp--preset--color--accent-2) !important;
   outline-offset: 2px !important;
+}
+
+/* ===========================
+Extend hamburger breakpoint to 680px
+===========================
+
+Two things independently switch the header from the hamburger toggle to
+the full horizontal menu, and BOTH need overriding here or the switch
+happens early:
+
+1. WP core (wp-includes/blocks/navigation/style.css) hardcodes the switch
+   at 600px: `.wp-block-navigation__responsive-container-open` hides and
+   `.wp-block-navigation__responsive-container` shows at (min-width: 600px).
+
+2. The "Better Block Editor" plugin's NavigationResponsive module
+   (plugins/better-block-editor/Modules/NavigationResponsive/Module.php)
+   ALSO injects its own scoped override for the nav block's default
+   "mobile" overlay-menu breakpoint, which defaults to 480px
+   (Core/Settings.php get_default_user_defined_breakpoints). That plugin
+   rule has higher selector specificity than core's (scoped to the
+   block's own class) but no !important, so between 480px and 600px it
+   was winning over core and switching to the full menu early — the
+   hamburger would disappear starting at 480px instead of 600px.
+
+We never edit core or plugin files directly (both get overwritten on
+updates), so instead we override the same two properties with !important
+across the FULL 0–680px range: !important beats both of the above
+regardless of specificity or source order, so this reliably keeps the
+hamburger visible and the horizontal menu hidden through 680px. Only
+above 680px do we fall through to normal desktop behaviour. */
+@media (max-width: 680px) {
+  .wp-block-navigation__responsive-container-open:not(.always-shown) {
+    display: flex !important;
+  }
+
+  .wp-block-navigation__responsive-container:not(.hidden-by-default):not(.is-menu-open) {
+    display: none !important;
+  }
 }
 
 /* ===========================
@@ -140,10 +178,14 @@ Fix: 620 width forces Contact to jump down to the donate button */
 }
 
 /* ============================================
-Mobile submenu logic (max-width: 599px)
+Mobile submenu logic (max-width: 680px)
 ============================================
 
-Special note: Wordpress shows the hamburger icon below or equal to 599px. 
+Special note: WordPress core shows the hamburger icon below or equal to
+599px by default (hardcoded in wp-includes/blocks/navigation/style.css).
+We override that breakpoint further down ("Extend hamburger breakpoint
+to 680px") so the hamburger shows up to 680px instead — every mobile-mode
+rule in this file has been extended to match that same 680px cutoff.
 
 On mobile WP renders nav inside a modal overlay. Submenus are hidden by
 default and shown only when aria-expanded is true on the toggle button.
@@ -153,7 +195,7 @@ here because the submenu ul is a direct child of the nav item, not the
 responsive wrapper — so that selector never matches.
 ============================================ */
 
-@media (max-width: 599px) {
+@media (max-width: 680px) {
   .wp-block-navigation__responsive-container-content
     .wp-block-navigation-item__content {
     font-size: 1.2rem;
@@ -246,7 +288,7 @@ responsive wrapper — so that selector never matches.
 /* ============================================
 Mobile menu closes automatically if resized to desktop
 ============================================ */
-@media (min-width: 600px) {
+@media (min-width: 681px) {
   .has-modal-open .wp-block-navigation__responsive-close {
     display: none !important;
   }
@@ -258,7 +300,7 @@ Mobile menu closes automatically if resized to desktop
 }
 
 /* ============================================
-   DESKTOP SUBMENU LOGIC (min-width: 600px)
+   DESKTOP SUBMENU LOGIC (min-width: 681px)
    ============================================
    Visibility is controlled by two mechanisms working together:
 
@@ -297,7 +339,7 @@ Mobile menu closes automatically if resized to desktop
    CSS hover is more reliable than JS mouseenter/mouseleave since it
    doesn't depend on WP's Interactivity API or aria-expanded at all.
    Submenu open and closing with the mouse click on chevron is controlled with JS. */
-@media (min-width: 600px) {
+@media (min-width: 681px) {
   .wp-block-navigation-submenu > .wp-block-navigation__submenu-container {
     opacity: 0 !important;
     visibility: hidden !important;

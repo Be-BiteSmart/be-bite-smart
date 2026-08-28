@@ -151,6 +151,73 @@ function showTrackNote(
   el.classList.add("is-visible");
 }
 
+/* ── Play-button label ──
+   Always names the currently-selected language next to the verb, e.g.
+   "Play (Spanish)" — kept in sync with the picker (called from
+   setEpisodeLanguage() below) so it's correct from first paint and after
+   every language change, including rollbacks. The wrapper phrase stays
+   TranslatePress-translatable the same way the track-note above does: a
+   static hidden template with a {language} placeholder, substituted
+   client-side with langName() — never a hardcoded per-language string, so
+   the button stays legible in the site's own language even when the
+   selected video language isn't (see bitesmart_render_play_button_label_templates()
+   in includes/site-lang.php for why that distinction matters here). */
+function getPlayButtonLabelTemplate() {
+  return (
+    document.querySelector(".play-button-label-template")?.textContent ??
+    null
+  );
+}
+
+function setPlayButtonLabel(block, code) {
+  const el = block.querySelector(".play-button-label");
+  if (!el) return;
+
+  const name = langName(code);
+  const template = getPlayButtonLabelTemplate();
+  el.textContent = template
+    ? applyLanguagePlaceholder(template, name)
+    : `Play (${name})`;
+}
+
+/* ── Transient "language changed" status ──
+   Unlike the track-note above, this is a plain confirmation shown only when
+   a language switch actually happens, then faded back out — see this
+   function's call sites in handleLangSegmentClick() for exactly which paths
+   count as a genuine change (never the initial page-load sync, a rollback,
+   or a video-quote track failure/partial-success, which shows the
+   track-note instead of this). One timeout per block, keyed in a WeakMap so
+   rapid re-toggling restarts the fade instead of stacking timers. */
+const langChangeStatusTimeouts = new WeakMap();
+const LANG_CHANGE_STATUS_VISIBLE_MS = 2500;
+
+function getLangChangeStatusTemplate() {
+  return (
+    document.querySelector(".lang-change-status-template")?.textContent ??
+    null
+  );
+}
+
+function showLangChangeStatus(block, code) {
+  const el = block.querySelector(".lang-change-status");
+  if (!el) return;
+
+  const name = langName(code);
+  const template = getLangChangeStatusTemplate();
+  el.textContent = template
+    ? applyLanguagePlaceholder(template, name)
+    : `Switched to ${name}.`;
+  el.classList.add("is-visible");
+
+  clearTimeout(langChangeStatusTimeouts.get(block));
+  langChangeStatusTimeouts.set(
+    block,
+    setTimeout(() => {
+      el.classList.remove("is-visible");
+    }, LANG_CHANGE_STATUS_VISIBLE_MS),
+  );
+}
+
 function buildVimeoPlayerSrc(vimeoId, lang, { forceCaptions = false } = {}) {
   // forceCaptions defaults to false to preserve episode-card's existing behavior
   // (captions off on first play). Video-quote blocks explicitly pass true to enable
@@ -274,6 +341,7 @@ document.addEventListener("DOMContentLoaded", function () {
       });
 
       updatePickerIndex(langPicker, langSegments, currentLang);
+      setPlayButtonLabel(block, currentLang);
     }
 
     if (langSegments.length) {
@@ -374,20 +442,29 @@ document.addEventListener("DOMContentLoaded", function () {
                 captionsOk,
                 totalFailure: false,
               });
+            } else {
+              // Full success: both tracks switched cleanly.
+              showLangChangeStatus(block, target);
             }
           });
+        } else {
+          // Not playing yet, OR playing but the player instance hasn't
+          // finished initializing yet (raced loadVideo()'s SDK load): either
+          // way, currentLang is already updated, and loadVideo()'s
+          // post-player-creation verification step (which reads currentLang
+          // live) will confirm/correct it once the player exists — covering
+          // both "picked a language before ever pressing play" and this
+          // race. Confirm the pick now regardless; if it turns out not to
+          // be available, that verification step corrects the UI and shows
+          // the track-note itself.
+          showLangChangeStatus(block, target);
         }
-        // Not playing yet, OR playing but the player instance hasn't
-        // finished initializing yet (raced loadVideo()'s SDK load): either
-        // way, currentLang is already updated, and loadVideo()'s
-        // post-player-creation verification step (which reads currentLang
-        // live) will confirm/correct it once the player exists — covering
-        // both "picked a language before ever pressing play" and this race.
         return;
       }
 
       if (!isPlaying) {
         setEpisodeLanguage(target);
+        showLangChangeStatus(block, target);
         return;
       }
 
@@ -403,6 +480,7 @@ document.addEventListener("DOMContentLoaded", function () {
           }
 
           setEpisodeLanguage(target);
+          showLangChangeStatus(block, target);
           loadVideo();
         },
       );

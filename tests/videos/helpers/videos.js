@@ -74,3 +74,44 @@ export async function getEpisodeVideoIds(episode) {
     (await episode.locator(".video-episode-block").first().getAttribute("data-videos"));
   return parseVideosDataset(raw);
 }
+
+/**
+ * A language code's display name, read from the hidden, TranslatePress-
+ * translatable .video-quote-lang-name templates — the exact same source
+ * langName() in shared/languages.js reads at runtime. Deriving expected text
+ * from the page's own templates (rather than hardcoding "English"/"Spanish")
+ * keeps these assertions correct regardless of site language or wording.
+ */
+export async function langDisplayName(page, code) {
+  const name = await page
+    .locator(`.video-quote-lang-name[data-lang="${code}"]`)
+    .textContent();
+  return name?.trim() ?? code;
+}
+
+/**
+ * Expected play-button label for a language, built the same way
+ * setPlayButtonLabel() does client-side: the hidden .play-button-label-template
+ * ("Play ({language})") with {language} substituted.
+ */
+export async function expectedPlayButtonLabel(page, code) {
+  const name = await langDisplayName(page, code);
+  const template =
+    (await page.locator(".play-button-label-template").textContent()) ||
+    "Play ({language})";
+  return template.replace("{language}", name);
+}
+
+/**
+ * Expected transient "language changed" status text for a language, built
+ * the same way showLangChangeStatus() does client-side: the hidden
+ * .lang-change-status-template ("Switched to {language}.") with {language}
+ * substituted.
+ */
+export async function expectedLangChangeStatus(page, code) {
+  const name = await langDisplayName(page, code);
+  const template =
+    (await page.locator(".lang-change-status-template").textContent()) ||
+    "Switched to {language}.";
+  return template.replace("{language}", name);
+}

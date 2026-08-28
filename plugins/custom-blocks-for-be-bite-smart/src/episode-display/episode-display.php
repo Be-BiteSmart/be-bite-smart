@@ -88,11 +88,15 @@ function render_episode_block( $attributes ) {
     // text by default — no need for bitesmart_attachment_alt_text() here.
     $thumbnail = get_the_post_thumbnail( $post, 'medium', array( 'loading' => 'lazy' ) );
 
-    $lang_codes = array_keys( $video_ids );
-    if ( count( $lang_codes ) > 1 ) {
+    $lang_codes  = array_keys( $video_ids );
+    $has_picker  = count( $lang_codes ) > 1;
+    if ( $has_picker ) {
         bitesmart_episode_needs_lang_restart_templates();
+        bitesmart_needs_play_button_label_template();
+        bitesmart_needs_lang_change_status_template();
     }
-    $lang_picker_html = bitesmart_render_lang_picker_html( $lang_codes, $site_lang );
+    $lang_picker_html   = bitesmart_render_lang_picker_html( $lang_codes, $site_lang );
+    $play_button_label  = bitesmart_play_button_label( $site_lang, $has_picker );
 
     $logo_alt  = $logo_id ? bitesmart_attachment_alt_text( $logo_id ) : '';
     $logo_attr = array( 'class' => 'episode-funded-by-logo', 'alt' => esc_attr( $logo_alt ) );
@@ -117,7 +121,7 @@ function render_episode_block( $attributes ) {
                             <div class="video-overlay">
                                 <button class="play-button" type="button">
                                     <span class="play-button-icon" aria-hidden="true"></span>
-                                    <span class="play-button-label"><?php esc_html_e( 'Watch', 'custom-blocks' ); ?></span>
+                                    <span class="play-button-label"><?php echo esc_html( $play_button_label ); ?></span>
                                 </button>
                             </div>
                         </div>
@@ -140,6 +144,7 @@ function render_episode_block( $attributes ) {
                         <div class="episode-controls">
                             <?php echo $lang_picker_html; ?>
                         </div>
+                        <p class="lang-change-status" role="status" aria-live="polite"></p>
                     <?php endif; ?>
                 </div>
             </div>

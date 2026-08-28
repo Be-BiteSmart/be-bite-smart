@@ -91,34 +91,14 @@ test.describe("Documentary video (video-quote block)", () => {
     });
   });
 
-  test(`${EDUCATION_PATH} play button label text stays the same across language switches`, async ({
-    page,
-  }, testInfo) => {
-    await gotoExpectOk(page, EDUCATION_PATH);
-
-    const block = page.locator(".video-quote-block").first();
-    await expect(block, `No video-quote block on ${EDUCATION_PATH}`).toBeVisible();
-
-    const segments = episodeLangSegments(block);
-    const segmentCount = await segments.count();
-    if (segmentCount < 2) {
-      testInfo.skip();
-      return;
-    }
-
-    const playButtonLabel = block.locator(".play-button .play-button-label");
-    const originalText = (await playButtonLabel.textContent())?.trim();
-    expect(originalText, "play button has no label text").toBeTruthy();
-
-    // The play button label is a static, site-language string — it must
-    // never swap based on which language pill is selected (that per-language
-    // watch-label behavior was deliberately removed).
-    for (let i = 0; i < segmentCount; i++) {
-      await segments.nth(i).click();
-      await expect(segments.nth(i)).toHaveClass(/active/);
-      await expect(playButtonLabel).toHaveText(originalText);
-    }
-  });
+  // Play-button label / transient status coverage (the button now names the
+  // currently-selected language, e.g. "Play (Spanish)", and briefly confirms
+  // a switch with a "Switched to Spanish." status) moved to
+  // language-feedback.spec.js — that per-language label behavior used to be
+  // asserted as a non-goal here before it was deliberately added back in a
+  // different, safer form (site's own language names the target language;
+  // never translates the whole button into that language's script). See
+  // CHANGES.md, "Make video language toggle visibly change something".
 
   test(`${EDUCATION_PATH} switching language while playing keeps the same video loaded`, async ({
     page,

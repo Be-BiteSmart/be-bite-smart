@@ -134,6 +134,56 @@ function bitesmart_lang_analytics_name( $code ) {
 }
 
 /**
+ * Human-readable name for a language code (e.g. "Spanish"), in the site's
+ * own base (non-translated) copy of bitesmart_site_languages(). Used only
+ * for the very first, pre-JS render of the play-button label — see
+ * bitesmart_play_button_label() below and setPlayButtonLabel() in
+ * video-toggle.js, which takes over after that using the same wrapper
+ * string with the same {language} placeholder, substituted with the
+ * TranslatePress-translated langName() instead.
+ */
+function bitesmart_lang_name( $code ) {
+    $code = bitesmart_normalize_lang_code( $code );
+
+    foreach ( bitesmart_site_languages() as $lang ) {
+        if ( $lang['code'] === $code ) {
+            return $lang['name'];
+        }
+    }
+
+    return $code;
+}
+
+/**
+ * Initial play-button label, e.g. "Play (English)" — computed server-side so
+ * it's correct on first paint, before video-toggle.js's setPlayButtonLabel()
+ * takes over keeping it in sync with the picker. Deliberately uses the same
+ * "Play ({language})" wrapper string (with the same {language} placeholder
+ * syntax, substituted here via str_replace() instead of JS's
+ * applyLanguagePlaceholder()) as bitesmart_render_play_button_label_templates()
+ * — one translatable string shared by both the PHP and JS render paths,
+ * rather than two independently-translated near-duplicates that could drift
+ * out of sync with each other.
+ *
+ * @param string $active_code Currently-active language code.
+ * @param bool   $has_picker  Whether this block actually renders a language
+ *                            picker (2+ languages) — with only one language
+ *                            there's nothing to disambiguate, so the label
+ *                            stays a plain "Play".
+ */
+function bitesmart_play_button_label( $active_code, $has_picker ) {
+    if ( ! $has_picker ) {
+        return __( 'Play', 'custom-blocks' );
+    }
+
+    return str_replace(
+        '{language}',
+        bitesmart_lang_name( $active_code ),
+        __( 'Play ({language})', 'custom-blocks' )
+    );
+}
+
+/**
  * Current site UI language code (TranslatePress when available).
  */
 function bitesmart_site_lang_code() {
@@ -309,6 +359,79 @@ function bitesmart_render_video_quote_track_note_templates() {
         <span class="video-quote-track-note-template" data-kind="total"><?php esc_html_e( '{language} isn\'t available for this video yet.', 'custom-blocks' ); ?></span>
         <span class="video-quote-track-note-template" data-kind="audio-missing"><?php esc_html_e( '{language} captions are on, but dubbed audio isn\'t available yet for this video.', 'custom-blocks' ); ?></span>
         <span class="video-quote-track-note-template" data-kind="captions-missing"><?php esc_html_e( '{language} audio is on, but captions aren\'t available yet for this video.', 'custom-blocks' ); ?></span>
+    </div>
+    <?php
+}
+
+/**
+ * Registers a wp_footer hook to print the play-button label template,
+ * exactly once, on any page that renders a multi-language episode or
+ * video-quote block. Shared by both blocks' play buttons (see
+ * setPlayButtonLabel() in video-toggle.js), which always name the
+ * currently-selected language next to the "Play" verb — e.g. "Play
+ * (Spanish)" — so the button itself confirms the picker's current state,
+ * even before the visitor presses play.
+ */
+function bitesmart_needs_play_button_label_template() {
+    static $needed = false;
+    if ( $needed ) {
+        return;
+    }
+    $needed = true;
+    bitesmart_needs_video_lang_name_templates();
+    add_action( 'wp_footer', 'bitesmart_render_play_button_label_templates' );
+}
+
+/**
+ * Visually hidden, TranslatePress-translatable source of truth for the play
+ * button's language-aware label (see setPlayButtonLabel() in
+ * video-toggle.js). The {language} placeholder is substituted client-side
+ * with langName() — never a hardcoded per-language string — so the
+ * surrounding "Play (...)" phrase stays in the site's own displayed
+ * language while only the language name changes. That's the deliberate
+ * difference from the old per-language watch-button text this replaces
+ * (see CHANGES.md, "Watch button text simplified"): that version translated
+ * the whole button into the target language's own script, which didn't
+ * help a visitor who clicked the wrong pill by accident; this version keeps
+ * the button legible in the site's own language at all times.
+ */
+function bitesmart_render_play_button_label_templates() {
+    ?>
+    <div class="play-button-label-templates" aria-hidden="true" style="display:none;">
+        <span class="play-button-label-template"><?php esc_html_e( 'Play ({language})', 'custom-blocks' ); ?></span>
+    </div>
+    <?php
+}
+
+/**
+ * Registers a wp_footer hook to print the transient "language changed"
+ * status template, exactly once, on any page that renders a multi-language
+ * episode or video-quote block. Shared by both blocks' language pickers
+ * (see showLangChangeStatus() in video-toggle.js) — a brief, accessible
+ * confirmation next to the picker right after a genuinely successful
+ * switch. Never shown alongside video-quote's existing
+ * .video-quote-track-note (a failed/partial live track swap shows that
+ * instead — see showLangChangeStatus()'s call sites in video-toggle.js).
+ */
+function bitesmart_needs_lang_change_status_template() {
+    static $needed = false;
+    if ( $needed ) {
+        return;
+    }
+    $needed = true;
+    bitesmart_needs_video_lang_name_templates();
+    add_action( 'wp_footer', 'bitesmart_render_lang_change_status_templates' );
+}
+
+/**
+ * Visually hidden, TranslatePress-translatable source of truth for the
+ * transient language-change status line (see showLangChangeStatus() in
+ * video-toggle.js).
+ */
+function bitesmart_render_lang_change_status_templates() {
+    ?>
+    <div class="lang-change-status-templates" aria-hidden="true" style="display:none;">
+        <span class="lang-change-status-template"><?php esc_html_e( 'Switched to {language}.', 'custom-blocks' ); ?></span>
     </div>
     <?php
 }
