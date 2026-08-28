@@ -73,8 +73,14 @@ function initLearningBrowseBlock(block) {
   let browsePage = 1;
 
   function renderBrowse() {
+    // A card matches if it carries ANY of the enabled Media Types (a card
+    // can carry more than one — e.g. a Q&A Entry tagged both "Short Answer"
+    // and "Video" — so this is an overlap check, not exact-membership the
+    // way the old post-type filter's single `card.type` was).
     const enabledTypes = getEnabledTypes();
-    const filtered = enabledTypes ? cards.filter((card) => enabledTypes.has(card.type)) : cards;
+    const filtered = enabledTypes
+      ? cards.filter((card) => card.mediaTypes.some((type) => enabledTypes.has(type)))
+      : cards;
 
     const totalPages = Math.max(1, Math.ceil(filtered.length / BROWSE_PER_PAGE));
     browsePage = Math.max(1, Math.min(browsePage, totalPages));

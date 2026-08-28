@@ -48,15 +48,22 @@
  * translation path. A search "result" is just one of these same
  * already-rendered, already-translated card HTML strings being shown.
  *
- * "Show: [x] Q&A [x] Resources …" type-filter checkboxes (see
- * bitesmart_render_learning_search_type_filter() below) render in BOTH this
- * block's AND custom/learning-browse's own output as of 2026-08-16 (own
- * copy each, all checked by default) — Janet wanted the filter usable from
- * the search block alone, without needing the browse block present. view.js
- * and browse.js each keep every copy on the page in sync and both re-apply
- * their own filtering whenever ANY copy changes — one consistent setting,
- * not independently-behaving filters, same idea as the "Show video/text"
- * bar's own cross-block sync (format-toggle.js).
+ * "Show: [x] Video [x] Short Answer [x] Article [x] Image" type-filter
+ * checkboxes (see bitesmart_render_learning_search_type_filter() below)
+ * render in BOTH this block's AND custom/learning-browse's own output as of
+ * 2026-08-16 (own copy each, all checked by default) — Janet wanted the
+ * filter usable from the search block alone, without needing the browse
+ * block present. view.js and browse.js each keep every copy on the page in
+ * sync and both re-apply their own filtering whenever ANY copy changes — one
+ * consistent setting, not independently-behaving filters, same idea as the
+ * "Show video/text" bar's own cross-block sync (format-toggle.js).
+ *
+ * As of 2026-08-28 this filter runs on the `media_type` taxonomy
+ * (Video/Short Answer/Article/Image — see includes/media-type-taxonomy.php
+ * in the CPT plugin) instead of post type (Q&A/Resource/Episode/etc.) — a
+ * card matches a checked box if it carries ANY of the enabled Media Types,
+ * since a single post can carry more than one (see
+ * bitesmart_learning_search_media_type_labels() below).
  *
  * Known v1 limitation (confirmed acceptable with Janet): the plain-text
  * search-matching corpus for each card is built from the CURRENT request's
@@ -177,8 +184,10 @@ function bitesmart_stage_cards_maybe_bump_terms( $object_id, $terms, $tt_ids, $t
     // 'series' is included because it feeds an Episode card's "Watch
     // Episode" link (bitesmart_episode_anchor_id() in episode-display.php)
     // — changing it changes that rendered href, even though nothing about
-    // it is visible page text.
-    if ( in_array( $taxonomy, array( 'stage', 'topic', 'series' ), true ) ) {
+    // it is visible page text. 'media_type' is included (2026-08-28) because
+    // it now drives which "Filter by type" checkbox(es) a card matches — see
+    // bitesmart_build_stage_card_list()'s 'mediaTypes' below.
+    if ( in_array( $taxonomy, array( 'stage', 'topic', 'series', 'media_type' ), true ) ) {
         bitesmart_stage_cards_maybe_bump( $object_id );
     }
 }
@@ -248,6 +257,7 @@ function bitesmart_stage_cards_template_version() {
         __DIR__ . '/../coloring-book-display/coloring-book-display.php', // holds render_coloring_book_search_card() too, not just render_coloring_book_block()
         __DIR__ . '/../guide-chapter-display/guide-chapter-display.php', // holds render_guide_chapter_search_card()/render_guide_chapter_pooled_card() too, not just bitesmart_render_guide_chapter_row()
         __DIR__ . '/../book-display/book-display.php', // holds render_book_search_card() too, not just render_book_block()
+        __FILE__, // this file's own bitesmart_build_stage_card_list() builds each card's SHAPE (id/type/mediaTypes/html/searchText), not just its 'html' — added 2026-08-28 when 'mediaTypes' was added, after a stale-cache Undefined-array-key warning on 'mediaTypes' surfaced: a cache built by the OLD version of this function (no 'mediaTypes' key) was still valid by generation-counter/other-templates' mtimes, so it kept being served as-is. Same reasoning as every other file in this array, just easy to miss since this file authors the array shape rather than any one card's HTML.
     );
 
     $stamps = array_map(
@@ -306,7 +316,7 @@ function bitesmart_stage_cards_template_version() {
  *
  * @param string $stage_slug Stage taxonomy term slug.
  * @param string $lang       Short language code (bitesmart_site_lang_code()).
- * @return array<int, array{id:int, type:string, html:string, searchText:string}>
+ * @return array<int, array{id:int, type:string, mediaTypes:array<int,string>, html:string, searchText:string}>
  */
 function bitesmart_build_stage_card_list( $stage_slug, $lang ) {
     $gen = (int) get_option( 'bitesmart_stage_cards_gen', 1 );
@@ -378,9 +388,23 @@ function bitesmart_build_stage_card_list( $stage_slug, $lang ) {
         $keywords    = bitesmart_stage_card_keywords( $post->ID, $post->post_type, $lang );
         $search_text = trim( wp_strip_all_tags( $html ) . ' ' . $keywords );
 
+        // Media Type slugs (Video/Short Answer/Article/Image — see
+        // includes/media-type-taxonomy.php in the CPT plugin), 2026-08-28.
+        // This is what the "Filter by type" checkboxes now match against
+        // (bitesmart_render_learning_search_type_filter() below and
+        // getEnabledTypes() in view.js/browse.js) — replaces the OLD filter,
+        // which matched on $post->post_type directly. 'type' (post type) is
+        // kept on the card too, since bitesmart_stage_card_keywords() above
+        // still needs it and it costs nothing extra to carry.
+        $media_types = wp_get_post_terms( $post->ID, 'media_type', array( 'fields' => 'slugs' ) );
+        if ( is_wp_error( $media_types ) ) {
+            $media_types = array();
+        }
+
         $cards[] = array(
             'id'         => $post->ID,
             'type'       => $post->post_type,
+            'mediaTypes' => $media_types,
             'html'       => $html,
             'searchText' => $search_text,
         );
@@ -411,6 +435,16 @@ function bitesmart_render_learning_search_data( array $cards, $instance_id ) {
             return array(
                 'id'         => $card['id'],
                 'type'       => $card['type'],
+                // '?? array()' guards a stale transient cache built by an
+                // older version of bitesmart_build_stage_card_list() that
+                // predates this key — see bitesmart_stage_cards_template_version()'s
+                // 2026-08-28 comment. Without it, a stale card would embed
+                // no 'mediaTypes' at all in this page's JSON blob, and
+                // view.js/browse.js's card.mediaTypes.some(...) would throw
+                // in the browser (TypeError: Cannot read properties of
+                // undefined) instead of just treating that card as
+                // type-less.
+                'mediaTypes' => $card['mediaTypes'] ?? array(),
                 'html'       => $card['html'],
                 'searchText' => $card['searchText'],
             );
@@ -431,28 +465,32 @@ function bitesmart_render_learning_search_data( array $cards, $instance_id ) {
 }
 
 /**
- * Card type => checkbox label, in the fixed order the type-filter
+ * Media Type slug => checkbox label, in the fixed order the type-filter
  * checkboxes always render — see bitesmart_render_learning_search_type_filter()
- * below. One place to add a label if a new card type is ever added to
- * bitesmart_build_stage_card_list()'s WP_Query.
+ * below. Replaces the OLD per-post-type label map (Q&A/Resources/Episodes/
+ * etc.) as of 2026-08-28 — the filter now runs on the `media_type` taxonomy
+ * (includes/media-type-taxonomy.php, CPT plugin) instead of post type, so a
+ * card can match more than one checkbox (e.g. a Q&A Entry that's both
+ * "Short Answer" and, once it embeds one, "Video"). One place to add a label
+ * if a new Media Type term is ever added to
+ * bitesmart_seed_media_type_terms().
  *
- * @return array<string, string>
+ * @return array<string, string> Term slug => label.
  */
-function bitesmart_learning_search_type_labels() {
+function bitesmart_learning_search_media_type_labels() {
     return array(
-        'qa_entry'      => __( 'Q&A', 'custom-blocks' ),
-        'resource'      => __( 'Resources', 'custom-blocks' ),
-        'episode'       => __( 'Episodes', 'custom-blocks' ),
-        'coloring_book' => __( 'Coloring Books', 'custom-blocks' ),
-        'guide_chapter' => __( 'Guide Chapters', 'custom-blocks' ),
-        'book'          => __( 'Books', 'custom-blocks' ),
+        'video'        => __( 'Video', 'custom-blocks' ),
+        'short-answer' => __( 'Short Answer', 'custom-blocks' ),
+        'article'      => __( 'Article', 'custom-blocks' ),
+        'image'        => __( 'Image', 'custom-blocks' ),
     );
 }
 
 /**
- * "Show: [x] Q&A [x] Resources …" checkboxes — all checked by default,
- * unchecking one hides that type from BOTH the live Fuse.js search results
- * AND the browse list below (view.js/browse.js each read these via
+ * "Show: [x] Video [x] Short Answer [x] Article [x] Image" checkboxes — all
+ * checked by default, unchecking one hides any card that carries ONLY
+ * unchecked types from BOTH the live Fuse.js search results AND the browse
+ * list below (view.js/browse.js each read these via
  * .learning-search-type-checkbox/data-type). Deliberately JS-only, same as
  * the search box itself doing nothing without JS — no server-side GET-param
  * fallback, so as not to duplicate the filtering logic in two places for a
@@ -469,15 +507,33 @@ function bitesmart_learning_search_type_labels() {
  * their own filtering whenever ANY copy changes, the same way
  * format-toggle.js already keeps multiple "Show video/text" bars in sync.
  *
- * Only rendered when this Stage actually has 2+ distinct card types —
- * a single checkbox with nothing to compare against isn't a useful filter,
- * and no checkboxes at all when $cards is empty (nothing to filter).
+ * Only rendered when this Stage actually has 2+ distinct Media Types present
+ * across its cards — a single checkbox with nothing to compare against isn't
+ * a useful filter, and no checkboxes at all when $cards is empty (nothing to
+ * filter).
  *
- * @param array<int, array{id:int, type:string, html:string, searchText:string}> $cards
+ * @param array<int, array{id:int, type:string, mediaTypes:array<int,string>, html:string, searchText:string}> $cards
  * @return void
  */
 function bitesmart_render_learning_search_type_filter( array $cards ) {
-    $present_types = array_unique( wp_list_pluck( $cards, 'type' ) );
+    // array_map() with a '?? array()' fallback rather than
+    // wp_list_pluck( $cards, 'mediaTypes' ) — wp_list_pluck() reads
+    // $item['mediaTypes'] directly with no isset() guard, which throws an
+    // "Undefined array key" warning against a stale transient cache built by
+    // an older version of bitesmart_build_stage_card_list() that predates
+    // this key (see bitesmart_stage_cards_template_version()'s own
+    // 2026-08-28 comment on why that shouldn't happen going forward, but
+    // this is a free extra guard against the same class of bug next time a
+    // card field is added). array() prepended as a guaranteed first argument
+    // to array_merge() — array_merge(...$x) with an empty $cards (nothing
+    // added for this Stage yet) would otherwise spread to zero arguments,
+    // which throws ArgumentCountError in PHP 8.
+    $present_types = array_unique( array_merge( array(), ...array_map(
+        function ( $card ) {
+            return $card['mediaTypes'] ?? array();
+        },
+        $cards
+    ) ) );
     if ( count( $present_types ) < 2 ) {
         return;
     }
@@ -487,8 +543,8 @@ function bitesmart_render_learning_search_type_filter( array $cards ) {
     <div class="learning-search-type-filter-wrap">
         <fieldset class="learning-search-type-filter">
             <legend class="learning-search-type-filter-legend"><?php esc_html_e( 'Filter by type', 'custom-blocks' ); ?></legend>
-            <?php foreach ( bitesmart_learning_search_type_labels() as $type => $label ) : ?>
-                <?php if ( in_array( $type, $present_types, true ) ) : // don't offer a "Coloring Books" checkbox on a Stage with none, etc. ?>
+            <?php foreach ( bitesmart_learning_search_media_type_labels() as $type => $label ) : ?>
+                <?php if ( in_array( $type, $present_types, true ) ) : // don't offer an "Image" checkbox on a Stage with none, etc. ?>
                     <label class="learning-search-type-toggle">
                         <input type="checkbox" class="learning-search-type-checkbox" data-type="<?php echo esc_attr( $type ); ?>" checked>
                         <?php echo esc_html( $label ); ?>

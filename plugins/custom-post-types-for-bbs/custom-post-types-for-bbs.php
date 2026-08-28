@@ -22,10 +22,14 @@
 // book-cpt.php (2026-08-16) only needs Stage/Topic, already loaded above —
 // sits with the other flat/independent content types, before the
 // Guide/Guide-Chapter/Citation "conceptually nested" group starts.
+// media-type-taxonomy.php (2026-08-28) is used by every content type below
+// EXCEPT Guide/Citation — same "shared taxonomy, load before any CPT that
+// attaches to it" reasoning as Stage/Topic/Series.
 require_once __DIR__ . '/includes/stage-taxonomy.php';
 require_once __DIR__ . '/includes/topic-taxonomy.php';
 require_once __DIR__ . '/includes/series-taxonomy.php';
 require_once __DIR__ . '/includes/guide-section-taxonomy.php';
+require_once __DIR__ . '/includes/media-type-taxonomy.php';
 require_once __DIR__ . '/includes/episode-cpt.php';
 require_once __DIR__ . '/includes/resource-cpt.php';
 require_once __DIR__ . '/includes/qa-entry-cpt.php';
@@ -40,17 +44,19 @@ require_once __DIR__ . '/includes/citation-cpt.php';
 // anything above — it just needs to register on 'init' like the rest.
 require_once __DIR__ . '/includes/search-log-cpt.php';
 
-// Registers the Stage/Series taxonomies and seeds their terms on fresh
-// installs. wp_insert_term() requires the taxonomy to already be
+// Registers the Stage/Series/Media Type taxonomies and seeds their terms on
+// fresh installs. wp_insert_term() requires the taxonomy to already be
 // registered, so this calls the full registration functions (which seed
 // terms at their end), not just the seeding helpers on their own. This
 // plugin is already active in production, so this alone won't seed the
 // existing install — the init-hooked calls in stage-taxonomy.php /
-// series-taxonomy.php are what actually do that; this only covers future
-// fresh installs. Topic has no terms to seed (free-tag, see
-// topic-taxonomy.php), so it needs no equivalent activation call.
+// series-taxonomy.php / media-type-taxonomy.php are what actually do that;
+// this only covers future fresh installs. Topic has no terms to seed
+// (free-tag, see topic-taxonomy.php), so it needs no equivalent activation
+// call.
 register_activation_hook( __FILE__, 'bitesmart_register_stage_taxonomy' );
 register_activation_hook( __FILE__, 'bitesmart_register_series_taxonomy' );
+register_activation_hook( __FILE__, 'bitesmart_register_media_type_taxonomy' );
 
 // Search Log's own daily prune job schedules itself defensively on 'init'
 // (see bitesmart_search_log_schedule_prune() in search-log-cpt.php — same

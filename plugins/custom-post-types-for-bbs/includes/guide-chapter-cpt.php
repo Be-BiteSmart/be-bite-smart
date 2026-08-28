@@ -140,9 +140,47 @@ function bitesmart_register_guide_chapter_post_type() {
     // own "View All Chapters" list; a chapter's OWN page never shows it.
     register_taxonomy_for_object_type( 'guide_section', 'guide_chapter' );
 
+    // Attaches Guide Chapter to the shared Media Type taxonomy
+    // (includes/media-type-taxonomy.php) — drives the Learning Hub's
+    // "Filter by type" checkboxes (see
+    // bitesmart_default_guide_chapter_media_type_term() below for the
+    // default this CPT applies).
+    register_taxonomy_for_object_type( 'media_type', 'guide_chapter' );
+
     bitesmart_register_guide_chapter_meta();
 }
 add_action( 'init', 'bitesmart_register_guide_chapter_post_type' );
+
+/**
+ * Every chapter's text body is real written content (post_content — see the
+ * file-level comment above), so new Guide Chapter posts default to the
+ * "Article" Media Type term — same reasoning and same known WP core autosave
+ * edge case as bitesmart_default_episode_stage_term() in episode-cpt.php
+ * (see its comment for why this is a save_post hook rather than the
+ * 'default_term' taxonomy arg). Only fires when the post genuinely has zero
+ * Media Type terms at save time, so it never overrides an editor's real
+ * choice.
+ *
+ * Deliberately does NOT also auto-add "Video" for chapters that have one
+ * (bitesmart_guide_chapter_video_ids() in the Custom Blocks plugin's
+ * guide-chapter-display.php) — that meta is written via REST AFTER
+ * save_post fires (same timing gotcha documented on
+ * bitesmart_guide_chapter_autofill_guide_id() above), so a save_post-time
+ * read here would see stale (often empty) video data on the very save that
+ * added it. Not worth the added rest_after_insert_guide_chapter complexity
+ * for what's only ever a starting default — editors check the "Video" box
+ * by hand for chapters that have one.
+ */
+function bitesmart_default_guide_chapter_media_type_term( $post_id, $post, $update ) {
+    if ( wp_is_post_revision( $post_id ) || wp_is_post_autosave( $post_id ) ) {
+        return;
+    }
+
+    if ( ! has_term( '', 'media_type', $post_id ) ) {
+        wp_set_object_terms( $post_id, 'article', 'media_type' );
+    }
+}
+add_action( 'save_post_guide_chapter', 'bitesmart_default_guide_chapter_media_type_term', 10, 3 );
 
 /**
  * Explicit rewrite-rule carve-out for the References page

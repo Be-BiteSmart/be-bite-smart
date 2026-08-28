@@ -119,9 +119,13 @@ function initLearningSearchBlock(block) {
     const rawMatches = fuse.search(trimmed);
     lastRawFuseCount = rawMatches.length;
 
+    // A card matches if it carries ANY of the enabled Media Types (a card
+    // can carry more than one — e.g. a Q&A Entry tagged both "Short Answer"
+    // and "Video" — so this is an overlap check, not exact-membership the
+    // way the old post-type filter's single `match.item.type` was).
     const enabledTypes = getEnabledTypes();
     const matches = rawMatches.filter(
-      (match) => !enabledTypes || enabledTypes.has(match.item.type),
+      (match) => !enabledTypes || match.item.mediaTypes.some((type) => enabledTypes.has(type)),
     );
 
     if (matches.length === 0) {
