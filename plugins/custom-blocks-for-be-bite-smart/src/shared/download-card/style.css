@@ -152,6 +152,14 @@ html
   border: 2px solid var(--wp--preset--color--accent-2);
 }
 
+/* Coming Soon pill: same greyed-out look for EN and ES — unlike the real
+   Download buttons (ES outline / EN filled), there's no PDF underneath
+   either language yet, so distinguishing them here just reads as one
+   button being "off" (white) and confusing rather than a deliberate
+   style choice. The .ecd-toggle--outline modifier is still applied to the
+   ES pill (see bitesmart_coloring_book_language_row() /
+   render-language-row.js) for markup consistency with the real button,
+   but intentionally has no visual effect here. */
 html
   body:not(.block-editor-page)
   .download-card-block
@@ -161,14 +169,6 @@ html
   border-color: #c8d4dc;
   cursor: not-allowed;
   pointer-events: none;
-}
-html
-  body:not(.block-editor-page)
-  .download-card-block
-  .ecd-toggle--outline.ecd-toggle--coming-soon.block-toggle-btn {
-  background: #ffffff;
-  color: #4e6475;
-  border-color: #c8d4dc;
 }
 
 .ecd-viewer {
