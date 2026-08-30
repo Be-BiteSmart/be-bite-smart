@@ -337,6 +337,15 @@ function bitesmart_stage_cards_template_version() {
  * selectable in custom/learning-search's own Stage dropdown (index.js) —
  * it's just no longer read by this query.
  *
+ * $stage_slug === 'all' (2026-08-30, the "All Stages" pseudo-stage — see
+ * [[be-bitesmart-content-hub-plan]] in memory for why this was originally
+ * deferred and later built) is its own query branch too, same idea as
+ * 'guide': every published post of these types, but with NO tax_query,
+ * rather than a real 'all' term ever being applied to content. Unlike
+ * 'guide', guide_chapter posts here still get the compact teaser render
+ * (render_guide_chapter_search_card()), not the pooled accordion row — the
+ * ternary below only special-cases 'guide' specifically.
+ *
  * @param string $stage_slug Stage taxonomy term slug.
  * @param string $lang       Short language code (bitesmart_site_lang_code()).
  * @return array<int, array{id:int, type:string, mediaTypes:array<int,string>, html:string, searchText:string}>
@@ -379,6 +388,24 @@ function bitesmart_build_stage_card_list( $stage_slug, $lang ) {
                 ),
             ),
             'orderby'        => array( 'number_clause' => 'ASC' ),
+        ) );
+    } elseif ( 'all' === $stage_slug ) {
+        // "All Stages" pseudo-stage (bitesmart_seed_all_stages_pseudo_term(),
+        // stage-taxonomy.php): same post types as the real-Stage branch
+        // below, but no tax_query at all, so this pulls every published
+        // post of these types regardless of Stage tagging (including any
+        // untagged post) — lets a visitor browse/search everything without
+        // picking a stage first. guide_chapter posts still fall through to
+        // the compact render_guide_chapter_search_card() teaser below,
+        // since the pooled-accordion render only applies when
+        // stage_slug === 'guide' specifically.
+        $query = new WP_Query( array(
+            'post_type'      => array( 'qa_entry', 'resource', 'episode', 'coloring_book', 'guide_chapter' ),
+            'post_status'    => 'publish',
+            'posts_per_page' => -1,
+            'orderby'        => 'title',
+            'order'          => 'ASC',
+            'no_found_rows'  => true,
         ) );
     } else {
         $query = new WP_Query( array(

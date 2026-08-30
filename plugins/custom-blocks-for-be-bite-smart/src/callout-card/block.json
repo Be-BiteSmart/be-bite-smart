@@ -1,0 +1,34 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 2,
+  "name": "custom/callout-card",
+  "title": "Callout Card",
+  "description": "Contained two-column card with a pull-quote panel and supporting copy + two CTAs — used for the homepage prevention-education section and for sponsorship callouts",
+  "category": "widgets",
+  "editorScript": "file:./index.js",
+  "style": "file:./style-index.css",
+  "supports": {
+    "align": ["wide"]
+  },
+  "attributes": {
+    "align": { "type": "string", "default": "wide" },
+    "leadIn": {
+      "type": "string",
+      "default": "Despite the decades long call for age-appropriate education, structured prevention education designed specifically for children remains inadequate and relatively ineffective. Much is static Do and Don’t advice."
+    },
+    "quote": {
+      "type": "string",
+      "default": "Be BiteSmart<sup>SM</sup> addresses this gap through proactive education grounded in canine behavioral science, early child development, and pediatric injury-prevention research."
+    },
+    "body": {
+      "type": "string",
+      "default": "Be BiteSmart<sup>SM</sup> educational materials are provided free of charge and are publicly accessible worldwide. All videos and learning resources may be shared and used for non-commercial educational purposes by families, schools, healthcare providers, and community organizations."
+    },
+    "quoteSource": { "type": "string", "default": "" },
+    "quoteSourceUrl": { "type": "string", "default": "" },
+    "btn1Text": { "type": "string", "default": "Free Educational Material" },
+    "btn1Url": { "type": "string", "default": "#" },
+    "btn2Text": { "type": "string", "default": "Evidence Library" },
+    "btn2Url": { "type": "string", "default": "#" }
+  }
+}
