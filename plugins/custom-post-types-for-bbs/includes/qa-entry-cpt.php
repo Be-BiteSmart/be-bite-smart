@@ -73,9 +73,37 @@ function bitesmart_register_qa_entry_post_type() {
     register_taxonomy_for_object_type( 'stage', 'qa_entry' );
     register_taxonomy_for_object_type( 'topic', 'qa_entry' );
 
+    // Attaches Q&A Entry to the shared Media Type taxonomy
+    // (includes/media-type-taxonomy.php) — drives the Learning Hub's
+    // "Filter by type" checkboxes (see bitesmart_default_qa_entry_media_type_term()
+    // below for the default this CPT applies).
+    register_taxonomy_for_object_type( 'media_type', 'qa_entry' );
+
     bitesmart_register_qa_entry_meta();
 }
 add_action( 'init', 'bitesmart_register_qa_entry_post_type' );
+
+/**
+ * A Q&A Entry defaults to a short inline answer (_bitesmart_qa_answer_type
+ * itself defaults to 'short' — see bitesmart_register_qa_entry_meta() below),
+ * so new Q&A Entry posts default to the "Short Answer" Media Type term too —
+ * same reasoning and same known WP core autosave edge case as
+ * bitesmart_default_episode_stage_term() in episode-cpt.php (see its comment
+ * for why this is a save_post hook rather than the 'default_term' taxonomy
+ * arg). Only fires when the post genuinely has zero Media Type terms at save
+ * time, so it never overrides an editor's real choice — e.g. an entry with a
+ * Long Answer that links out to an Article, or one that embeds a video.
+ */
+function bitesmart_default_qa_entry_media_type_term( $post_id, $post, $update ) {
+    if ( wp_is_post_revision( $post_id ) || wp_is_post_autosave( $post_id ) ) {
+        return;
+    }
+
+    if ( ! has_term( '', 'media_type', $post_id ) ) {
+        wp_set_object_terms( $post_id, 'short-answer', 'media_type' );
+    }
+}
+add_action( 'save_post_qa_entry', 'bitesmart_default_qa_entry_media_type_term', 10, 3 );
 
 /**
  * The native Title field sits above the locked custom/qa-entry-fields block

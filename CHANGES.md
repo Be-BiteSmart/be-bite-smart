@@ -1,5 +1,146 @@
 # Change log
 
+## 2026-08-27 — Add Playwright coverage for the language-toggle feedback
+
+**What was changed:**
+- `app/public/wp-content/tests/videos/helpers/videos.js`: added `langDisplayName()`, `expectedPlayButtonLabel()`, and `expectedLangChangeStatus()` — derive the expected play-button/status text straight from the page's own hidden, TranslatePress-translatable templates (same source `langName()`/`setPlayButtonLabel()`/`showLangChangeStatus()` read at runtime) instead of hardcoding "English"/"Spanish", so the assertions stay correct regardless of site language or wording changes.
+- `app/public/wp-content/tests/videos/language-feedback.spec.js` (new): covers, for the video-quote block — initial `Play ({site language})` label on load; picking a different language before pressing play updates the label and shows "Switched to {language}." (which then fades back out on its own, `is-visible` gone within ~4s); a fully-successful live track switch while playing also shows the status and never together with the existing `.video-quote-track-note`. For the episode block — the same before-play label/status behavior; confirming the restart dialog while playing updates the label and shows the status; cancelling it rolls the label/picker back with **no** status flash (no false "success" message for a switch that didn't happen).
+- `app/public/wp-content/tests/videos/loading.spec.js`: removed the now-obsolete `play button label text stays the same across language switches` test, which asserted the exact opposite of the new intended behavior (a static label that never changes) — replaced with a comment pointing to the new spec file.
+
+**Why this approach:**
+- The old test in `loading.spec.js` would have started failing the moment this feature shipped, since it explicitly asserted the play button label must never change per language — that assertion described the pre-this-change behavior on purpose. Removing/replacing it rather than leaving it to fail was the point, not an afterthought.
+- Episode-block tests guard on `.play-button-label` actually being present before asserting anything, skipping (not failing) otherwise — `/learn/`'s current episode cards are stale legacy content (see finding above) that won't show this feature until re-saved. This mirrors the suite's existing defensive-skip convention (e.g. skipping when a picker has fewer than 2 languages) rather than hardcoding a dependency on a specific other page's content existing in every environment (local/staging/production) tests might run against.
+
+**Verification:** Ran `pnpm exec playwright test tests/videos tests/analytics tests/smoke/blocks.spec.js` against the local site (`PLAYWRIGHT_BASE_URL=https://bebitesmart.local`) — 31 passed, 3 skipped (the episode-block tests, correctly, against `/learn/`'s stale cards), 0 failed. No other existing spec (`analytics/events.spec.js`, `smoke/blocks.spec.js`) broke from the markup/text changes.
+
+## 2026-08-27 — Make video language toggle visibly change something (Episode + Video-quote blocks)
+
+**What was changed:**
+- Plugin: `app/public/wp-content/plugins/custom-blocks-for-be-bite-smart`
+- Problem: switching the EN/ES/HI language picker on a video only moved the picker's own sliding pill — nothing else on the card indicated anything had changed, especially before pressing play. Episode number/title/description are intentionally not per-language content, so they were never an option for showing the change.
+- [src/includes/site-lang.php](plugins/custom-blocks-for-be-bite-smart/src/includes/site-lang.php): added `bitesmart_lang_name()`, `bitesmart_play_button_label()` (initial server-rendered "Play (English)"-style label), and two new hidden-template pairs following the existing track-note/restart-dialog pattern — `bitesmart_needs_play_button_label_template()`/`bitesmart_render_play_button_label_templates()` (`"Play ({language})"`) and `bitesmart_needs_lang_change_status_template()`/`bitesmart_render_lang_change_status_templates()` (`"Switched to {language}."`) — both TranslatePress-translatable via the existing `{language}`-placeholder + hidden-template mechanism.
+- [src/episode-display/episode-display.php](plugins/custom-blocks-for-be-bite-smart/src/episode-display/episode-display.php) and [src/video-quote/video-quote.php](plugins/custom-blocks-for-be-bite-smart/src/video-quote/video-quote.php): play button now reads `Play ({site language name})` from first paint (was a plain static "Watch"); added an empty `.lang-change-status` status paragraph (`role="status" aria-live="polite"`) next to each block's language picker.
+- [src/video-toggle.js](plugins/custom-blocks-for-be-bite-smart/src/video-toggle.js): added `setPlayButtonLabel()` (called from inside `setEpisodeLanguage()`, so the play button always names the currently-selected language, including on initial load and on any rollback) and `showLangChangeStatus()` (fades in a "Switched to Spanish." status line for ~2.5s, only at genuine user-driven language-change points — the pre-playback picker click, a confirmed mid-playback restart, and a fully-successful video-quote live track swap — never on page load, a cancelled restart, or a failed/partial video-quote track swap, which still shows the existing `.video-quote-track-note` instead).
+- [src/shared/lang-picker.css](plugins/custom-blocks-for-be-bite-smart/src/shared/lang-picker.css): added `.lang-change-status` styling, mirroring `.video-quote-track-note`'s always-in-DOM/opacity-fade shape but in a neutral/muted tone (not the track-note's warning amber) since it's a plain confirmation, not a problem.
+- Ran `pnpm run build` in the plugin to regenerate `build/`.
+
+**Why this approach:**
+- User was reluctant to change the episode title/description into the selected language (those aren't per-language content anyway, and an accidental toggle shouldn't make it look like real content silently changed).
+- Considered a static "Selected Language: Spanish" line above the picker instead — rejected as somewhat redundant with the picker's own sliding-pill state and as permanent clutter on an already dense card; a transient confirmation plus a label change at the actual point of action (the play button) won out.
+- **Checked prior history first:** [app/public/CHANGES.md](../CHANGES.md) documents that a per-language watch-button label ("Watch Now"/"Ver Ahora"/"अभी देखें") existed once and was deliberately removed, because translating the whole button into the target language's own script didn't help a visitor who'd clicked the wrong pill by accident. Confirmed with the user this isn't a repeat: the new label keeps the surrounding phrase in the site's own displayed language at all times (e.g. "Play (Spanish)" on an English-language site) — only the language *name* changes, never the button's script/legibility. Decision: keep, not revert.
+- The PHP-side initial render and the JS-side runtime update deliberately share the exact same translatable wrapper string (`"Play ({language})"`, substituted via `str_replace()` server-side and `applyLanguagePlaceholder()` client-side) instead of two independently-worded phrases, so a site admin only has to translate it once via TranslatePress for both paths to stay in sync.
+
+**Verification:** `pnpm run build` completed successfully. Verified live against the local site (`https://bebitesmart.local/learn/`, Mini Documentary `video-quote` block) with a throwaway Playwright script: initial render showed `Play (English)`; clicking the ES picker segment instantly updated the button to `Play (Spanish)`, showed "Switched to Spanish." with `is-visible` true, and the status correctly lost `is-visible` again after ~2.8s while the button label persisted — no console/page errors. Confirmed via raw HTML fetch that the two new hidden templates (`Play ({language})`, `Switched to {language}.`) render correctly in `wp_footer`.
+
+**Found along the way (pre-existing, unrelated to this change):** the `custom/episode-card` blocks embedded on `/learn/` are stale saved HTML predating even the 2026-08-20 "merge Watch Now / Watch the Mini-Documentary buttons" refactor — they still render the old empty `<button class="play-button" aria-label="Play video">` + separate `.watch-now-button` markup with no `.play-button-label` span at all. Neither that older refactor nor this one takes effect on those instances until the post is re-saved in the block editor (regenerating `episode-card/index.js`'s save() output). The CPT-backed `custom/episode` block (`episode-display.php`) and `custom/video-quote` block are unaffected by this since both render dynamically server-side on every request. Confirmed via a direct DB query that at least one published page (`/kids/`, "Resources for Kids to Learn Safe Dog Interactions") already uses the CPT-backed block, so the feature is live somewhere on the site today even though `/learn/`'s legacy cards aren't there yet.
+
+## 2026-08-25 — Fix: hamburger was still disappearing between 480px and 600px
+
+**Problem encountered:** After the first fix above, the hamburger still vanished (and the full horizontal menu showed) for viewport widths between 480px and 600px — outside the 600–680px range that fix targeted.
+
+**Root cause:** Two separate things control the hamburger/full-menu switch, and the first fix only accounted for one of them:
+1. WordPress core hardcodes the switch at 600px (`wp-includes/blocks/navigation/style.css`), which is what round 1 addressed.
+2. The active **Better Block Editor** plugin (`wp-content/plugins/better-block-editor`) has its own `NavigationResponsive` module that injects a *second*, higher-specificity CSS override for the Navigation block's default "mobile" overlay-menu behavior, using its own configurable breakpoint presets (`Core/Settings.php`), whose "Mobile" preset defaults to **480px** — not core's 600px. That plugin rule doesn't use `!important`, but its selector is scoped to the block's own generated class, giving it higher specificity than both core's rule and the round-1 override, so it was winning and switching to the full menu starting at 480px.
+
+Also discovered along the way: `functions.php` enqueues `css/navbar.css` directly (versioned by content hash via `get_css_version()`), not `build/navbar.css` — the `wp-scripts build` output in `build/` isn't actually loaded by the site, so the round-1 rebuild had no effect on production; only the source `css/navbar.css` edit did.
+
+**Fix:** Widened the round-1 override's media query from `(min-width: 600px) and (max-width: 680px)` to `(max-width: 680px)`, keeping the `!important` flags — `!important` beats specificity regardless of source order, so this now reliably beats both core's 600px switch and the plugin's 480px switch across the entire 0–680px range, with the full horizontal menu only taking over above 680px.
+
+**Options considered:**
+- Editing the Better Block Editor plugin's default "Mobile" breakpoint setting (480px → 680px) via its admin UI instead of CSS. Rejected for now since it's a global site-wide setting affecting every block using plugin-provided responsive breakpoints, not just the header nav — the CSS-only fix stays scoped to the navigation block's hamburger behavior.
+
+## 2026-08-25 — Extend header hamburger breakpoint to 680px
+
+**What was changed:**
+- [themes/twentytwentyfive-child/css/navbar.css](themes/twentytwentyfive-child/css/navbar.css):
+  - Added a new override section ("Extend hamburger breakpoint to 680px") that overrides WordPress core's hardcoded 600px switch between the hamburger toggle button (`.wp-block-navigation__responsive-container-open`) and the full horizontal menu (`.wp-block-navigation__responsive-container`), for the `600px`–`680px` range — keeping the hamburger visible and the horizontal menu hidden through 680px instead of 600px.
+  - Extended every other mobile-mode media query in the file that previously used `max-width: 599px` (pipe-hiding, donate button padding, the accordion submenu logic block) to `max-width: 680px`, and the corresponding desktop-mode queries that used `min-width: 600px` (auto-close-on-resize, hover-based desktop submenu logic) to `min-width: 681px`, so the whole mobile experience stays consistent with the new cutoff instead of switching to desktop hover behavior mid-range.
+  - Rebuilt theme assets with `pnpm run build` so the compiled `build/navbar.css` / `build/navbar-rtl.css` (the files actually enqueued on the site) pick up the change.
+
+**Why this approach:**
+- The hamburger/full-menu switch is hardcoded in WordPress core at `wp-includes/blocks/navigation/style.css` (600px). Core files are overwritten on every WP update, so the breakpoint can't be changed there — it has to be overridden from the child theme's own CSS instead, targeting the same core class selectors with a `(min-width: 600px) and (max-width: 680px)` window.
+
+**Problems encountered (round 1):** None — the theme already had a small build pipeline (`wp-scripts build` via pnpm) compiling `src/navbar.js` (which just imports `css/navbar.css`) into `build/navbar.css`, so the fix just needed a rebuild after the CSS edit. (This rebuild turned out to be a no-op for the site itself — see below.)
+
+## 2026-08-25 — Fix `.no-underline-link` not removing the Learning Hub title link's underline
+
+**What was built and why:** Janet turned the Learning Hub site title into a paragraph containing a link (so it points to `/learn/` instead of the default homepage) and added a `no-underline-link` "Additional CSS class" to remove the link's underline, but the underline still showed even though DevTools confirmed the class was present.
+
+**Problems encountered, why they happened, and how they were fixed:** WordPress's "Additional CSS class(es)" setting applies to the block's own wrapper element — here, the paragraph — not to a link nested inside it. `text-decoration-line` isn't inherited the normal way: a browser's default `<a>` underline is a separate decoration from anything declared on its parent, so `.no-underline-link { text-decoration-thickness: 0 !important; }` had nothing to act on when the class sat on the `<p>` and not the `<a>`. Also, `text-decoration-thickness: 0` alone is a fragile way to hide an underline, since some browsers can round a 0 thickness back up to a visible minimum instead of rendering nothing. Fixed by also targeting `.no-underline-link a` and switching to `text-decoration: none !important`, which reliably turns the line off regardless of which element (wrapper or link) actually carries the class.
+
+**Files modified:**
+
+- `themes/twentytwentyfive-child/style.css` — `.no-underline-link` rule now also matches `.no-underline-link a`, and uses `text-decoration: none !important` instead of `text-decoration-thickness: 0px !important`
+
+**Verification:** Not yet confirmed in the browser (Local) — next step is to reload the Learning Hub header and check the title link no longer shows an underline.
+
+**Follow-up — cache-busting gap found while testing this fix:** After the CSS edit, the browser kept showing the parent theme's `a { text-decoration-thickness: 1px !important }` (from `themes/twentytwentyfive/style.css`) as if the new rule weren't there at all — not a specificity problem (`.no-underline-link a` is more specific and also `!important`), but a stale-cache one. `twentytwentyfive-child`'s enqueued `style.css` is versioned from `build/style.asset.php` (`functions.php`), and that hash comes from `@wordpress/dependency-extraction-webpack-plugin` hashing the compiled **JS** entry (`src/style.js`, a near-empty file that just imports `style.css`) — not the CSS content. Ran `pnpm run build` expecting it to refresh the hash and confirmed it did not: `build/style.asset.php`'s version (`70bdde6439205150e1b9`) was identical before and after the build, because the JS entry never changed. So this project's version-hash cache-busting silently does nothing for CSS-only edits to `style.css`, `css/navbar.css`, `css/forminator.css`, or `css/shared-block-styles.css` — a hard browser refresh (or cache purge on deployed environments) is the only thing that reliably shows a pure-CSS change right now.
+
+**Fix applied:** Replaced `get_asset()` (which read `build/*.asset.php`'s webpack-JS-derived hash) with `get_css_version( $relative_path )`, which returns `substr( md5_file( $full ), 0, 20 )` of the actual enqueued CSS file — falling back to `'1.0.0'` if the file is missing, same as before. Updated all four `wp_enqueue_style()` calls (`style.css`, `css/navbar.css`, `css/forminator.css`, `css/shared-block-styles.css`) to use it. This is git-safe (unlike `filemtime()`, which the original code's comment already noted was rejected because git stamps every file with checkout time on `git pull`, busting cache for every stylesheet on every deploy whether it changed or not) — the version string now only changes when a CSS file's actual bytes change.
+
+**Files modified:**
+
+- `themes/twentytwentyfive-child/functions.php` — `get_asset()` → `get_css_version()`; all four CSS `wp_enqueue_style()` calls now pass `get_css_version( <relative path> )` instead of an asset-file version; removed the now-stale comment about the asset.php hash being sufficient for cache-busting
+
+**Verification:** Confirmed `md5sum style.css | cut -c1-20` matches what `get_css_version('style.css')` will compute (`f06573dccf2010517f51`), and that this value already reflects the `.no-underline-link` fix above. `php -l` wasn't available in this shell to lint the file directly, so verification was by careful re-read of the edited `functions.php` rather than a syntax-checker run. Not yet confirmed via an actual page load in Local.
+
+**What the next logical step would be:** Load the site in Local, confirm the Learning Hub title link's `<link>` tag now carries a fresh `?ver=` value and the underline is gone; the `build/*.asset.php` files are no longer read for CSS versioning at all (still produced by `pnpm run build` since JS entries still exist, just unused for this purpose) — worth deciding later whether to drop those unused JS entries/asset files entirely, but out of scope for this fix.
+
+## 2026-08-21 — Play-button label: "Watch Now" / "Watch the Mini-Documentary" → "Watch"
+
+**What was built and why:** Shortened the play-button pill's label text to just "Watch" on both episode cards and the video-quote (mini-documentary) block, for a terser CTA.
+
+**Files modified:**
+
+- `plugins/custom-blocks-for-be-bite-smart/src/episode-card/index.js` — `__("Watch Now", "custom-blocks")` → `__("Watch", "custom-blocks")`
+- `plugins/custom-blocks-for-be-bite-smart/src/episode-display/episode-display.php` — same string, PHP `esc_html_e()` side
+- `plugins/custom-blocks-for-be-bite-smart/src/video-quote/video-quote.php` — `"Watch the Mini-Documentary"` → `"Watch"`
+- `plugins/custom-blocks-for-be-bite-smart/build/**` — rebuilt via `pnpm run build`
+
+**Scope note:** left the test title `"Watch Now fires episodes-watched..."` (`tests/analytics/events.spec.js`) and the descriptive "Watch Now" mentions in `README.md`/`analytics.php` comments as-is — those describe the click action generically, not the literal rendered label, and don't assert exact button text.
+
+**Verification:** Build completed successfully; confirmed no remaining "Watch Now" / "Watch the Mini-Documentary" strings under `plugins/custom-blocks-for-be-bite-smart/build/`.
+
+## 2026-08-20 — Play-button pill: orange → accent-2 (blue) for contrast
+
+**What was built and why:** The new play-button pill (white icon + white label text on an orange `accent-1` fill, `#D16B0C`) fails WCAG AA color contrast for normal text — white-on-`#D16B0C` is ~3.6:1, below the 4.5:1 minimum. Switched the pill's background (base and `:hover`) to `accent-2`, the same CSS custom property the language toggle/picker already uses at this identical white-text/white-icon-on-fill pairing (`lang-picker.css`), so the fix reuses an already-accessible color instead of picking a new one and re-deriving contrast.
+
+**Files modified:**
+
+- `themes/twentytwentyfive-child/css/shared-block-styles.css` — `.play-button` and `.play-button:hover` now reference `--wp--preset--color--accent-2` instead of `--wp--preset--color--accent-1`
+- `themes/twentytwentyfive-child/build/shared-blocks.css`, `shared-blocks-rtl.css`, `shared-blocks.asset.php` — rebuilt via `pnpm run build`
+
+**Verification:** Build completed successfully; confirmed `accent-2` (not `accent-1`) in the rebuilt `build/shared-blocks.css` output. Visual/contrast check still needs to happen in the browser (Local) since `accent-2`'s actual rendered value can be overridden by Global Styles in the database, not just `theme.json`.
+
+**What the next logical step would be:** Load the site in Local and eyeball the play-button pill on the home/`/learn/` pages to confirm it now matches the language toggle's blue and reads clearly; re-run an axe/contrast check once deployed.
+
+## 2026-08-20 — Merge "Watch Now" / "Watch the Mini-Documentary" buttons into the play-button pill
+
+**What was built and why:** Episode cards and the video-quote (mini-documentary) block each had two separate playback triggers doing the same job — a plain circular `.play-button` over the thumbnail, and a separate text button (`.watch-now-button` / `.video-quote-watch-button`) below it that had to be hidden once playback started. Consolidated to a single trigger: the play-button overlay is now a pill containing a `.play-button-icon` (the triangle, previously a `::after` pseudo-element) and a `.play-button-label` text span ("Watch Now" / "Watch the Mini-Documentary"), so there's one button, one click handler, and no "hide the dead button once playing" logic to maintain in two places.
+
+**Files modified:**
+
+- `plugins/custom-blocks-for-be-bite-smart/src/episode-card/index.js` — play-button now renders icon + label spans instead of an empty button; `episode-controls` wrapper (and language picker) only renders when a language picker exists, since the watch-now-button that used to fill the other side is gone
+- `plugins/custom-blocks-for-be-bite-smart/src/episode-display/episode-display.php` — same play-button markup change server-side; `episode-controls` div now conditional on `$lang_picker_html`
+- `plugins/custom-blocks-for-be-bite-smart/src/video-quote/video-quote.php` — same play-button markup change; removed the two `.video-quote-watch-button` renders (with-language-picker and no-language-picker branches)
+- `plugins/custom-blocks-for-be-bite-smart/src/video-toggle.js` — removed `watchButton` lookup, its `hidden`-class toggle on play, and its separate click listener; play-button's own listener now covers what both used to do (a click on `.play-button-label` still bubbles to the button)
+- `plugins/custom-blocks-for-be-bite-smart/src/episode-card/style.css` — dropped `.watch-now-button` rules; `.episode-controls` centers its one remaining child (language picker) instead of `space-between`
+- `plugins/custom-blocks-for-be-bite-smart/src/video-quote/style.css` — dropped all `.video-quote-watch-button` rules; play-button padding override updated for the wider pill shape
+- `themes/twentytwentyfive-child/css/shared-block-styles.css` — shared `.play-button` is now `inline-flex` with `.play-button-icon` (real element, same CSS-triangle technique) + `.play-button-label` children; `border-radius` changed from `9999px` to a fixed `2.5rem` so a two-line-wrapped label doesn't collapse the pill into a lozenge; `max-width: min(85%, 22rem)` keeps it from stretching edge-to-edge on narrow viewports
+- `themes/twentytwentyfive-child/inc/analytics.php` — Plausible click-tracking selectors for documentary and episode plays no longer include the removed `.video-quote-watch-button` / `.watch-now-button` classes
+- `tests/analytics/helpers/plausible.js`, `tests/videos/loading.spec.js` — updated to click/query `.play-button` (and `.play-button .play-button-label` where text content is asserted) instead of the removed watch-button selectors; retitled tests accordingly
+
+**Accessibility note:** the old markup relied on `aria-label="Play video"` on an otherwise-empty button. Since the button now has visible text content (`.play-button-label`), the `aria-label` was dropped in favor of the button's own accessible name from its text — same pattern already used elsewhere in the codebase.
+
+**Problems encountered and how they were fixed:**
+
+- Found the plugin and theme `build/` output were stale relative to `src/` (still contained `watch-now-button` and `Play video` strings) when picking this branch back up — ran `pnpm run build` in both `plugins/custom-blocks-for-be-bite-smart` and `themes/twentytwentyfive-child` to regenerate them. Confirmed no `watch-now-button` / `video-quote-watch-button` / `Play video` strings remain anywhere under either `build/` directory.
+- Checked `guide-chapter-display.php` (also has `.play-button` in a doc-comment) — it doesn't render the shared play-button markup at all, so it wasn't affected by the shared CSS change.
+
+**Verification:** Both `pnpm run build` runs completed successfully (exit code 0). Have not yet run Playwright against a deployed environment — `tests/videos/loading.spec.js` and `tests/analytics/helpers/plausible.js` hit `PLAYWRIGHT_BASE_URL`/production by default and won't reflect this change until deployed.
+
+**What the next logical step would be:** Deploy plugin + theme (PHP, CSS, and rebuilt `build/` output) to staging, purge cache, then run `pnpm exec playwright test tests/videos/loading.spec.js` against staging to confirm the consolidated play-button pill loads Vimeo embeds correctly and Plausible tracking still fires.
+
 ## 2026-06-29 — PR Branch Deployment to Staging + Playwright Basic Auth Fix
 
 **What was built and why:**

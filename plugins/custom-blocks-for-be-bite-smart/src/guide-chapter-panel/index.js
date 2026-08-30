@@ -94,6 +94,17 @@ function GuideChapterPanel() {
       placeholder: __("Shown even when this chapter is collapsed.", "custom-blocks"),
     }),
 
+    el(TextControl, {
+      label: __("Question", "custom-blocks"),
+      value: meta._bitesmart_chapter_question || "",
+      onChange: (val) => updateMeta("_bitesmart_chapter_question", val),
+      placeholder: __("e.g. What should I do if my dog won't stop growling?", "custom-blocks"),
+      help: __(
+        "Shown as the heading on this chapter's compact search-result card on real Stage pages. Leave blank to use the chapter title instead.",
+        "custom-blocks",
+      ),
+    }),
+
     el("hr", { style: { margin: "16px 0" } }),
 
     el(ToggleControl, {
@@ -134,7 +145,7 @@ function GuideChapterPanel() {
 
     el("hr", { style: { margin: "16px 0" } }),
 
-    el("p", { style: { fontWeight: 600, marginBottom: 4 } }, __("Search Keywords", "custom-blocks")),
+    el("p", { style: { fontWeight: 600, marginBottom: 4 } }, __("Search Synonyms", "custom-blocks")),
     el(
       "p",
       { className: "components-base-control__help", style: { marginTop: 0 } },
@@ -146,7 +157,7 @@ function GuideChapterPanel() {
     ...languages.map((lang) =>
       el(TextControl, {
         key: `keyword-${lang.code}`,
-        label: `${__("Keywords", "custom-blocks")} (${lang.name})`,
+        label: `${__("Synonyms", "custom-blocks")} (${lang.name})`,
         value: keywords[lang.code] || "",
         onChange: (val) => setKeywords(lang.code, val),
         placeholder: __("e.g. growl, growling, snapped, aggressive", "custom-blocks"),

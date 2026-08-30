@@ -46,6 +46,7 @@ function EpisodeCardSave({ attributes }) {
   const blockProps = useBlockProps.save();
   const urlsByLang = videosFromAttributes(attributes);
   const dataAttrs = episodeArticleDataAttributes(attributes);
+  const langPicker = renderLanguagePicker(wp, urlsByLang, { activeCode: "en" });
 
   return wp.element.createElement(
     "article",
@@ -84,11 +85,19 @@ function EpisodeCardSave({ attributes }) {
               wp.element.createElement(
                 "div",
                 { className: "video-overlay" },
-                wp.element.createElement("button", {
-                  className: "play-button",
-                  "aria-label": "Play video",
-                  type: "button",
-                }),
+                wp.element.createElement(
+                  "button",
+                  { className: "play-button", type: "button" },
+                  wp.element.createElement("span", {
+                    className: "play-button-icon",
+                    "aria-hidden": "true",
+                  }),
+                  wp.element.createElement(
+                    "span",
+                    { className: "play-button-label" },
+                    __("Watch", "custom-blocks"),
+                  ),
+                ),
               ),
             ),
             wp.element.createElement("div", { className: "video-player" }),
@@ -120,21 +129,12 @@ function EpisodeCardSave({ attributes }) {
               value: attributes.description,
             }),
 
-          wp.element.createElement(
-            "div",
-            { className: "episode-controls" },
-
-            renderLanguagePicker(wp, urlsByLang, { activeCode: "en" }),
-
+          langPicker &&
             wp.element.createElement(
-              "button",
-              {
-                className: "watch-now-button block-toggle-btn",
-                type: "button",
-              },
-              wp.element.createElement("span", null, __("Watch Now", "custom-blocks")),
+              "div",
+              { className: "episode-controls" },
+              langPicker,
             ),
-          ),
         ),
       ),
 

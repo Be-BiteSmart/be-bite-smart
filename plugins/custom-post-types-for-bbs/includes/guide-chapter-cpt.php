@@ -140,9 +140,47 @@ function bitesmart_register_guide_chapter_post_type() {
     // own "View All Chapters" list; a chapter's OWN page never shows it.
     register_taxonomy_for_object_type( 'guide_section', 'guide_chapter' );
 
+    // Attaches Guide Chapter to the shared Media Type taxonomy
+    // (includes/media-type-taxonomy.php) — drives the Learning Hub's
+    // "Filter by type" checkboxes (see
+    // bitesmart_default_guide_chapter_media_type_term() below for the
+    // default this CPT applies).
+    register_taxonomy_for_object_type( 'media_type', 'guide_chapter' );
+
     bitesmart_register_guide_chapter_meta();
 }
 add_action( 'init', 'bitesmart_register_guide_chapter_post_type' );
+
+/**
+ * Every chapter's text body is real written content (post_content — see the
+ * file-level comment above), so new Guide Chapter posts default to the
+ * "Article" Media Type term — same reasoning and same known WP core autosave
+ * edge case as bitesmart_default_episode_stage_term() in episode-cpt.php
+ * (see its comment for why this is a save_post hook rather than the
+ * 'default_term' taxonomy arg). Only fires when the post genuinely has zero
+ * Media Type terms at save time, so it never overrides an editor's real
+ * choice.
+ *
+ * Deliberately does NOT also auto-add "Video" for chapters that have one
+ * (bitesmart_guide_chapter_video_ids() in the Custom Blocks plugin's
+ * guide-chapter-display.php) — that meta is written via REST AFTER
+ * save_post fires (same timing gotcha documented on
+ * bitesmart_guide_chapter_autofill_guide_id() above), so a save_post-time
+ * read here would see stale (often empty) video data on the very save that
+ * added it. Not worth the added rest_after_insert_guide_chapter complexity
+ * for what's only ever a starting default — editors check the "Video" box
+ * by hand for chapters that have one.
+ */
+function bitesmart_default_guide_chapter_media_type_term( $post_id, $post, $update ) {
+    if ( wp_is_post_revision( $post_id ) || wp_is_post_autosave( $post_id ) ) {
+        return;
+    }
+
+    if ( ! has_term( '', 'media_type', $post_id ) ) {
+        wp_set_object_terms( $post_id, 'article', 'media_type' );
+    }
+}
+add_action( 'save_post_guide_chapter', 'bitesmart_default_guide_chapter_media_type_term', 10, 3 );
 
 /**
  * Explicit rewrite-rule carve-out for the References page
@@ -272,11 +310,14 @@ function bitesmart_sanitize_guide_chapter_videos_by_lang( $value ) {
 }
 
 /**
- * Sanitize the per-language search-matching Keywords map — identical
+ * Sanitize the per-language search-matching Synonyms map — identical
  * shape/reasoning to bitesmart_sanitize_episode_keywords_by_lang() in
- * episode-cpt.php. Feeds bitesmart_stage_card_keywords() (learning-search.php)
- * once the chapter's search card is wired in, same as Q&A Entry's
- * Synonyms / Resource's Keywords / Episode's Keywords.
+ * episode-cpt.php. Feeds bitesmart_stage_card_keywords() (learning-search.php),
+ * same as Q&A Entry's Synonyms / Resource's Keywords / Episode's Synonyms.
+ * Labeled "Synonyms" in the editing UI (guide-chapter-panel/index.js) as of
+ * 2026-08-28, to match Q&A Entry's naming — the meta key itself
+ * (_bitesmart_chapter_keywords_by_lang) and this function's name were
+ * deliberately left unchanged, this was a user-facing label-only rename.
  *
  * @param mixed $value Raw value.
  * @return array<string, string>
@@ -347,6 +388,29 @@ function bitesmart_register_guide_chapter_meta() {
         'auth_callback'     => 'bitesmart_guide_chapter_meta_auth_callback',
     ) );
 
+    // Real editor-authored question shown as the H3 heading on this
+    // chapter's compact Stage-page search-result card
+    // (render_guide_chapter_search_card(), guide-chapter-display.php) —
+    // added 2026-08-28, same field/reasoning as Episode's
+    // _bitesmart_episode_question (episode-cpt.php): replaces an earlier
+    // "Chapter {number}: {title}" sprintf() heading. Single plain string
+    // (not per-language), since it renders as real visible text and
+    // TranslatePress picks it up normally. Deliberately does NOT affect the
+    // pooled multi-Guide search page's full chapter accordion
+    // (render_guide_chapter_pooled_card() -> bitesmart_render_guide_chapter_row(),
+    // guide-chapter-display.php), which still shows "Chapter {number}:
+    // {title}" exactly as before — this field is read only by the compact
+    // Stage-page teaser. Left blank, the render function falls back to the
+    // plain post title (get_the_title()).
+    register_post_meta( 'guide_chapter', '_bitesmart_chapter_question', array(
+        'type'              => 'string',
+        'single'            => true,
+        'default'           => '',
+        'sanitize_callback' => 'sanitize_text_field',
+        'show_in_rest'      => true,
+        'auth_callback'     => 'bitesmart_guide_chapter_meta_auth_callback',
+    ) );
+
     // Per-language Vimeo URLs for this chapter's video version — identical
     // shape to Episode's _bitesmart_episode_videos_by_lang. An empty map
     // means this chapter has no video version (drives the "video" badge
@@ -408,6 +472,8 @@ function bitesmart_register_guide_chapter_meta() {
     // rendered as visible page text, so TranslatePress won't auto-translate
     // it (same caveat as every other content type's Keywords/Synonyms
     // field). Same shape as Episode's _bitesmart_episode_keywords_by_lang.
+    // Labeled "Synonyms" in the editing UI as of 2026-08-28 to match Q&A
+    // Entry's naming; meta key kept as-is.
     register_post_meta( 'guide_chapter', '_bitesmart_chapter_keywords_by_lang', array(
         'type'              => 'object',
         'single'            => true,

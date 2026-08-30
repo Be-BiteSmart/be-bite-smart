@@ -6,45 +6,85 @@
  * Learning Hub is.
  *
  * This plugin (Custom Post Types for BBS) owns the CONTENT MODEL only — the
- * post type itself, its meta fields, and attaching it to the Stage and Topic
- * taxonomies (NOT Series — books aren't tied to the "Paws To Prevent" show
- * the way Episode/Coloring Book are). The editing UI
+ * post type itself, its meta fields, and attaching it to the Topic taxonomy
+ * (NOT Series — books aren't tied to the "Paws To Prevent" show the way
+ * Episode/Coloring Book are; NOT Stage or Media Type either, as of
+ * 2026-08-30 — both were search/browse-filter machinery with nothing left
+ * to feed once Book left the Learning Hub search listing, see further down
+ * in this file). The editing UI
  * (custom/book-panel) and the front-end display block (custom/book) both
  * live in the separate "Custom Blocks for Be BiteSmart" plugin — see that
  * plugin's src/book-panel/ and src/book-display/. That plugin declares this
  * one as a dependency (its "Requires Plugins" header), so WordPress won't
  * let it activate without this plugin also active.
  *
- * A Book is deliberately built DIFFERENTLY from Episode/Resource/Q&A
- * Entry/Coloring Book, which all lock the block editor canvas to one custom
- * fields block, because every field THOSE have is either a plain value or a
- * short piece of text. A book's "why we recommend it" text is real
- * multi-paragraph, sometimes-bulleted prose — too rich for a plain meta
- * textarea. Guide Chapter already solved this exact problem (see
- * guide-chapter-cpt.php), so Book borrows that same mechanism: the canvas
- * stays UNLOCKED, post_content IS the recommendation body, authored with
- * WordPress's real block editor — but restricted (see
- * bitesmart_restrict_book_allowed_blocks() below) to just Paragraph/List,
- * since this is a short blurb, not a full article. Everything else (Featured
- * Image aside) lives in a sidebar panel (custom/book-panel, a
- * PluginDocumentSettingPanel — NOT a locked template block, same reasoning
- * as custom/guide-chapter-panel) rather than a canvas block, for the same
- * "canvas has to stay free for content authoring" reason.
+ * Book's content-editing shape changed several times on 2026-08-30 before
+ * settling here — full blow-by-blow in [[be-bitesmart-book-cpt-status]] in
+ * memory. Short version: originally an UNLOCKED canvas (post_content was
+ * the recommendation body directly, restricted via an allowed_block_types_all
+ * filter). Janet then asked for Q&A-Entry-style dedicated fields, which
+ * became a locked custom/book-fields block (Custom Blocks plugin) with two
+ * RichText fields storing HTML in post meta — but real content needs a
+ * bulleted list sitting in the MIDDLE of a paragraph (e.g. "How to Speak
+ * Dog": intro sentence, 4-item list, closing sentence), which no meta-field
+ * shape can represent, and RichText's `multiline` mode (the obvious fix)
+ * failed silently, twice, when tried.
+ *
+ * Landed here: the canvas is STILL locked to one top-level block
+ * (custom/book-fields), same `template`/`template_lock: 'all'` mechanism as
+ * Q&A/Resource, but that block's own content is now two further-locked,
+ * always-ordered, clearly-labeled sections (custom/book-summary-section
+ * always first, custom/book-excerpt-section always second — neither can be
+ * removed or reordered) — and WITHIN each section, a genuinely free nested
+ * Paragraph/List editing area (real InnerBlocks, `templateLock: false`,
+ * `allowedBlocks: ['core/paragraph','core/list']`). This is the same
+ * per-level `templateLock` nesting Core's own Columns/Column block uses.
+ * post_content is USED again as of this design (unlike the brief meta-field
+ * interlude) — InnerBlocks content can only ever serialize into its parent
+ * block's own output, there's no way to redirect it into a meta field, and
+ * real nested block editing is exactly the mechanism WordPress already
+ * provides for "freely interleave these block types" — reusing decades-old
+ * block parsing/rendering rather than any RichText trick. render_book_block()
+ * (book-display.php) extracts the two sections via `parse_blocks()` +
+ * `render_block()`.
+ *
+ * Everything ELSE (Audience, Price/Availability, Buy Links,
+ * Inside-the-Book preview images) stays in the existing sidebar panel
+ * (custom/book-panel, a PluginDocumentSettingPanel) — this restructuring
+ * was scoped to just the two write-up sections, not a full migration of
+ * every Book field into the locked canvas the way Q&A Entry has everything.
+ *
+ * Existing books' content was migrated (twice, matching the two shape
+ * changes above) — see the 2026-08-30 entries in
+ * [[be-bitesmart-book-cpt-status]] in memory for the full history.
  *
  * UNLIKE Guide Chapter, Book stays HEADLESS (public/publicly_queryable
  * false) — same as Episode/Resource/Coloring Book: no theme in this install
  * renders a standalone permalink page, so a book is only ever displayed
- * embedded via custom/book, wherever an editor manually places it on a
- * topic page, plus picked up automatically by Stage-tagged Learning Hub
- * search/browse (see bitesmart_build_stage_card_list() in
- * learning-search.php, Custom Blocks plugin).
+ * embedded via custom/book, wherever an editor manually places it — either
+ * a hand-authored topic page, or one of the Audience-grouped custom/books-list
+ * instances on the Books page (see [[be-bitesmart-book-cpt-status]] in
+ * memory).
  *
- * No default Stage-term auto-assignment on save (unlike Episode/Coloring
- * Book) — deliberate, per Janet: which Stage(s) a book fits varies a lot
- * per book (a photo-heavy body-language book might suit a parent AND a
- * preschooler, while a dense photographic reference is adult-only), so
- * every new Book starts untagged and an editor picks Stage term(s)
- * manually every time.
+ * NOT attached to the Stage taxonomy (removed 2026-08-30, per Janet — was
+ * attached until then so books could be picked up by the Stage-scoped
+ * Learning Hub search/browse, bitesmart_build_stage_card_list() in
+ * learning-search.php; Book was removed from that listing entirely on
+ * 2026-08-28, so tagging a book's Stage had nothing left to feed and the
+ * selector was just clutter in the editor). Any Stage terms already saved
+ * on existing books before this change are harmless leftover data — not
+ * cleaned up, since that's a separate DB write Janet didn't ask for.
+ *
+ * Same removal, same day, extended to everything ELSE that only ever
+ * existed for that same search/browse machinery, per Janet: the Media Type
+ * taxonomy attachment (drove the Learning Hub's "Filter by type"
+ * checkboxes) and its `bitesmart_default_book_media_type_term()` default,
+ * and the per-language Search Keywords meta field/UI
+ * (`_bitesmart_book_keywords_by_lang`, fed `bitesmart_stage_card_keywords()`
+ * in learning-search.php's Fuse.js search index). All removed outright, not
+ * just left dormant — unlike the Stage taxonomy attachment above, there was
+ * no reason to keep this one "just in case" the way Stage's leftover terms
+ * were left alone.
  */
 
 function bitesmart_register_book_post_type() {
@@ -64,12 +104,16 @@ function bitesmart_register_book_post_type() {
         // comment in episode-cpt.php's 'supports' entry for exactly why
         // (block editor won't load at all without 'editor'; registered meta
         // silently vanishes from REST without 'custom-fields'). Same two
-        // gotchas apply here verbatim. Deliberately NO 'template'/
-        // 'template_lock': unlike every other content type in this plugin
-        // (Guide Chapter excepted), the canvas stays open — post_content is
-        // the real recommendation body, restricted to Paragraph/List blocks
-        // only via bitesmart_restrict_book_allowed_blocks() below.
+        // gotchas apply here verbatim — 'editor' is required even though
+        // post_content itself goes unused now (same as Q&A Entry/Resource).
+        // 'template'/'template_lock' lock the canvas to exactly one block,
+        // custom/book-fields (Custom Blocks plugin) — added 2026-08-30, same
+        // mechanism as qa-entry-cpt.php/resource-cpt.php.
         'supports'            => array( 'title', 'editor', 'thumbnail', 'custom-fields' ),
+        'template'            => array(
+            array( 'custom/book-fields' ),
+        ),
+        'template_lock'       => 'all',
         'public'              => false,
         'publicly_queryable'  => false,
         'show_ui'             => true,
@@ -86,41 +130,18 @@ function bitesmart_register_book_post_type() {
         'capability_type'     => 'post',
     ) );
 
-    // Attaches Book to the shared Stage/Topic taxonomies
-    // (includes/stage-taxonomy.php, includes/topic-taxonomy.php, this
-    // plugin) so books can be tagged and picked up by
-    // bitesmart_build_stage_card_list() in learning-search.php, same as
-    // Q&A Entry/Resource/Episode/Coloring Book. Deliberately NOT attached to
-    // 'series' — books aren't episodes of "Paws To Prevent".
-    register_taxonomy_for_object_type( 'stage', 'book' );
+    // Attaches Book to the shared Topic taxonomy (includes/topic-taxonomy.php,
+    // this plugin) — free-tag topic labeling, still useful for an editor's
+    // own organization even though nothing currently queries by it (Book
+    // isn't in any Stage/Topic-scoped listing — see the file header for the
+    // Stage removal). Deliberately NOT attached to 'series' — books aren't
+    // episodes of "Paws To Prevent". NOT attached to 'stage' or 'media_type'
+    // as of 2026-08-30 — see file header.
     register_taxonomy_for_object_type( 'topic', 'book' );
 
     bitesmart_register_book_meta();
 }
 add_action( 'init', 'bitesmart_register_book_post_type' );
-
-/**
- * Restricts the Book edit screen's canvas to Paragraph and List blocks only
- * — no headings, images, embeds, etc. inline. The one genuinely new
- * mechanism this CPT needed: no other post type here combines an unlocked
- * canvas (Guide Chapter's trick, for real rich content) with a content
- * restriction (every OTHER post type's trick, but via template_lock on a
- * single fields block, which doesn't apply to an unlocked canvas). A book's
- * cover comes from the native Featured Image field, not inline content, so
- * there's no need for the Image block here.
- *
- * @param array|bool               $allowed_block_types
- * @param WP_Block_Editor_Context  $context
- * @return array|bool
- */
-function bitesmart_restrict_book_allowed_blocks( $allowed_block_types, $context ) {
-    if ( ! $context->post || 'book' !== $context->post->post_type ) {
-        return $allowed_block_types;
-    }
-
-    return array( 'core/paragraph', 'core/list', 'core/list-item' );
-}
-add_filter( 'allowed_block_types_all', 'bitesmart_restrict_book_allowed_blocks', 10, 2 );
 
 /**
  * The native Title field sits above whatever the editor's authored in the
@@ -147,46 +168,104 @@ function bitesmart_book_meta_auth_callback( $allowed, $meta_key, $post_id ) {
 }
 
 /**
- * Audience is a fixed two-value toggle (For Readers of Any Age / For Adult
- * Readers) — anything else input falls back to 'all_ages' rather than being
- * stored as-is. Same shape/reasoning as
+ * Audience was originally a fixed two-value toggle (For Readers of Any Age /
+ * For Adult Readers) — anything else input falls back to 'all_ages' rather
+ * than being stored as-is. Same shape/reasoning as
  * bitesmart_sanitize_qa_entry_answer_type() in qa-entry-cpt.php.
  *
- * @param mixed $value Raw value.
- * @return string 'all_ages' or 'adult'.
- */
-function bitesmart_sanitize_book_audience( $value ) {
-    return 'adult' === $value ? 'adult' : 'all_ages';
-}
-
-/**
- * Sanitize the per-language search-matching Keywords map — same shape and
- * reasoning as bitesmart_sanitize_coloring_book_keywords_by_lang() in
- * coloring-book-cpt.php (free-form comma-separated phrases per language).
+ * Expanded 2026-08-29, per Janet, to four values — her Books page groups
+ * recommendations into more buckets than a binary toggle could express:
+ * books clearly for younger children, books for older kids, and adult books
+ * picture-rich enough to double as a teaching tool with guidance. Both
+ * original slugs/behavior are kept unchanged (no data migration needed —
+ * every existing book is already 'all_ages' or 'adult'); only 'all_ages'
+ * gained a new display LABEL ("All Ages (With Guidance)", see
+ * bitesmart_book_audience_badge() in book-display.php), not a new slug.
+ * Fixed order used everywhere (this field's enum, the book-panel RadioControl,
+ * the badge, and the books-list.php grouping): Younger Children, Older
+ * Children, Adults, All Ages (With Guidance) — Janet's own stated order.
  *
  * @param mixed $value Raw value.
- * @return array<string, string>
+ * @return string One of 'younger_children', 'older_children', 'adult', 'all_ages'.
  */
-function bitesmart_sanitize_book_keywords_by_lang( $value ) {
-    $clean = array();
-
-    if ( is_array( $value ) ) {
-        foreach ( $value as $code => $text ) {
-            $code = sanitize_key( $code );
-            $text = sanitize_text_field( (string) $text );
-            if ( $code && $text !== '' ) {
-                $clean[ $code ] = $text;
-            }
-        }
-    }
-
-    return $clean;
+function bitesmart_sanitize_book_audience( $value ) {
+    $allowed = array( 'younger_children', 'older_children', 'adult', 'all_ages' );
+    return in_array( $value, $allowed, true ) ? $value : 'all_ages';
 }
 
 /**
- * All custom fields for the Book CPT. Native fields (title, thumbnail, the
- * recommendation body itself via post_content) need no registration here —
- * only data that doesn't map onto a native post field lives in post meta.
+ * Sanitize the "Inside the Book" preview-image picker (added 2026-08-29,
+ * per Janet — optional interior-page photos shown as a small carousel
+ * alongside the cover, see bitesmart_book_cover_gallery() in
+ * book-display.php). Filters to positive integers that are actual image
+ * attachments, dropping anything else (a stray non-image ID, a deleted
+ * attachment, non-numeric junk) rather than storing it — same defensive
+ * posture as this file's other sanitizers. Order is preserved (the order the
+ * editor selected them in the media library), not re-sorted.
+ *
+ * @param mixed $value Raw value.
+ * @return array<int, int> Attachment IDs.
+ */
+function bitesmart_sanitize_book_preview_images( $value ) {
+    if ( ! is_array( $value ) ) {
+        return array();
+    }
+
+    $ids = array_map( 'absint', $value );
+    $ids = array_filter( $ids, function ( $id ) {
+        return $id > 0 && wp_attachment_is_image( $id );
+    } );
+
+    return array_values( $ids );
+}
+
+/**
+ * Sanitize the Buy Links repeater (_bitesmart_book_buy_links, added
+ * 2026-08-30, per Janet — multiple retailer buttons per book, e.g. Amazon
+ * and Target). Drops any entry with no url at all (an incomplete/empty row
+ * left over from the editor's "Add Buy Link" button) since there's nothing
+ * to link to; a blank label is kept as-is; render_book_block()
+ * (book-display.php) is what supplies the "Buy / More Info" fallback
+ * wording for a blank label, not this sanitizer — sanitization here is only
+ * about what gets stored. Order is preserved (the order entered in the
+ * editor), same as the preview-images list above.
+ *
+ * @param mixed $value Raw value.
+ * @return array<int, array{label: string, url: string}>
+ */
+function bitesmart_sanitize_book_buy_links( $value ) {
+    if ( ! is_array( $value ) ) {
+        return array();
+    }
+
+    $links = array();
+    foreach ( $value as $entry ) {
+        if ( ! is_array( $entry ) ) {
+            continue;
+        }
+
+        $url = isset( $entry['url'] ) ? esc_url_raw( $entry['url'] ) : '';
+        if ( '' === $url ) {
+            continue; // nothing to link to — drop the row.
+        }
+
+        $links[] = array(
+            'label' => isset( $entry['label'] ) ? sanitize_text_field( $entry['label'] ) : '',
+            'url'   => $url,
+        );
+    }
+
+    return array_values( $links );
+}
+
+/**
+ * All custom fields for the Book CPT. Native fields (title, thumbnail) need
+ * no registration here. "Why BBS Recommends This Book" and Book Excerpt —
+ * the book's actual write-up — are NOT meta fields; they're real nested
+ * Paragraph/List blocks inside post_content, locked into two named sections
+ * via custom/book-fields
+ * (Custom Blocks plugin) — see the file header for why. Only the OTHER
+ * fields below (Audience, preview images, price, URL) are post meta.
  */
 function bitesmart_register_book_meta() {
     // Added 2026-08-16, per Janet: some book recommendations are kid-facing,
@@ -200,6 +279,8 @@ function bitesmart_register_book_meta() {
     // book-display.php, Custom Blocks plugin) — deliberately NOT wired into
     // any Learning Hub search/browse filter; see
     // [[be-bitesmart-book-cpt-status]] in memory for the full reasoning.
+    // Expanded 2026-08-29 to four values — see bitesmart_sanitize_book_audience()
+    // above for the full reasoning and fixed order.
     register_post_meta( 'book', '_bitesmart_book_audience', array(
         'type'              => 'string',
         'single'            => true,
@@ -208,7 +289,27 @@ function bitesmart_register_book_meta() {
         'show_in_rest'      => array(
             'schema' => array(
                 'type' => 'string',
-                'enum' => array( 'all_ages', 'adult' ),
+                'enum' => array( 'younger_children', 'older_children', 'adult', 'all_ages' ),
+            ),
+        ),
+        'auth_callback'     => 'bitesmart_book_meta_auth_callback',
+    ) );
+
+    // Added 2026-08-29, per Janet: optional interior-page photos so a
+    // visitor can get a "sneak peek" inside the book, not just the cover —
+    // see bitesmart_book_cover_gallery() in book-display.php (Custom Blocks
+    // plugin). Empty array by default; when empty, the front end renders
+    // exactly the plain cover it always has. Order is preserved (the order
+    // selected in the media library) — no drag-to-reorder UI.
+    register_post_meta( 'book', '_bitesmart_book_preview_images', array(
+        'type'              => 'array',
+        'single'            => true,
+        'default'           => array(),
+        'sanitize_callback' => 'bitesmart_sanitize_book_preview_images',
+        'show_in_rest'      => array(
+            'schema' => array(
+                'type'  => 'array',
+                'items' => array( 'type' => 'integer' ),
             ),
         ),
         'auth_callback'     => 'bitesmart_book_meta_auth_callback',
@@ -228,11 +329,16 @@ function bitesmart_register_book_meta() {
         'auth_callback'     => 'bitesmart_book_meta_auth_callback',
     ) );
 
-    // Optional — a real buy/more-info link, same esc_url_raw convention as
-    // Resource's _bitesmart_resource_url. Not every book will have one on
-    // day one (the original hand-authored version only had informal
-    // price/availability text), so the display block treats this as
-    // optional throughout.
+    // Kept registered, but no longer written to by the editor UI as of
+    // 2026-08-30 — superseded by _bitesmart_book_buy_links below, which
+    // supports multiple retailers (Amazon, Target, ...) instead of one link.
+    // Left in place, untouched, purely so books saved before this change
+    // keep their data; render_book_block() falls back to reading this
+    // field only for a book whose buy-links list is still empty (see
+    // bitesmart_book_buy_links() in book-display.php) — the editor panel
+    // also auto-prefills it into the new list the first time that book's
+    // panel is opened. Not deprecated for removal — there's no cleanup step
+    // planned, just no longer the primary field.
     register_post_meta( 'book', '_bitesmart_book_url', array(
         'type'              => 'string',
         'single'            => true,
@@ -242,20 +348,31 @@ function bitesmart_register_book_meta() {
         'auth_callback'     => 'bitesmart_book_meta_auth_callback',
     ) );
 
-    // Per-language search-matching phrases — plain internal data, NOT
-    // rendered as visible page text, so TranslatePress's normal translation
-    // won't pick it up automatically (same caveat as every other content
-    // type's Keywords/Synonyms field — see
-    // [[be-bitesmart-qa-resource-data-model]] in memory).
-    register_post_meta( 'book', '_bitesmart_book_keywords_by_lang', array(
-        'type'              => 'object',
+    // Added 2026-08-30, per Janet: a book can be available from more than
+    // one retailer (e.g. Amazon and Target), each wanting its own visible
+    // button label, not one generic "Buy / More Info" link — see
+    // bitesmart_sanitize_book_buy_links() below and book-panel/index.js for
+    // the repeater UI. Each entry is a {label, url} pair; label may be left
+    // blank (the display block falls back to "Buy / More Info" for that
+    // button — see render_book_block() in book-display.php), but an entry
+    // with no url at all is dropped by the sanitizer rather than stored.
+    // Replaces _bitesmart_book_url as the primary buy field — see that
+    // field's own comment above for the back-compat story.
+    register_post_meta( 'book', '_bitesmart_book_buy_links', array(
+        'type'              => 'array',
         'single'            => true,
         'default'           => array(),
-        'sanitize_callback' => 'bitesmart_sanitize_book_keywords_by_lang',
+        'sanitize_callback' => 'bitesmart_sanitize_book_buy_links',
         'show_in_rest'      => array(
             'schema' => array(
-                'type'                 => 'object',
-                'additionalProperties' => array( 'type' => 'string' ),
+                'type'  => 'array',
+                'items' => array(
+                    'type'       => 'object',
+                    'properties' => array(
+                        'label' => array( 'type' => 'string' ),
+                        'url'   => array( 'type' => 'string' ),
+                    ),
+                ),
             ),
         ),
         'auth_callback'     => 'bitesmart_book_meta_auth_callback',

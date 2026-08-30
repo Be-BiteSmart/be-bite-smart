@@ -1,0 +1,26 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "custom/books-list",
+  "title": "Books List",
+  "category": "widgets",
+  "icon": "book-alt",
+  "description": "Lists every published Book tagged with one Audience group (Younger Children, Older Children, Adults, or All Ages With Guidance) — pick which in the block settings. Place one instance per group, with your own Heading block above each, on the Books page. New books in that group need no further page-editing step.",
+  "attributes": {
+    "audience": {
+      "type": "string",
+      "default": ""
+    },
+    "order": {
+      "type": "array",
+      "items": {
+        "type": "integer"
+      },
+      "default": []
+    }
+  },
+  "supports": {
+    "html": false
+  },
+  "editorScript": "file:./index.js"
+}

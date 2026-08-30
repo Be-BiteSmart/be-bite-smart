@@ -99,13 +99,29 @@ body:not(.block-editor-page) .guide-chapter-container.custom-block-card {
 }
 
 /* This chapter HAS this format, but a visitor toggled it off just for this
-   chapter (format-toggle.js) — same color family as .is-active (still
-   reads as "this exists"), just muted, so it's visually distinct from
-   .is-inactive below ("doesn't exist at all for this chapter"). */
+   chapter (format-toggle.js). Accessible OFF state — added 2026-08-28,
+   replacing an earlier opacity:0.35 dimmed-orange version Janet flagged as
+   not accessible: opacity fades the WHOLE element, not just a visual
+   "faded" look — the browser composites white-on-orange first, then blends
+   that entire flattened pill at 35% alpha onto the page background, which
+   drags BOTH the background and the white text back toward the page color
+   together, collapsing contrast to roughly 1.5:1 (WCAG AA needs 4.5:1 for
+   text this small). Reuses the SAME already-accessible off-state colors
+   this exact page's global "Show: Video/Text" bar already uses (see
+   .guide-format-toggle:has(.guide-format-checkbox:not(:checked)) further
+   down) rather than inventing a second off-state color scheme — full-
+   opacity dark-grey text/border on white, ~10:1 contrast. Still reads as
+   clearly different from .is-active (filled orange) and from .is-inactive
+   below (that state is genuinely exempt from contrast requirements —
+   WCAG excludes disabled controls — so it's untouched): the eye-slash icon
+   (bitesmart_render_guide_badge_icons(), guide-chapter-display.php) plus
+   this button staying genuinely clickable (cursor: pointer, not disabled)
+   are what tell is-off and is-inactive apart, not color alone — satisfies
+   WCAG 1.4.1 (Use of Color) either way. */
 .guide-chapter-badge.is-off {
-  background: var(--wp--preset--color--accent-1, #d16b0c);
-  color: #fff;
-  opacity: 0.35;
+  background: #fff;
+  color: #3f3f46;
+  border-color: #71717a;
 }
 
 .guide-chapter-badge.is-inactive {
@@ -113,6 +129,26 @@ body:not(.block-editor-page) .guide-chapter-container.custom-block-card {
   border-color: currentColor;
   color: var(--wp--preset--color--contrast-2, #6b6b6b);
   opacity: 0.7;
+}
+
+/* Eye/eye-slash icon pair (bitesmart_render_guide_badge_icons(),
+   guide-chapter-display.php) — added 2026-08-28 so a badge's "this is a
+   clickable toggle" affordance doesn't rely on color/opacity alone. Only
+   ONE of the two is ever visible; which one is a pure CSS read of the SAME
+   .is-active/.is-off classes handleBadgeClick() already toggles
+   (format-toggle.js) — no JS changes needed for the icon swap. Not
+   rendered at all for .is-inactive badges (chapter has no video/text to
+   toggle in the first place), so no rule is needed for that state here. */
+.guide-chapter-badge-icon {
+  width: 14px;
+  height: 14px;
+  margin-right: 4px;
+  flex-shrink: 0;
+}
+
+.guide-chapter-badge.is-active .guide-chapter-badge-icon-off,
+.guide-chapter-badge.is-off .guide-chapter-badge-icon-on {
+  display: none;
 }
 
 .guide-chapter-summary-text {
@@ -297,27 +333,31 @@ body:not(.block-editor-page) .guide-chapter-download-buttons .block-toggle-btn {
    logic.
    ───────────────────────────────────────────────────────────────────────────── */
 
-/* Top/bottom border-line wrapper, matching custom/learning-browse's own
-   "Filter by type" wrapper (.learning-search-type-filter-wrap,
-   learning-browse/style.css) — same #d0e4eb border color, same edge-to-
-   edge vertical-only padding, instead of this bar's old filled-box/
-   rounded-corner look. Per Janet: "lets have it match the border line
-   styling too that the other one has." */
-.guide-format-controls {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 16px;
-  padding: 16px 0;
-  margin-bottom: 16px;
-  border-top: 1px solid #d0e4eb;
-  border-bottom: 1px solid #d0e4eb;
-}
+/* No .guide-format-controls rule of its own left here as of 2026-08-28 —
+   its flex layout, padding, AND bottom margin all moved into the theme's
+   shared .custom-block-filter-bar class (shared-block-styles.css, added
+   alongside this class in guide-chapter-display.php's markup), once Janet
+   asked for this bar to fully match custom/learning-search's/
+   custom/learning-browse's own "Filter by type" wrapper
+   (.learning-search-type-filter-wrap, learning-browse/style.css) — that
+   other wrapper's own values won throughout (20px margin, 8px 10px gap);
+   see the shared class's own comment for the full reasoning. This bar's
+   own border-top/border-bottom (previously matching that other wrapper's
+   too) was deliberately dropped by Janet earlier today, not moved
+   anywhere. The class name is kept in markup for its semantic meaning,
+   even though it carries no CSS of its own right now. */
 
-.guide-format-controls-label {
-  font-size: 0.85em;
-  color: var(--wp--preset--color--contrast-2, #6b6b6b);
-}
+/* No .guide-format-controls-label rule of its own left here as of
+   2026-08-28 — its previous small/grey inline look (font-size, color) is
+   GONE, not moved: Janet asked for this label to match
+   custom/learning-search's/custom/learning-browse's own "Filter by type"
+   legend (.learning-search-type-filter-legend, learning-browse/style.css)
+   instead, which is bold and sits on its own line above the pill row. That
+   look now lives in the theme's shared .custom-block-filter-bar-legend
+   class (shared-block-styles.css, added alongside this class in
+   guide-chapter-display.php's markup) — see that class's own comment. The
+   class name is kept in markup for its semantic meaning, even though it
+   carries no CSS of its own right now. */
 
 /* Pill/button look, matching custom/learning-browse's own "Filter by type"
    checkboxes (.learning-search-type-toggle, learning-browse/style.css) —
@@ -418,6 +458,95 @@ body:not(.block-editor-page) .guide-chapter-download-buttons .block-toggle-btn {
 .guide-single-empty {
   font-style: italic;
   color: var(--wp--preset--color--contrast-2, #6b6b6b);
+}
+
+/* Table of Contents (bitesmart_render_guide_single(), guide-single.php) —
+   added 2026-08-28, per Janet: the full accordion rows below make the page
+   "impossible to read at a glance," so this exists purely for a fast scan
+   of the guide's structure. Deliberately compact/plain — no card look, no
+   summary text, no Video/Text badges, just Section groupings + chapter
+   titles as plain links — the opposite of the loosely-spaced rows it sits
+   above. Native <details>, open by default, collapsible — Janet: "start as
+   visible but also let parents collapse it if they want." */
+.guide-toc {
+  margin-bottom: 24px;
+  padding: 16px 20px;
+  border: 1px solid #d0e4eb; /* same border-line color as .guide-format-controls/.learning-search-type-filter-wrap and guide-references/download-card's own dividers — this codebase's established color for a light section/box border, not a real --wp--preset--color token */
+  border-radius: 8px;
+}
+
+.guide-toc-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  list-style: none; /* removes Firefox's default marker */
+}
+
+.guide-toc-summary::-webkit-details-marker {
+  display: none; /* removes Chrome/Safari's default marker */
+}
+
+.guide-toc-chevron {
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.guide-toc[open] .guide-toc-chevron {
+  transform: rotate(180deg);
+}
+
+.guide-toc-list {
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Section grouping inside the ToC — plain label, not a link (mirrors the
+   real list's own .guide-section-heading, which likewise isn't
+   interactive). */
+.guide-toc-section-heading {
+  margin-top: 14px;
+  font-size: 0.85em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--wp--preset--color--contrast-2, #6b6b6b);
+}
+
+.guide-toc-list > .guide-toc-section-heading:first-child {
+  margin-top: 0;
+}
+
+.guide-toc-chapter {
+  padding: 6px 0;
+}
+
+.guide-toc-chapter-link {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.guide-toc-chapter-link:hover,
+.guide-toc-chapter-link:focus-visible {
+  text-decoration: underline;
+}
+
+.guide-toc-chapter-index {
+  font-family: var(--wp--preset--font-family--monospace, monospace);
+  font-size: 0.8em;
+  color: var(--wp--preset--color--contrast-2, #6b6b6b);
+  flex-shrink: 0;
+}
+
+.guide-toc-chapter-title {
+  font-size: 0.95em;
 }
 
 /* Chapter-page-only breadcrumb (bitesmart_render_guide_chapter_single()),

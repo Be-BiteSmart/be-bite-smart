@@ -48,15 +48,22 @@
  * translation path. A search "result" is just one of these same
  * already-rendered, already-translated card HTML strings being shown.
  *
- * "Show: [x] Q&A [x] Resources …" type-filter checkboxes (see
- * bitesmart_render_learning_search_type_filter() below) render in BOTH this
- * block's AND custom/learning-browse's own output as of 2026-08-16 (own
- * copy each, all checked by default) — Janet wanted the filter usable from
- * the search block alone, without needing the browse block present. view.js
- * and browse.js each keep every copy on the page in sync and both re-apply
- * their own filtering whenever ANY copy changes — one consistent setting,
- * not independently-behaving filters, same idea as the "Show video/text"
- * bar's own cross-block sync (format-toggle.js).
+ * "Show: [x] Video [x] Short Answer [x] Article [x] Image" type-filter
+ * checkboxes (see bitesmart_render_learning_search_type_filter() below)
+ * render in BOTH this block's AND custom/learning-browse's own output as of
+ * 2026-08-16 (own copy each, all checked by default) — Janet wanted the
+ * filter usable from the search block alone, without needing the browse
+ * block present. view.js and browse.js each keep every copy on the page in
+ * sync and both re-apply their own filtering whenever ANY copy changes — one
+ * consistent setting, not independently-behaving filters, same idea as the
+ * "Show video/text" bar's own cross-block sync (format-toggle.js).
+ *
+ * As of 2026-08-28 this filter runs on the `media_type` taxonomy
+ * (Video/Short Answer/Article/Image — see includes/media-type-taxonomy.php
+ * in the CPT plugin) instead of post type (Q&A/Resource/Episode/etc.) — a
+ * card matches a checked box if it carries ANY of the enabled Media Types,
+ * since a single post can carry more than one (see
+ * bitesmart_learning_search_media_type_labels() below).
  *
  * Known v1 limitation (confirmed acceptable with Janet): the plain-text
  * search-matching corpus for each card is built from the CURRENT request's
@@ -93,10 +100,15 @@
  * custom/resource's block.json were registered on init — no guessing at
  * the handle string.
  *
- * Episode cards (render_episode_search_card() in episode-display.php) need
- * nothing added here — they deliberately reuse custom/qa-entry's own
- * markup/classes rather than custom/episode's, so qa-entry's style handle
- * (already enqueued below) covers them too.
+ * Episode cards (render_episode_search_card() in episode-display.php)
+ * mostly reuse custom/qa-entry's own markup/classes rather than
+ * custom/episode's, so qa-entry's style handle (enqueued below) covers most
+ * of their look — EXCEPT the thumbnail/Q&A-description layout added
+ * 2026-08-28 (.episode-search-card-thumbnail/-description), which lives in
+ * custom/episode's own style.css instead (episode-display/style.css) — see
+ * that file's own comment. That's why 'custom/episode' is now in the array
+ * below too, alongside qa-entry/resource, even though this card's markup
+ * still isn't custom/episode's own card markup.
  */
 function bitesmart_learning_search_enqueue_card_styles() {
     if ( ! function_exists( 'generate_block_asset_handle' ) ) {
@@ -110,7 +122,7 @@ function bitesmart_learning_search_enqueue_card_styles() {
         return;
     }
 
-    foreach ( array( 'custom/qa-entry', 'custom/resource' ) as $block_name ) {
+    foreach ( array( 'custom/qa-entry', 'custom/resource', 'custom/episode' ) as $block_name ) {
         $handle = generate_block_asset_handle( $block_name, 'style' );
         if ( wp_style_is( $handle, 'registered' ) ) {
             wp_enqueue_style( $handle );
@@ -150,13 +162,16 @@ function bitesmart_stage_cards_bump_generation() {
  * which REAL Stage's list it appears in, AND (since every chapter also
  * auto-carries the "Guide" pseudo-stage term — see
  * [[be-bitesmart-guide-cpt-plan]] in memory) editing a chapter always
- * affects the pooled Guide-pseudo-stage list too. Book is included for the
- * same reason as Episode/Coloring Book (see render_book_search_card() in
- * book-display.php).
+ * affects the pooled Guide-pseudo-stage list too. Book is deliberately NOT
+ * included (removed 2026-08-28, was here for the same reason as Episode/
+ * Coloring Book) — book posts no longer appear in this search/browse list
+ * at all, see bitesmart_build_stage_card_list() below, so a Book save has
+ * nothing left here to invalidate. The `book` CPT itself is untouched;
+ * Janet's plan is a separate Q&A entry linking out to a books page instead.
  */
 function bitesmart_stage_cards_maybe_bump( $post_id, $post = null ) {
     $post_type = $post ? $post->post_type : get_post_type( $post_id );
-    if ( in_array( $post_type, array( 'qa_entry', 'resource', 'episode', 'coloring_book', 'guide_chapter', 'book' ), true ) ) {
+    if ( in_array( $post_type, array( 'qa_entry', 'resource', 'episode', 'coloring_book', 'guide_chapter' ), true ) ) {
         bitesmart_stage_cards_bump_generation();
     }
 }
@@ -165,33 +180,50 @@ add_action( 'save_post_resource', 'bitesmart_stage_cards_maybe_bump', 10, 2 );
 add_action( 'save_post_episode', 'bitesmart_stage_cards_maybe_bump', 10, 2 );
 add_action( 'save_post_coloring_book', 'bitesmart_stage_cards_maybe_bump', 10, 2 );
 add_action( 'save_post_guide_chapter', 'bitesmart_stage_cards_maybe_bump', 10, 2 );
-add_action( 'save_post_book', 'bitesmart_stage_cards_maybe_bump', 10, 2 );
 add_action( 'delete_post', 'bitesmart_stage_cards_maybe_bump' );
 
 function bitesmart_stage_cards_maybe_bump_terms( $object_id, $terms, $tt_ids, $taxonomy ) {
     // 'series' is included because it feeds an Episode card's "Watch
     // Episode" link (bitesmart_episode_anchor_id() in episode-display.php)
     // — changing it changes that rendered href, even though nothing about
-    // it is visible page text.
-    if ( in_array( $taxonomy, array( 'stage', 'topic', 'series' ), true ) ) {
+    // it is visible page text. 'media_type' is included (2026-08-28) because
+    // it now drives which "Filter by type" checkbox(es) a card matches — see
+    // bitesmart_build_stage_card_list()'s 'mediaTypes' below. 'guide_section'
+    // is included (also 2026-08-28) for a different consumer entirely:
+    // bitesmart_get_guide_chapters_with_sections() (guide-chapter-display.php)
+    // reuses this SAME generation counter for its own persistent cache of a
+    // chapter's Section grouping (the Guide page's Table of Contents +
+    // Section headings), and that cache needs to invalidate on a Section
+    // term change too — a quick-edit that only touches taxonomy terms never
+    // fires save_post, so bitesmart_stage_cards_maybe_bump() alone wouldn't
+    // catch it.
+    if ( in_array( $taxonomy, array( 'stage', 'topic', 'series', 'media_type', 'guide_section' ), true ) ) {
         bitesmart_stage_cards_maybe_bump( $object_id );
     }
 }
 add_action( 'set_object_terms', 'bitesmart_stage_cards_maybe_bump_terms', 10, 4 );
 
 /**
- * Per-language search-matching keywords for one post, plain string,
- * '' if none filled in for that language. Reads whichever of the per-
- * language meta keys applies to the post's type — Episode's
- * (`_bitesmart_episode_keywords_by_lang`) added 2026-08-13 so Episodes
- * shown in this search can match on more than just their synthesized
- * question text, same as Q&A Entry's Synonyms / Resource's Keywords.
- * Guide Chapter's (`_bitesmart_chapter_keywords_by_lang`) added the same
- * way — see [[be-bitesmart-guide-cpt-plan]] in memory. Book's
- * (`_bitesmart_book_keywords_by_lang`) added the same way, 2026-08-16.
+ * Per-language search-matching Synonyms/Keywords for one post, plain
+ * string, '' if none filled in for that language. Reads whichever of the
+ * per-language meta keys applies to the post's type — Q&A Entry's
+ * (`_bitesmart_qa_synonyms_by_lang`), Episode's
+ * (`_bitesmart_episode_keywords_by_lang`, added 2026-08-13) and Guide
+ * Chapter's (`_bitesmart_chapter_keywords_by_lang`) all feed this exact
+ * same mechanism, so a Synonyms/Keywords match works identically for all
+ * three — this already covers Episode and Guide Chapter, not just Q&A
+ * Entry, with no extra wiring. Episode's and Guide Chapter's fields were
+ * labeled "Keywords" in the editing UI until 2026-08-28, when they were
+ * relabeled "Synonyms" to match Q&A Entry's naming (meta keys unchanged).
+ * Resource keeps the "Keywords" label (a deliberately different field, not
+ * renamed). Book's (`_bitesmart_book_keywords_by_lang`) was mapped here
+ * until 2026-08-28, when book posts were removed from this search list
+ * entirely — see bitesmart_build_stage_card_list() below; the meta field
+ * itself was deleted outright on 2026-08-30 (no longer exists on the
+ * `book` CPT at all — see [[be-bitesmart-book-cpt-status]] in memory).
  *
  * @param int    $post_id Post ID.
- * @param string $type    'qa_entry', 'resource', 'episode', 'coloring_book', 'guide_chapter', or 'book'.
+ * @param string $type    'qa_entry', 'resource', 'episode', 'coloring_book', or 'guide_chapter'.
  * @param string $lang    Short language code.
  * @return string
  */
@@ -202,7 +234,6 @@ function bitesmart_stage_card_keywords( $post_id, $type, $lang ) {
         'episode'       => '_bitesmart_episode_keywords_by_lang',
         'coloring_book' => '_bitesmart_coloring_book_keywords_by_lang',
         'guide_chapter' => '_bitesmart_chapter_keywords_by_lang',
-        'book'          => '_bitesmart_book_keywords_by_lang',
     );
 
     if ( ! isset( $meta_keys[ $type ] ) ) {
@@ -237,8 +268,14 @@ function bitesmart_stage_cards_template_version() {
         __DIR__ . '/../episode-display/episode-display.php', // holds render_episode_search_card() too, not just render_episode_block()
         __DIR__ . '/../coloring-book-display/coloring-book-display.php', // holds render_coloring_book_search_card() too, not just render_coloring_book_block()
         __DIR__ . '/../guide-chapter-display/guide-chapter-display.php', // holds render_guide_chapter_search_card()/render_guide_chapter_pooled_card() too, not just bitesmart_render_guide_chapter_row()
-        __DIR__ . '/../book-display/book-display.php', // holds render_book_search_card() too, not just render_book_block()
+        __FILE__, // this file's own bitesmart_build_stage_card_list() builds each card's SHAPE (id/type/mediaTypes/html/searchText), not just its 'html' — added 2026-08-28 when 'mediaTypes' was added, after a stale-cache Undefined-array-key warning on 'mediaTypes' surfaced: a cache built by the OLD version of this function (no 'mediaTypes' key) was still valid by generation-counter/other-templates' mtimes, so it kept being served as-is. Same reasoning as every other file in this array, just easy to miss since this file authors the array shape rather than any one card's HTML.
     );
+    // book-display.php deliberately NOT in this list (removed 2026-08-28) —
+    // book posts no longer appear in this search/browse list at all, see
+    // bitesmart_build_stage_card_list() below. (render_book_search_card(),
+    // the function this comment used to reference, was deleted outright on
+    // 2026-08-30 — book-display.php no longer has anything search-related
+    // in it at all.)
 
     $stamps = array_map(
         function ( $file ) {
@@ -253,12 +290,18 @@ function bitesmart_stage_cards_template_version() {
 /**
  * Build (or fetch from cache) the full, ordered list of rendered cards for
  * one Stage, in the current request's language. Every Q&A Entry + Resource
- * + Episode + Coloring Book + Guide Chapter + Book published and tagged with
- * $stage_slug, alphabetical by title. Book is included as a compact card
- * (see render_book_search_card() in book-display.php) with no Stage
- * default of its own — an editor tags it manually, since which Stage(s)
- * fit varies a lot per book. Episode is included as a compact
- * synthesized-question card (see render_episode_search_card() in
+ * + Episode + Coloring Book + Guide Chapter published and tagged with
+ * $stage_slug, alphabetical by title — EXCEPT the pooled Guide pseudo-stage
+ * (`'guide' === $stage_slug`, its own query branch below), ordered by
+ * Chapter Number instead (added 2026-08-28), so this array's own order
+ * matches the Guide's own page. Book is deliberately EXCLUDED (removed
+ * 2026-08-28, Janet's call) — the `book` CPT itself still exists (now
+ * organized on its own Books page via custom/books-list, grouped by
+ * Audience — see [[be-bitesmart-book-cpt-status]] in memory), but its old
+ * compact search-card render function, render_book_search_card(), was
+ * deleted outright on 2026-08-30 along with everything else that only
+ * existed for this search listing. Episode is included as a compact
+ * Question/title card (see render_episode_search_card() in
  * episode-display.php), not its full video-player embed — Episodes already
  * default to the Preschool stage term on save (see episode-cpt.php), so
  * this "just works" for the Preschool page's search/browse list without
@@ -296,7 +339,7 @@ function bitesmart_stage_cards_template_version() {
  *
  * @param string $stage_slug Stage taxonomy term slug.
  * @param string $lang       Short language code (bitesmart_site_lang_code()).
- * @return array<int, array{id:int, type:string, html:string, searchText:string}>
+ * @return array<int, array{id:int, type:string, mediaTypes:array<int,string>, html:string, searchText:string}>
  */
 function bitesmart_build_stage_card_list( $stage_slug, $lang ) {
     $gen = (int) get_option( 'bitesmart_stage_cards_gen', 1 );
@@ -310,18 +353,36 @@ function bitesmart_build_stage_card_list( $stage_slug, $lang ) {
     if ( 'guide' === $stage_slug ) {
         // Every published chapter, unconditionally — see the header
         // comment above for why this bypasses tax_query entirely rather
-        // than filtering by a "Guide" pseudo-stage term.
+        // than filtering by a "Guide" pseudo-stage term. Ordered by
+        // Chapter Number (same numeric-cast meta_query shape
+        // bitesmart_get_guide_chapters_with_sections() uses,
+        // guide-chapter-display.php) — NOT title (was, before 2026-08-28) —
+        // so this array's own order matches the Guide's own page. Janet:
+        // "when the search gets a match... it returns the chapters in
+        // reverse order... is there a way so that if theres a match, it
+        // shows in the chapter order for the guide page." Fuse.js still
+        // ranks live search results by relevance score, not plain array
+        // order, so view.js's render() ALSO re-sorts matches back to this
+        // array's own order (via each result's refIndex) specifically for
+        // stage_slug === 'guide' — see that function's own comment for why
+        // this PHP-side ordering alone wasn't enough.
         $query = new WP_Query( array(
             'post_type'      => 'guide_chapter',
             'post_status'    => 'publish',
             'posts_per_page' => -1,
-            'orderby'        => 'title',
-            'order'          => 'ASC',
             'no_found_rows'  => true,
+            'meta_query'     => array(
+                'number_clause' => array(
+                    'key'     => '_bitesmart_chapter_number',
+                    'type'    => 'NUMERIC',
+                    'compare' => 'EXISTS',
+                ),
+            ),
+            'orderby'        => array( 'number_clause' => 'ASC' ),
         ) );
     } else {
         $query = new WP_Query( array(
-            'post_type'      => array( 'qa_entry', 'resource', 'episode', 'coloring_book', 'guide_chapter', 'book' ),
+            'post_type'      => array( 'qa_entry', 'resource', 'episode', 'coloring_book', 'guide_chapter' ),
             'post_status'    => 'publish',
             'posts_per_page' => -1,
             'orderby'        => 'title',
@@ -346,8 +407,6 @@ function bitesmart_build_stage_card_list( $stage_slug, $lang ) {
             $html = render_resource_block( array( 'resourceId' => $post->ID ) );
         } elseif ( 'coloring_book' === $post->post_type ) {
             $html = render_coloring_book_search_card( array( 'coloringBookId' => $post->ID ) );
-        } elseif ( 'book' === $post->post_type ) {
-            $html = render_book_search_card( array( 'bookId' => $post->ID ) );
         } elseif ( 'guide_chapter' === $post->post_type ) {
             // Full accordion row on the pooled Guide pseudo-stage (every
             // result there IS a chapter); a compact link-out teaser on a
@@ -368,9 +427,23 @@ function bitesmart_build_stage_card_list( $stage_slug, $lang ) {
         $keywords    = bitesmart_stage_card_keywords( $post->ID, $post->post_type, $lang );
         $search_text = trim( wp_strip_all_tags( $html ) . ' ' . $keywords );
 
+        // Media Type slugs (Video/Short Answer/Article/Image — see
+        // includes/media-type-taxonomy.php in the CPT plugin), 2026-08-28.
+        // This is what the "Filter by type" checkboxes now match against
+        // (bitesmart_render_learning_search_type_filter() below and
+        // getEnabledTypes() in view.js/browse.js) — replaces the OLD filter,
+        // which matched on $post->post_type directly. 'type' (post type) is
+        // kept on the card too, since bitesmart_stage_card_keywords() above
+        // still needs it and it costs nothing extra to carry.
+        $media_types = wp_get_post_terms( $post->ID, 'media_type', array( 'fields' => 'slugs' ) );
+        if ( is_wp_error( $media_types ) ) {
+            $media_types = array();
+        }
+
         $cards[] = array(
             'id'         => $post->ID,
             'type'       => $post->post_type,
+            'mediaTypes' => $media_types,
             'html'       => $html,
             'searchText' => $search_text,
         );
@@ -401,6 +474,16 @@ function bitesmart_render_learning_search_data( array $cards, $instance_id ) {
             return array(
                 'id'         => $card['id'],
                 'type'       => $card['type'],
+                // '?? array()' guards a stale transient cache built by an
+                // older version of bitesmart_build_stage_card_list() that
+                // predates this key — see bitesmart_stage_cards_template_version()'s
+                // 2026-08-28 comment. Without it, a stale card would embed
+                // no 'mediaTypes' at all in this page's JSON blob, and
+                // view.js/browse.js's card.mediaTypes.some(...) would throw
+                // in the browser (TypeError: Cannot read properties of
+                // undefined) instead of just treating that card as
+                // type-less.
+                'mediaTypes' => $card['mediaTypes'] ?? array(),
                 'html'       => $card['html'],
                 'searchText' => $card['searchText'],
             );
@@ -421,64 +504,92 @@ function bitesmart_render_learning_search_data( array $cards, $instance_id ) {
 }
 
 /**
- * Card type => checkbox label, in the fixed order the type-filter
+ * Media Type slug => checkbox label, in the fixed order the type-filter
  * checkboxes always render — see bitesmart_render_learning_search_type_filter()
- * below. One place to add a label if a new card type is ever added to
- * bitesmart_build_stage_card_list()'s WP_Query.
+ * below. Replaces the OLD per-post-type label map (Q&A/Resources/Episodes/
+ * etc.) as of 2026-08-28 — the filter now runs on the `media_type` taxonomy
+ * (includes/media-type-taxonomy.php, CPT plugin) instead of post type, so a
+ * card can match more than one checkbox (e.g. a Q&A Entry that's both
+ * "Short Answer" and, once it embeds one, "Video"). One place to add a label
+ * if a new Media Type term is ever added to
+ * bitesmart_seed_media_type_terms().
  *
- * @return array<string, string>
+ * @return array<string, string> Term slug => label.
  */
-function bitesmart_learning_search_type_labels() {
+function bitesmart_learning_search_media_type_labels() {
     return array(
-        'qa_entry'      => __( 'Q&A', 'custom-blocks' ),
-        'resource'      => __( 'Resources', 'custom-blocks' ),
-        'episode'       => __( 'Episodes', 'custom-blocks' ),
-        'coloring_book' => __( 'Coloring Books', 'custom-blocks' ),
-        'guide_chapter' => __( 'Guide Chapters', 'custom-blocks' ),
-        'book'          => __( 'Books', 'custom-blocks' ),
+        'video'        => __( 'Video', 'custom-blocks' ),
+        'short-answer' => __( 'Short Answer', 'custom-blocks' ),
+        'article'      => __( 'Article', 'custom-blocks' ),
+        'image'        => __( 'Image', 'custom-blocks' ),
     );
 }
 
 /**
- * "Show: [x] Q&A [x] Resources …" checkboxes — all checked by default,
- * unchecking one hides that type from BOTH the live Fuse.js search results
- * AND the browse list below (view.js/browse.js each read these via
+ * "Show: [x] Video [x] Short Answer [x] Article [x] Image" checkboxes — all
+ * checked by default, unchecking one hides any card that carries ONLY
+ * unchecked types from BOTH the live Fuse.js search results AND the browse
+ * list below (view.js/browse.js each read these via
  * .learning-search-type-checkbox/data-type). Deliberately JS-only, same as
  * the search box itself doing nothing without JS — no server-side GET-param
  * fallback, so as not to duplicate the filtering logic in two places for a
  * feature that's an enhancement on top of an already fully-JS-dependent
  * live search.
  *
- * Called from BOTH custom/learning-search's and custom/learning-browse's
- * render callbacks as of 2026-08-16 (each independently, own copy — same
- * "each block works correctly on its own" reasoning as
- * bitesmart_render_guide_format_controls()) — the legend text is
- * deliberately generic ("Filter by type", not "...the list below...")
- * since it no longer only ever sits above a list. view.js and browse.js
- * keep every copy's checked state in sync with each other and both re-apply
- * their own filtering whenever ANY copy changes, the same way
- * format-toggle.js already keeps multiple "Show video/text" bars in sync.
+ * Called from custom/learning-search's render callback only as of
+ * 2026-08-28 — briefly called from BOTH custom/learning-search's and
+ * custom/learning-browse's render callbacks between 2026-08-16 and
+ * 2026-08-28 (each independently, own copy), but once the browse list
+ * started auto-hiding while a search is active (see view.js's
+ * setPersistentListsHidden()), a visitor could see this same checkbox row
+ * rendered twice on one Stage page (once above the search results, again
+ * above the now-hidden browse list) — the search block's copy is the only
+ * one still needed, so custom/learning-browse's copy was dropped. The
+ * legend text stays deliberately generic ("Filter by type", not "...the
+ * list below...") since it still affects two blocks even though it only
+ * renders in one of them. view.js's getEnabledTypes()/syncTypeCheckboxes()
+ * and browse.js's own copies still read/sync checkboxes page-wide (not
+ * scoped to "this block's own"), so browse.js's filtering keeps working
+ * correctly off this one remaining copy with no code changes needed there.
  *
- * Only rendered when this Stage actually has 2+ distinct card types —
- * a single checkbox with nothing to compare against isn't a useful filter,
- * and no checkboxes at all when $cards is empty (nothing to filter).
+ * Only rendered when this Stage actually has 2+ distinct Media Types present
+ * across its cards — a single checkbox with nothing to compare against isn't
+ * a useful filter, and no checkboxes at all when $cards is empty (nothing to
+ * filter).
  *
- * @param array<int, array{id:int, type:string, html:string, searchText:string}> $cards
+ * @param array<int, array{id:int, type:string, mediaTypes:array<int,string>, html:string, searchText:string}> $cards
  * @return void
  */
 function bitesmart_render_learning_search_type_filter( array $cards ) {
-    $present_types = array_unique( wp_list_pluck( $cards, 'type' ) );
+    // array_map() with a '?? array()' fallback rather than
+    // wp_list_pluck( $cards, 'mediaTypes' ) — wp_list_pluck() reads
+    // $item['mediaTypes'] directly with no isset() guard, which throws an
+    // "Undefined array key" warning against a stale transient cache built by
+    // an older version of bitesmart_build_stage_card_list() that predates
+    // this key (see bitesmart_stage_cards_template_version()'s own
+    // 2026-08-28 comment on why that shouldn't happen going forward, but
+    // this is a free extra guard against the same class of bug next time a
+    // card field is added). array() prepended as a guaranteed first argument
+    // to array_merge() — array_merge(...$x) with an empty $cards (nothing
+    // added for this Stage yet) would otherwise spread to zero arguments,
+    // which throws ArgumentCountError in PHP 8.
+    $present_types = array_unique( array_merge( array(), ...array_map(
+        function ( $card ) {
+            return $card['mediaTypes'] ?? array();
+        },
+        $cards
+    ) ) );
     if ( count( $present_types ) < 2 ) {
         return;
     }
 
     ?>
-    <?php /* The border/divider look lives on THIS wrapper, not the <fieldset> below — a <fieldset> with a <legend> child natively "cuts a notch" out of its own top border where the legend sits (that's how a fieldset caption is meant to render). With the legend forced to 100% width so it stacks on its own line, that notch would span the fieldset's entire top edge and hide the border completely. Keeping <fieldset>/<legend> for their real accessibility grouping semantics, just not for this visual treatment. */ ?>
-    <div class="learning-search-type-filter-wrap">
+    <?php /* Padding lives on THIS wrapper (.custom-block-filter-bar, the theme's shared-block-styles.css — see that file, shared with custom/guide-single's/custom/learning-*'s own "Show: Video/Text" bar), not the <fieldset> below — keeping the vertical spacing here rather than on the fieldset avoids fighting a <fieldset>'s own UA-default padding/border box model. */ ?>
+    <div class="learning-search-type-filter-wrap custom-block-filter-bar">
         <fieldset class="learning-search-type-filter">
-            <legend class="learning-search-type-filter-legend"><?php esc_html_e( 'Filter by type', 'custom-blocks' ); ?></legend>
-            <?php foreach ( bitesmart_learning_search_type_labels() as $type => $label ) : ?>
-                <?php if ( in_array( $type, $present_types, true ) ) : // don't offer a "Coloring Books" checkbox on a Stage with none, etc. ?>
+            <legend class="learning-search-type-filter-legend custom-block-filter-bar-legend"><?php esc_html_e( 'Filter by type', 'custom-blocks' ); ?></legend>
+            <?php foreach ( bitesmart_learning_search_media_type_labels() as $type => $label ) : ?>
+                <?php if ( in_array( $type, $present_types, true ) ) : // don't offer an "Image" checkbox on a Stage with none, etc. ?>
                     <label class="learning-search-type-toggle">
                         <input type="checkbox" class="learning-search-type-checkbox" data-type="<?php echo esc_attr( $type ); ?>" checked>
                         <?php echo esc_html( $label ); ?>

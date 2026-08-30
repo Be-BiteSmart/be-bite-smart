@@ -58,6 +58,7 @@ post types that attach to them (see the ordering comment at the top of
 | `topic` | `includes/topic-taxonomy.php` | Free-tag |
 | `series` | `includes/series-taxonomy.php` | Hierarchical |
 | `guide_section` | `includes/guide-section-taxonomy.php` | Hierarchical |
+| `media_type` | `includes/media-type-taxonomy.php` | Hierarchical (fixed terms: Video/Short Answer/Article/Image) |
 
 Each post-type file is self-contained: registration, its own
 `register_post_meta()` calls, sanitize/auth callbacks, and any admin-UI

@@ -67,6 +67,19 @@
  * section ORDER falls naturally out of the existing Chapter Number
  * ordering with no extra data needed.
  *
+ * A collapsible Table of Contents (bitesmart_render_guide_toc_item(),
+ * guide-chapter-display.php) renders above the chapter list, built in the
+ * same loop — added 2026-08-28. Briefly lived in its own separate block
+ * (`custom/guide-toc`, same day, same "split out so it can be placed
+ * independently" precedent `custom/guide-description` set below) — reverted
+ * back into this function's own output the same day once Janet decided one
+ * block was simpler/more efficient than querying twice for two blocks that
+ * normally sit on the same page anyway. The underlying chapter query is
+ * still its own function, `bitesmart_get_guide_chapters_with_sections()`
+ * (guide-chapter-display.php), now backed by a real persistent cache
+ * (a transient, not just a per-request memo) — see that function's own
+ * comment for why and how it's invalidated.
+ *
  * Does NOT render the Guide's Description — that used to render here (a
  * plain paragraph, right above the chapter list) but was split out into
  * its own block, `custom/guide-description` (see guide-description.php),
@@ -87,75 +100,119 @@ function bitesmart_render_guide_single( $guide_id ) {
         return '';
     }
 
-    $chapters = new WP_Query( array(
-        'post_type'      => 'guide_chapter',
-        'post_status'    => 'publish',
-        'posts_per_page' => -1,
-        'no_found_rows'  => true,
-        'meta_query'     => array(
-            'relation'      => 'AND',
-            'guide_clause'  => array(
-                'key'   => '_bitesmart_chapter_guide_id',
-                'value' => $guide_id,
-            ),
-            'number_clause' => array(
-                'key'     => '_bitesmart_chapter_number',
-                'type'    => 'NUMERIC',
-                'compare' => 'EXISTS',
-            ),
-        ),
-        'orderby'        => array( 'number_clause' => 'ASC' ),
-    ) );
-
-    $accordion_group = 'guide-' . $guide_id;
+    $chapters_with_sections = bitesmart_get_guide_chapters_with_sections( $guide_id );
+    $accordion_group        = 'guide-' . $guide_id;
 
     ob_start();
     ?>
     <div class="guide-single">
-        <?php if ( $chapters->have_posts() ) : ?>
-            <?php echo bitesmart_render_guide_format_controls(); // phpcs:ignore ?>
-            <div class="guide-chapter-list">
-                <?php
-                // Guide Section headings between groups of chapters (added
-                // 2026-08-16, guide-section-taxonomy.php) — per Janet: "we
-                // don't need to mention the sections for the individual
-                // chapters but for the guide pages 'view all chapters'
-                // block we would need to incorporate these as headings
-                // between the chapters." No separate "Section order" data
-                // needed: chapters are already queried in Chapter Number
-                // order above, and the source document's own chapters are
-                // numbered sequentially BY section (Section I = Chapters
-                // 1–2, Section II = Chapters 3–5, etc.), so simply
-                // detecting when the term changes as we walk the
-                // already-ordered list reproduces the right section order
-                // for free. A chapter with no Section term set yet doesn't
-                // get a heading at all (rather than an "Uncategorized"
-                // placeholder) — $current_section starts null, and an
-                // empty string only ever triggers the "insert a heading"
-                // branch once, on the very first untagged chapter; every
-                // untagged chapter after that no longer looks like a
-                // transition, so nothing repeats.
-                $current_section = null;
-                foreach ( $chapters->posts as $chapter ) :
-                    $section_terms = get_the_terms( $chapter->ID, 'guide_section' );
-                    $section_name  = ( ! is_wp_error( $section_terms ) && ! empty( $section_terms ) ) ? $section_terms[0]->name : '';
+        <?php if ( $chapters_with_sections ) : ?>
+            <?php
+            // NOT rendering bitesmart_render_guide_format_controls() here as
+            // of 2026-08-28 (was, always, before that) — Janet confirmed this
+            // block is placed on the SAME page as the pooled Guide-stage
+            // custom/learning-search block (stage_slug === 'guide'), which
+            // renders its own copy of this exact bar; that sibling copy is
+            // enough, same "one filter is enough" call as
+            // custom/learning-browse's now-dropped "Filter by type" copy
+            // (see learning-browse.php). See
+            // bitesmart_render_guide_format_controls()'s own docblock
+            // (guide-chapter-display.php) for the full up-to-date picture of
+            // where this bar renders.
+            ?>
+            <?php
+            // Table of Contents — built in the SAME pass over
+            // $chapters_with_sections as the chapter rows below (not a
+            // separate loop), reusing the identical Section-change
+            // detection so the ToC's own grouping can never drift out of
+            // step with the real list's <h2> headings. Added 2026-08-28,
+            // per Janet: the full accordion rows' own spacing makes the
+            // page "impossible to read at a glance" — the ToC gives a
+            // fast, compact scan of the guide's structure instead.
+            // Collapsible (native <details>, no JS) but starts open —
+            // Janet: "start as visible but also let parents collapse it if
+            // they want."
+            //
+            // $chapters_with_sections is already in Chapter Number order
+            // (bitesmart_get_guide_chapters_with_sections()), and the
+            // source document's own chapters are numbered sequentially BY
+            // section, so simply detecting when the section name changes
+            // as we walk the list reproduces the right section order for
+            // free — same logic drives both $toc_items' section headings
+            // and $chapter_rows' <h2> headings below, from ONE walk of the
+            // list. A chapter with no Section term set yet doesn't get a
+            // heading at all (rather than an "Uncategorized" placeholder)
+            // — $current_section starts null, and an empty string only
+            // ever triggers the "insert a heading" branch once, on the
+            // very first untagged chapter; every untagged chapter after
+            // that no longer looks like a transition, so nothing repeats.
+            //
+            // $toc_items and $chapter_rows accumulate as plain strings
+            // (rather than echoing directly) specifically because the ToC
+            // has to appear BEFORE the chapter list in the final markup,
+            // even though both are only knowable by walking the same
+            // per-chapter loop once.
+            $current_section = null;
+            $toc_items       = '';
+            $chapter_rows    = '';
 
-                    if ( $section_name !== $current_section ) :
-                        $current_section = $section_name;
-                        if ( $section_name ) :
-                            ?>
-                            <h2 class="guide-section-heading"><?php echo esc_html( $section_name ); ?></h2>
-                            <?php
-                        endif;
+            foreach ( $chapters_with_sections as $entry ) :
+                $chapter_id   = $entry['chapter_id'];
+                $section_name = $entry['section'];
+
+                // bitesmart_get_guide_chapters_with_sections() may be
+                // serving a cached list of ids — get_post() re-resolves
+                // each one fresh (cheap: hits WordPress's own object cache
+                // in the common case). A chapter trashed/deleted since the
+                // cache was built (rare — the cache is invalidated on
+                // save/delete/Section-term-change, see that function's own
+                // comment) simply won't resolve here; skip it rather than
+                // render a broken row.
+                $chapter = get_post( $chapter_id );
+                if ( ! $chapter ) :
+                    continue;
+                endif;
+
+                if ( $section_name !== $current_section ) :
+                    $current_section = $section_name;
+                    if ( $section_name ) :
+                        $chapter_rows .= '<h2 class="guide-section-heading">' . esc_html( $section_name ) . '</h2>';
+                        $toc_items    .= '<li class="guide-toc-section-heading">' . esc_html( $section_name ) . '</li>';
                     endif;
-                    ?>
-                    <?php
-                    echo bitesmart_render_guide_chapter_row( $chapter->ID, array( // phpcs:ignore
-                        'accordion_group' => $accordion_group,
-                        'show_guide_link' => false, // redundant — we're already ON this chapter's guide
-                    ) );
-                    ?>
-                <?php endforeach; ?>
+                endif;
+
+                $chapter_rows .= bitesmart_render_guide_chapter_row( $chapter_id, array(
+                    'accordion_group' => $accordion_group,
+                    'show_guide_link' => false, // redundant — we're already ON this chapter's guide
+                ) );
+
+                $toc_items .= bitesmart_render_guide_toc_item( $chapter );
+            endforeach;
+            ?>
+
+            <?php if ( $toc_items ) : ?>
+                <details class="guide-toc" open>
+                    <summary class="guide-toc-summary">
+                        <?php esc_html_e( 'Table of Contents', 'custom-blocks' ); ?>
+                        <?php
+                        // Same chevron SVG/rotate-on-[open] treatment every
+                        // other <summary> in this feature already uses (see
+                        // .guide-chapter-chevron, guide-chapter-display/style.css)
+                        // — kept visually consistent rather than falling back
+                        // to the browser's own default disclosure triangle.
+                        ?>
+                        <svg class="guide-toc-chevron" viewBox="0 0 20 20" width="20" height="20" aria-hidden="true" focusable="false">
+                            <polyline points="5 7.5 10 12.5 15 7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                        </svg>
+                    </summary>
+                    <ul class="guide-toc-list">
+                        <?php echo $toc_items; // phpcs:ignore ?>
+                    </ul>
+                </details>
+            <?php endif; ?>
+
+            <div class="guide-chapter-list">
+                <?php echo $chapter_rows; // phpcs:ignore ?>
             </div>
         <?php else : ?>
             <p class="guide-single-empty"><?php esc_html_e( 'Chapters for this guide are coming soon.', 'custom-blocks' ); ?></p>

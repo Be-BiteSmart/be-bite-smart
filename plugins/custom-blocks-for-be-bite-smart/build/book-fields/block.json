@@ -1,0 +1,14 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "custom/book-fields",
+  "title": "Book Fields",
+  "category": "widgets",
+  "description": "\"Why BBS Recommends This Book\" and Book Excerpt (the book's own description or a quote about it) for a Book post. Only ever appears via the Book post type's locked content template (see book-cpt.php) — not meant to be inserted anywhere else.",
+  "supports": {
+    "inserter": false,
+    "html": false,
+    "multiple": false
+  },
+  "editorScript": "file:./index.js"
+}

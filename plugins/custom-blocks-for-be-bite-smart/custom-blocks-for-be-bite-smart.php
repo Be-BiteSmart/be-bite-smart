@@ -195,8 +195,11 @@ add_action( 'init', 'coloring_books_list_register_block' );
 // it — same pattern as custom/resource and custom/coloring-book. See
 // src/book-display/book-display.php, and the Book post type in the Custom
 // Post Types for BBS plugin's includes/book-cpt.php. Must load before
-// learning-search.php further down, since bitesmart_build_stage_card_list()
-// there calls render_book_search_card() (same file).
+// books-list.php further down, since render_books_list_block() there calls
+// render_book_block() (same file) for every card. (Until 2026-08-28 this
+// comment instead pointed at learning-search.php calling
+// render_book_search_card() — Book was removed from that listing that day;
+// see learning-search.php's own file header for the full story.)
 require_once __DIR__ . '/src/book-display/book-display.php';
 
 function book_register_block() {
@@ -206,15 +209,58 @@ function book_register_block() {
 }
 add_action( 'init', 'book_register_block' );
 
+// -------------- Book Fields Block (locked template block) --------- //
+
+// custom/book-fields is Book's main canvas content as of 2026-08-30 —
+// locked into the `book` CPT's content template (book-cpt.php, Custom Post
+// Types for BBS plugin), same mechanism as custom/qa-entry-fields/
+// custom/resource-fields. Its own content is, in turn, two FURTHER-locked
+// child sections (custom/book-summary-section, custom/book-excerpt-section,
+// registered just below) — see src/book-fields/index.js for the full
+// 3-level nesting story. None of the three have a render_callback: Book is
+// headless (never rendered through the normal front-end block pipeline —
+// see book-cpt.php), so they only matter as editor-side block definitions;
+// the actual front-end HTML comes from render_book_block() (book-display.php)
+// parsing/rendering the saved post_content directly.
+function book_fields_register_block() {
+    register_block_type( __DIR__ . '/build/book-fields' );
+}
+add_action( 'init', 'book_fields_register_block' );
+
+function book_summary_section_register_block() {
+    register_block_type( __DIR__ . '/build/book-summary-section' );
+}
+add_action( 'init', 'book_summary_section_register_block' );
+
+function book_excerpt_section_register_block() {
+    register_block_type( __DIR__ . '/build/book-excerpt-section' );
+}
+add_action( 'init', 'book_excerpt_section_register_block' );
+
 // -------------- Book sidebar panel (NOT a locked template block) -- //
 
-// book's canvas stays open (post_content is the real recommendation body,
-// restricted to Paragraph/List — see book-cpt.php), so its other fields
-// (Price/Availability, Buy/More Info URL, Keywords) live in a sidebar
-// panel instead of a locked template block — same reasoning and mechanism
-// as src/guide-chapter-panel/. No register_block_type() call: this isn't a
-// block.
+// UNLIKE the canvas content above, these fields (Audience, Price/Availability,
+// Buy/More Info URL, Inside-the-Book preview images) live in a sidebar panel
+// instead of the locked custom/book-fields block — same reasoning and
+// mechanism as src/guide-chapter-panel/. This restructuring (2026-08-30) was
+// scoped to just the canvas content; these fields weren't moved. No
+// register_block_type() call: this isn't a block.
 require_once __DIR__ . '/src/book-panel/book-panel.php';
+
+// -------------- Books List Block (CPT-backed) --------------------- //
+
+// custom/books-list auto-lists every published Book, grouped by Audience,
+// on the existing /books/ page — see src/books-list/books-list.php. Requires
+// book-display.php (just above) to already be loaded, since its render
+// callback calls render_book_block() for each card.
+require_once __DIR__ . '/src/books-list/books-list.php';
+
+function books_list_register_block() {
+    register_block_type( __DIR__ . '/build/books-list', [
+        'render_callback' => 'render_books_list_block',
+    ] );
+}
+add_action( 'init', 'books_list_register_block' );
 
 // -------------- Learning Hub Search Block ------------------------ //
 

@@ -3,10 +3,13 @@
 // file-level comment for the full "why"). Owns the paginated "All X"
 // browse list; no Fuse.js/live-search logic here at all — that stays with
 // the sibling custom/learning-search block's own view.js. The type-filter
-// checkboxes can render in EITHER block's own output (or both, as of
-// 2026-08-16 — see syncTypeCheckboxes() below) so one consistent filter
-// setting always governs both blocks regardless of which copy a visitor
-// touches or which blocks are actually present on the page.
+// checkboxes rendered in EITHER block's own output (or both) between
+// 2026-08-16 and 2026-08-28; as of 2026-08-28 they render ONLY in the
+// sibling custom/learning-search block (see that block's PHP for why), but
+// this file still reads/syncs them page-wide (see getEnabledTypes()/
+// syncTypeCheckboxes() below) rather than assuming where they live, so this
+// block's own filtering keeps working correctly with zero changes needed
+// here regardless of which block(s) a checkbox row happens to render in.
 //
 // Deliberately NOT a fetch()/REST call: every card for this block's Stage
 // is already embedded in the page as a <script type="application/json">
@@ -51,12 +54,13 @@ function initLearningBrowseBlock(block) {
   const stringFor = (key, fallback) =>
     block.querySelector(`.learning-search-string[data-key="${key}"]`)?.textContent || fallback;
 
-  // Reads EVERY .learning-search-type-checkbox on the page (this block's
-  // own copy and/or a sibling custom/learning-search block's copy — see
-  // file header) rather than just this block's own, now that a checkbox
-  // can live in either block's output. syncTypeCheckboxes() keeps every
-  // copy's .checked in agreement, so it doesn't matter which one is read.
-  // No checkboxes rendered anywhere (bitesmart_render_learning_search_type_filter()
+  // Reads EVERY .learning-search-type-checkbox on the page rather than just
+  // this block's own — this block renders none of its own as of 2026-08-28
+  // (see file header), so in practice this reads the sibling
+  // custom/learning-search block's copy, but staying page-wide (not
+  // assuming where the checkboxes live) means nothing here would need to
+  // change if that ever moves again. No checkboxes rendered anywhere
+  // (bitesmart_render_learning_search_type_filter()
   // skips this Stage — fewer than 2 distinct card types present) means
   // "every type is enabled" by definition, same as if they were all checked.
   function getEnabledTypes() {
@@ -73,8 +77,14 @@ function initLearningBrowseBlock(block) {
   let browsePage = 1;
 
   function renderBrowse() {
+    // A card matches if it carries ANY of the enabled Media Types (a card
+    // can carry more than one — e.g. a Q&A Entry tagged both "Short Answer"
+    // and "Video" — so this is an overlap check, not exact-membership the
+    // way the old post-type filter's single `card.type` was).
     const enabledTypes = getEnabledTypes();
-    const filtered = enabledTypes ? cards.filter((card) => enabledTypes.has(card.type)) : cards;
+    const filtered = enabledTypes
+      ? cards.filter((card) => card.mediaTypes.some((type) => enabledTypes.has(type)))
+      : cards;
 
     const totalPages = Math.max(1, Math.ceil(filtered.length / BROWSE_PER_PAGE));
     browsePage = Math.max(1, Math.min(browsePage, totalPages));

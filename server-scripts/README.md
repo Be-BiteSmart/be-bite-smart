@@ -27,6 +27,7 @@ This used to cause the post-sync cleanup step to **fail outright** (`wp plugin d
 | Situation | What to do |
 |---|---|
 | You want to test a plugin update against real production data | SSH in and run `./sync-staging-db.sh` manually — see Step 6 below for the full walkthrough |
+| You want staging to reflect your LOCAL DB changes for manual review | Run `push-local-db-to-staging.sh` from your machine (in `local-only-scripts/`, not this repo) — see Step 7. Remember: the next PR's CI sync overwrites it with prod's DB again. |
 | Wordfence gets updated and adds new DB tables | Update the `WORDFENCE_TABLES` array in `sync-staging-db.sh` — see Step 5 and the "Wordfence table exclusion drift" risk below |
 | You want to test a Wordfence update specifically | Install Wordfence on staging yourself first (it's not there by default — see above), test, then either leave it deactivated via the next sync or remove it again once done |
 | You're setting this up fresh for a *different* repo/site (not just inheriting this one) | Follow Steps 1–4 in order — they cover initial deployment, key generation, and GitHub configuration from scratch |
@@ -44,6 +45,7 @@ This setup has been reviewed at the design level (see the Security Review sectio
 - `sync-to-staging-post.sh` - Post-sync cleanup that deactivates Wordfence on staging only, if it's installed there
 - `deploy-staging-branch.sh` - Checks out and pulls a specific branch on staging (used for PR deployments; validates branch name against strict allowlist before any git operations)
 - `staging-deploy-wrapper.sh` - **Deprecated** - Wrapper script that combines git pull and sync. Not recommended due to privilege escalation risk. Use separate SSH keys instead (see Step 4).
+- `import-local-db-to-staging.sh` - Imports a developer's local DB dump into staging (local → staging, the reverse direction of `sync-staging-db.sh`). Backs up staging's current DB first. Triggered manually from a developer's machine via `local-only-scripts/push-local-db-to-staging.sh` (outside this repo, not committed) — never by CI. **Important:** the next CI-triggered sync (every PR) will overwrite whatever this pushes with production's DB again — this is for transient manual testing, not a durable state.
 
 ## Deployment Instructions
 
@@ -113,7 +115,7 @@ command="/home/USER/deploy-staging-branch.sh",no-port-forwarding,no-X11-forwardi
 ```bash
 ssh-keygen -lf ~/.ssh/authorized_keys
 ```
-This should print one fingerprint per key line (4, in this setup: personal admin key, `staging-deploy`, `staging-sync-deploy`, `prod-deploy`). If the count is short, re-check the line you just edited — don't assume the rest of the file is fine.
+This should print one fingerprint per key line (5, in this setup: personal admin key, `staging-deploy`, `staging-sync-deploy`, `prod-deploy`, `local-push-deploy`). If the count is short, re-check the line you just edited — don't assume the rest of the file is fine.
 
 **How the deploy key passes the branch name:** `deploy-staging-branch.sh` reads its target branch from `$SSH_ORIGINAL_COMMAND` — whatever the SSH client sends as its "script." The GitHub Actions workflow passes `${{ github.head_ref }}` (the PR's source branch) as that value. The script validates it against a strict allowlist (`^[a-zA-Z0-9_/-]+$`) before any git operation, so a leaked key can only trigger a checkout of a valid-looking branch name — not arbitrary shell commands.
 
@@ -219,6 +221,23 @@ Once it completes, staging will reflect current production content with Wordfenc
 
 **Note:** this manual sync uses the same script, same lock file, and same safety mechanisms as the CI-triggered path. If a CI sync happens to be running at the same time (e.g. someone just opened a PR), the lock file will cause your manual run to wait/fail rather than race against it; just re-run it once the CI sync finishes.
 
+### 7. Pushing your local DB to staging (for manual review of local changes)
+
+This is the reverse direction: instead of refreshing staging from production, it overwrites staging's DB with a copy of **your local** database. Useful when you've made content/data changes locally (not just code) and want to see them on staging before/without a PR.
+
+**One-time setup**, in addition to Steps 1–4 above (same process, one more key/script):
+1. Upload `import-local-db-to-staging-template.sh` to the server as `/home/USER/import-local-db-to-staging.sh`, fill in placeholders, `chmod 700` it — same as Step 1–3 for the other scripts.
+2. Generate a fourth, separately-scoped key pair (`local-push-deploy`) and add it to `authorized_keys` with its own forced command — see `authorized_keys_template` for the exact line. This key is **not** added to any GitHub Secret; it's manual-only, so it stays local to your machine (`~/.ssh/local_push_key`), never uploaded anywhere.
+3. Fill in `local-only-scripts/push-local-db-to-staging.sh`'s CONFIG block (this file lives outside the repo, alongside `pull-live-db.sh` — see [[be-bitesmart-local-env]]).
+
+**To run it:**
+```bash
+./push-local-db-to-staging.sh
+```
+It exports your local DB, backs up staging's current DB server-side first (so it's reversible — the script prints the restore command), imports your local dump into staging, and rewrites URLs local → staging.
+
+**Important:** the CI-triggered sync (`deploy-staging` job) still runs prod → staging on every PR — this script doesn't disable or interact with that. If you open a PR after pushing your local DB, CI will overwrite your push with production's DB again on that PR's run. Use this for "let me eyeball this on staging right now," not as a lasting change.
+
 ## How It Works
 
 ### sync-staging-db.sh
@@ -240,6 +259,15 @@ Once it completes, staging will reflect current production content with Wordfenc
 1. **Reads the target branch** from `$SSH_ORIGINAL_COMMAND` (set by the SSH client — in CI, this is `github.head_ref`)
 2. **Validates the branch name** against `^[a-zA-Z0-9_/-]+$` — rejects anything with shell metacharacters, path traversal, or injection vectors
 3. **Fetches, checks out, and pulls** the validated branch in staging's wp-content directory
+
+### import-local-db-to-staging.sh
+
+1. **Checks environment** by verifying the site URL contains "staging" — fail-closed, same as `sync-to-staging-post.sh`, and runs *before* anything else so a misconfigured path can never touch production
+2. **Acquires the same lock file** `sync-staging-db.sh` uses, so a manual local push can never race the CI-triggered prod sync
+3. **Reads the incoming dump from stdin** (piped over SSH by `push-local-db-to-staging.sh`)
+4. **Backs up staging's current DB** before overwriting it (7 days of these backups are kept, for rollback)
+5. **Imports** the local dump, then **rewrites URLs** local → staging
+6. **Runs the same post-sync cleanup** (`sync-to-staging-post.sh`) as the prod→staging path
 
 ## Safety Features
 
@@ -317,6 +345,8 @@ This sync process moves production WordPress data (including the database and me
 | **Post-sync step fails when Wordfence not installed** | Fixed | `sync-to-staging-post.sh` now checks `wp plugin is-installed` before attempting deactivation; absent plugin is the expected, healthy outcome. |
 | **Test job couldn't resolve staging auth secrets** | Fixed | Added `environment: staging` to the `test` job — required for `STAGING_AUTH_USER`/`STAGING_AUTH_PASS` to resolve; without it they silently return null, causing 401 on every request. |
 | **Security tests running against staging instead of production** | Fixed | `security.spec.js` uses `test.use({ baseURL: PRODUCTION_URL })` to pin all security checks to production, independent of whatever `baseURL` the rest of the suite resolves to for a given run. Security checks validate server/file-level hardening specific to production's actual configuration. |
+| **Local→staging DB push could target prod if misconfigured** | Fixed | `import-local-db-to-staging.sh` runs the same fail-closed siteurl check as `sync-to-staging-post.sh`, first, before any import/backup step. A leaked `local-push-deploy` key is also forced-command restricted to this one script, so it can't run arbitrary shell even if the check were somehow bypassed. |
+| **Local→staging push racing the CI prod→staging sync** | Fixed | `import-local-db-to-staging.sh` acquires the same lock file as `sync-staging-db.sh`, so the two can never run concurrently against staging's DB. |
 
 ### Reasoning for Key Design Decisions
 
@@ -399,6 +429,7 @@ A daily cron-triggered sync was implemented and then removed. Rejected because p
 - **Security tests correctly pinned to production:** confirmed — `test.use({ baseURL: PRODUCTION_URL })` in `security.spec.js` overrides the shared `baseURL` for that suite only
 - **Fail-closed environment check:** confirmed in success path; abort path not yet deliberately tested against a forced failure
 - **Lock file behavior under concurrent runs:** not yet stress-tested; design is reasoned through but unobserved under real concurrent conditions
+- **`import-local-db-to-staging.sh` / `push-local-db-to-staging.sh` (local→staging push):** newly added, not yet deployed or run end-to-end — needs the same live-validation pass (key generation, forced command, fail-closed check, actual import/rewrite/backup) before being trusted the way the other three scripts now are
 
 **Found via live testing (not anticipated at design time):**
 - Unguarded `wp plugin deactivate wordfence` failed the entire sync on first real run (Wordfence not installed on staging). Fixed: presence check added.

@@ -81,25 +81,21 @@
 }
 
 /* ── Play button size override ──
-   Global .play-button uses 0.75rem padding; this block uses a slightly
-   larger button so we override padding only here.
-   The ::after triangle (optical centering: margin-left: 3px) is also
-   inherited from the global rule.                                        */
+   Global .play-button uses 0.75rem/1.25rem padding; this block uses a
+   slightly larger button so we override padding only here. The icon
+   (.play-button-icon) and label (.play-button-label) are both inherited
+   from the global rule.                                                  */
 .video-quote-block .play-button {
-  padding: 1rem;
+  padding: 1rem 1.5rem;
 }
 
-/* ── Controls row (language picker + watch button, 2+ languages) ── */
+/* ── Controls row (language picker, 2+ languages) ── */
 .video-quote-controls {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.75rem;
   margin-bottom: 2.5rem;
-}
-
-.video-quote-controls .video-quote-watch-button {
-  margin-bottom: 0;
 }
 
 /* ── Track-unavailable note ──
@@ -116,38 +112,6 @@
 
 .video-quote-track-note.is-visible {
   opacity: 1;
-}
-
-/* ── Watch button ── */
-.video-quote-watch-button {
-  margin-top: 0.5rem !important;
-  margin-left: auto;
-  margin-right: auto;
-  max-width: max-content;
-  margin-bottom: 2.5rem;
-}
-
-/* center watch button (beats competing block-toggle button styles) */
-body:not(.block-editor-page)
-  .video-quote-block
-  .video-quote-text-side
-  .video-quote-watch-button {
-  display: block;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.video-quote-watch-button:active {
-  transform: translateY(0);
-}
-
-/* Once playback starts, the button is a dead trigger (loadVideo() no-ops
-   while isPlaying) — hide it same as the thumbnail's .hidden treatment in
-   video-toggle.js, since the Vimeo iframe has its own play/pause controls.
-   !important needed to beat the display:block rule above, which applies
-   regardless of language-picker presence. */
-.video-quote-watch-button.hidden {
-  display: none !important;
 }
 
 /* ── Blockquote ── */

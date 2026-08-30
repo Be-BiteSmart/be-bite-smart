@@ -36,6 +36,13 @@ function render_video_quote_block( $attributes ) {
     $site_lang            = bitesmart_site_lang_code();
     $available_languages  = bitesmart_normalize_available_languages( $attributes['availableLanguages'] ?? array( 'en' ) );
     $active_lang          = in_array( $site_lang, $available_languages, true ) ? $site_lang : 'en';
+    $has_picker           = count( $available_languages ) > 1;
+    $play_button_label    = bitesmart_play_button_label( $active_lang, $has_picker );
+
+    if ( $has_picker ) {
+        bitesmart_needs_play_button_label_template();
+        bitesmart_needs_lang_change_status_template();
+    }
 
     ob_start(); ?>
     <article
@@ -63,7 +70,10 @@ function render_video_quote_block( $attributes ) {
                             <div class="video-thumbnail">
                                 <?php echo $thumbnail; ?>
                                 <div class="video-overlay">
-                                    <button class="play-button" aria-label="Play video" type="button"></button>
+                                    <button class="play-button" type="button">
+                                        <span class="play-button-icon" aria-hidden="true"></span>
+                                        <span class="play-button-label"><?php echo esc_html( $play_button_label ); ?></span>
+                                    </button>
                                 </div>
                             </div>
                             <div class="video-player"></div>
@@ -79,14 +89,8 @@ function render_video_quote_block( $attributes ) {
                     <div class="video-quote-controls">
                         <?php echo bitesmart_render_lang_picker_html( $available_languages, $active_lang ); ?>
                         <p class="video-quote-track-note" role="status" aria-live="polite"></p>
-                        <button class="video-quote-watch-button block-toggle-btn" type="button">
-                            <span>Watch the Mini-Documentary</span>
-                        </button>
+                        <p class="lang-change-status" role="status" aria-live="polite"></p>
                     </div>
-                <?php else : ?>
-                    <button class="video-quote-watch-button block-toggle-btn" type="button">
-                        <span>Watch the Mini-Documentary</span>
-                    </button>
                 <?php endif; ?>
 
                 <?php if ( $quote ) : ?>

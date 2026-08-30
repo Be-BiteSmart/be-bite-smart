@@ -1,22 +1,28 @@
 <?php
 /**
- * Render callback for "custom/learning-browse" — the type-filter checkboxes
- * + paginated "All X" browse list split OUT of custom/learning-search on
- * 2026-08-16 (see that block's own file-level comment,
- * src/learning-search/learning-search.php, for the full "why").
+ * Render callback for "custom/learning-browse" — the paginated "All X"
+ * browse list split OUT of custom/learning-search on 2026-08-16 (see that
+ * block's own file-level comment, src/learning-search/learning-search.php,
+ * for the full "why"). Briefly also rendered its own copy of the
+ * type-filter checkboxes (2026-08-16 through 2026-08-28) — dropped once the
+ * browse list started auto-hiding while a search is active (see
+ * learning-search/view.js's setPersistentListsHidden()), since a visitor
+ * would otherwise see the same checkbox row twice on one Stage page. The
+ * checkboxes now render ONLY in the sibling custom/learning-search block;
+ * see bitesmart_render_learning_search_type_filter()'s own docblock.
  *
  * Meant to be placed alongside a custom/learning-search block set to the
- * SAME Stage on a real Stage archive page — its type filter also narrows
- * that sibling block's live search results (see the stage-matched lookup
- * in learning-search/view.js's getEnabledTypes()). Deliberately NOT placed
- * on the pooled Guide search page (Stage=Guide) — a persistent "All
+ * SAME Stage on a real Stage archive page — that sibling block's type
+ * filter also narrows THIS block's browse list (browse.js's
+ * getEnabledTypes()/syncTypeCheckboxes() read/sync checkboxes page-wide,
+ * not scoped to "this block's own" — see that file). Deliberately NOT
+ * placed on the pooled Guide search page (Stage=Guide) — a persistent "All
  * Chapters" list there would just duplicate custom/guide-single's own
  * chapter list at /learning/guide/, which is the entire reason this split
  * happened.
  *
  * Reuses learning-search.php's shared helpers as-is
  * (bitesmart_build_stage_card_list(), bitesmart_render_learning_search_data(),
- * bitesmart_render_learning_search_type_filter(),
  * bitesmart_render_learning_search_strings()).
  * No require-order dependency on that file: none of these are called until
  * THIS block's render callback actually runs (well after every plugin file
@@ -29,7 +35,12 @@
  * cache hit when both are on the same page, at the cost of the full card
  * HTML+searchText being embedded twice on that page (accepted tradeoff for
  * genuine block independence — each block works correctly on its own with
- * no dependency on a sibling block's presence or DOM).
+ * no dependency on a sibling block's presence or DOM for its data/pagination).
+ * The one exception, as of 2026-08-28: this block no longer has its OWN
+ * type-filter checkbox row (see above), so on a page with no sibling
+ * custom/learning-search block, browse.js's getEnabledTypes() finds zero
+ * checkboxes anywhere and degrades to "no filtering" — the browse list
+ * still renders and paginates correctly, it just can't be filtered by type.
  */
 function render_learning_browse_block( $attributes ) {
     $stage_slug = isset( $attributes['stageSlug'] ) ? sanitize_title( $attributes['stageSlug'] ) : '';
@@ -63,10 +74,16 @@ function render_learning_browse_block( $attributes ) {
     <section class="wp-block-custom-learning-browse learning-browse-block" id="<?php echo esc_attr( $instance_id ); ?>" data-stage="<?php echo esc_attr( $stage_slug ); ?>" data-lang="<?php echo esc_attr( $lang ); ?>">
 
         <?php
-        // Rendered first, above the browse list — same "sits above
-        // everything, stable regardless of scroll/result state" reasoning
-        // this had before the split (see git history / memory).
-        bitesmart_render_learning_search_type_filter( $cards );
+        // NOT calling bitesmart_render_learning_search_type_filter() here
+        // as of 2026-08-28 (was, 2026-08-16 through 2026-08-28) — the
+        // sibling custom/learning-search block's own copy is enough now
+        // that the browse list auto-hides while a search is active (see
+        // view.js's setPersistentListsHidden()), so a visitor would
+        // otherwise see this same checkbox row rendered twice on one Stage
+        // page. This block's own getEnabledTypes()/syncTypeCheckboxes() in browse.js
+        // still read/sync checkboxes page-wide rather than "this block's
+        // own", so removing this block's copy doesn't change its filtering
+        // behavior at all — it just stops duplicating the UI.
 
         // Same conditional as custom/learning-search's own copy (see that
         // block's render_learning_search_block()) — only the pooled Guide

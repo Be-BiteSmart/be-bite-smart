@@ -97,6 +97,13 @@ function bitesmart_register_coloring_book_post_type() {
     // bitesmart_coloring_book_anchor_id() there.
     register_taxonomy_for_object_type( 'series', 'coloring_book' );
 
+    // Attaches Coloring Book to the shared Media Type taxonomy
+    // (includes/media-type-taxonomy.php) — drives the Learning Hub's
+    // "Filter by type" checkboxes (see
+    // bitesmart_default_coloring_book_media_type_term() below for the
+    // default this CPT applies).
+    register_taxonomy_for_object_type( 'media_type', 'coloring_book' );
+
     bitesmart_register_coloring_book_meta();
 }
 add_action( 'init', 'bitesmart_register_coloring_book_post_type' );
@@ -140,6 +147,26 @@ function bitesmart_default_coloring_book_stage_terms( $post_id, $post, $update )
     }
 }
 add_action( 'save_post_coloring_book', 'bitesmart_default_coloring_book_stage_terms', 10, 3 );
+
+/**
+ * A Coloring Book is a downloadable PDF of pages to color, so new Coloring
+ * Book posts default to the "Image" Media Type term — same reasoning and
+ * same known WP core autosave edge case as
+ * bitesmart_default_episode_stage_term() in episode-cpt.php (see its comment
+ * for why this is a save_post hook rather than the 'default_term' taxonomy
+ * arg). Only fires when the post genuinely has zero Media Type terms at save
+ * time, so it never overrides an editor's real choice.
+ */
+function bitesmart_default_coloring_book_media_type_term( $post_id, $post, $update ) {
+    if ( wp_is_post_revision( $post_id ) || wp_is_post_autosave( $post_id ) ) {
+        return;
+    }
+
+    if ( ! has_term( '', 'media_type', $post_id ) ) {
+        wp_set_object_terms( $post_id, 'image', 'media_type' );
+    }
+}
+add_action( 'save_post_coloring_book', 'bitesmart_default_coloring_book_media_type_term', 10, 3 );
 
 /**
  * The native Title field sits above the locked custom/coloring-book-fields

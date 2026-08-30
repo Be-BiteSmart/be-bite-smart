@@ -1,0 +1,14 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "custom/book-summary-section",
+  "title": "Book Summary Section",
+  "category": "widgets",
+  "description": "BBS's own \"why we're recommending this book\" write-up — a free Paragraph/List editing area. Only ever appears as the first locked child of custom/book-fields (see book-cpt.php) — not meant to be inserted anywhere else.",
+  "supports": {
+    "inserter": false,
+    "html": false,
+    "multiple": false
+  },
+  "editorScript": "file:./index.js"
+}
