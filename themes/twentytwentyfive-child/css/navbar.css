@@ -22,6 +22,11 @@ header .wp-block-navigation__container > li::before {
   content: "";
 }
 
+/* removes default padding from the left and right for the hamburger on mobile screens */
+.no-root-padding.has-global-padding {
+  padding-left: 0;
+  padding-right: 0;
+}
 /* Hide pipes on small screens (mobile) */
 @media (max-width: 680px) {
   header .wp-block-navigation__container > li::before {
@@ -138,7 +143,9 @@ above 680px do we fall through to normal desktop behaviour. */
     display: flex !important;
   }
 
-  .wp-block-navigation__responsive-container:not(.hidden-by-default):not(.is-menu-open) {
+  .wp-block-navigation__responsive-container:not(.hidden-by-default):not(
+      .is-menu-open
+    ) {
     display: none !important;
   }
 }
