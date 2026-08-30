@@ -126,7 +126,6 @@ function bitesmart_backfill_media_type_terms() {
         'resource'      => 'bitesmart_default_resource_media_type_term',
         'qa_entry'      => 'bitesmart_default_qa_entry_media_type_term',
         'coloring_book' => 'bitesmart_default_coloring_book_media_type_term',
-        'book'          => 'bitesmart_default_book_media_type_term',
         'guide_chapter' => 'bitesmart_default_guide_chapter_media_type_term',
     );
 
