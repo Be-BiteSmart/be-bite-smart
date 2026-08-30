@@ -59,6 +59,7 @@ add_action( 'init', 'bitesmart_register_stage_taxonomy' );
 function bitesmart_seed_stage_terms() {
     if ( get_option( 'bitesmart_stage_terms_seeded' ) ) {
         bitesmart_seed_guide_stage_term(); // added later than the other four; see its own comment
+        bitesmart_seed_all_stages_pseudo_term(); // added later still; see its own comment
         return;
     }
 
@@ -69,6 +70,7 @@ function bitesmart_seed_stage_terms() {
     }
 
     bitesmart_seed_guide_stage_term();
+    bitesmart_seed_all_stages_pseudo_term();
 
     update_option( 'bitesmart_stage_terms_seeded', true );
 }
@@ -100,5 +102,31 @@ function bitesmart_seed_stage_terms() {
 function bitesmart_seed_guide_stage_term() {
     if ( ! term_exists( 'Guide', 'stage' ) ) {
         wp_insert_term( 'Guide', 'stage' );
+    }
+}
+
+/**
+ * "All Stages" is a Stage term like "Guide" above — not a real parenting
+ * stage, no post is ever tagged with it, exists purely so it's selectable
+ * in `custom/learning-search`'s Stage dropdown. Picking it sets that block
+ * instance's `stageSlug` attribute to `'all'`, which
+ * `bitesmart_build_stage_card_list()` (learning-search.php) recognizes as a
+ * dedicated query branch — every published Q&A Entry / Resource / Episode /
+ * Coloring Book / Guide Chapter, regardless of Stage tagging, no tax_query
+ * involved at all. Lets a visitor browse/search everything without picking
+ * a stage first; see [[be-bitesmart-content-hub-plan]] in memory for why
+ * this was originally deferred and later built.
+ *
+ * Seeded separately (same reasoning as bitesmart_seed_guide_stage_term()
+ * above) because it was added well after this install was already seeded —
+ * the `bitesmart_stage_terms_seeded` option flag would otherwise skip it
+ * forever on the already-live site.
+ */
+function bitesmart_seed_all_stages_pseudo_term() {
+    // Explicit slug: sanitize_title( 'All Stages' ) would default to
+    // "all-stages", but bitesmart_build_stage_card_list()'s branch checks
+    // for the plain slug 'all'.
+    if ( ! term_exists( 'all', 'stage' ) ) {
+        wp_insert_term( 'All Stages', 'stage', array( 'slug' => 'all' ) );
     }
 }

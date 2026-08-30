@@ -78,6 +78,20 @@ function hero_register_block() {
 }
 add_action( 'init', 'hero_register_block' );
 
+// -------------- Callout Card Block  -------------- //
+// Reusable two-column callout card (pull-quote panel + supporting copy and
+// two CTAs) — first used for the homepage prevention-education section,
+// also intended for sponsorship callouts.
+
+require_once __DIR__ . '/src/callout-card/callout-card.php';
+
+function callout_card_register_block() {
+    register_block_type( __DIR__ . '/build/callout-card', [
+        'render_callback' => 'render_callout_card_block',
+    ] );
+}
+add_action( 'init', 'callout_card_register_block' );
+
 // ---------------- QR code Block -------------
 
 require_once __DIR__ . '/src/qr-experience/render.php';

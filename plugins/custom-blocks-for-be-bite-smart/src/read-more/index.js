@@ -10,6 +10,10 @@ registerBlockType("custom/read-more", {
 
   attributes: {
     buttonLabel: { type: "string", default: "Read More" },
+    // Shown once the content is expanded (replaces read-more.js's hardcoded
+    // "Read Less" for this block instance). Left blank, the toggle script
+    // falls back to "Read Less" on its own — see read-more.js.
+    expandedButtonLabel: { type: "string", default: "Read Less" },
   },
 
   edit: ({ attributes, setAttributes }) => {
@@ -55,6 +59,40 @@ registerBlockType("custom/read-more", {
         }),
       ),
 
+      // ── Expanded Button Label ────────────────────────────────────────
+      wp.element.createElement(
+        "div",
+        {
+          style: {
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            marginBottom: "12px",
+          },
+        },
+        wp.element.createElement(
+          "label",
+          {
+            style: {
+              fontSize: "15px",
+              fontWeight: "600",
+              flexShrink: 0,
+            },
+          },
+          "Label when expanded:",
+        ),
+        wp.element.createElement(RichText, {
+          tagName: "span",
+          placeholder: __("Read Less", "custom-blocks"),
+          value: attributes.expandedButtonLabel,
+          onChange: (val) => setAttributes({ expandedButtonLabel: val }),
+          style: {
+            fontSize: "15px",
+            flex: 1,
+          },
+        }),
+      ),
+
       // ── Expandable Content Zone ───────────────────────────────────────
       wp.element.createElement(
         "div",
@@ -72,6 +110,7 @@ registerBlockType("custom/read-more", {
             "core/list",
             "core/quote",
             "core/image",
+            "custom/unfunded-episode",
           ],
           template: [["core/paragraph", {}]],
         }),
@@ -101,6 +140,11 @@ registerBlockType("custom/read-more", {
         {
           className: "read-more-toggle block-toggle-btn",
           "data-expanded": "false",
+          // Per-instance label overrides read by read-more.js; it falls
+          // back to its own hardcoded "Read More"/"Read Less" when these
+          // are blank (e.g. content saved before this attribute existed).
+          "data-label-collapsed": attributes.buttonLabel || "",
+          "data-label-expanded": attributes.expandedButtonLabel || "",
           type: "button",
         },
         attributes.buttonLabel || "Read More",

@@ -1,0 +1,162 @@
+/* ── Callout Card — contained two-column card ──────────────────────────
+   Supports alignwide (default) so it can grow beyond the ~645px content
+   column, but max-width caps it well short of the ~1340px wide container —
+   deliberately NOT alignfull/edge-to-edge like .dbp-section (hero); the
+   point is a contained card with visible margin either side. Buttons reuse
+   the sitewide .block-toggle-btn / .is-style-outline classes (theme
+   style.css) rather than declaring new button styles. */
+
+.cc-card {
+  display: flex;
+  max-width: 1040px;
+  margin: 0 auto;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 24px 56px rgba(14, 52, 71, 0.18);
+}
+
+/* ── Left panel: brand-blue pull-quote ────────────────────────────────── */
+.cc-panel--quote {
+  position: relative;
+  flex: 0 0 42%;
+  background: var(--wp--preset--color--accent-2);
+  padding: 52px 44px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* Subtle depth — two soft circles, not a gradient wash. */
+.cc-panel--quote::before,
+.cc-panel--quote::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  background: #ffffff;
+  pointer-events: none;
+}
+.cc-panel--quote::before {
+  top: -30px;
+  right: -30px;
+  width: 150px;
+  height: 150px;
+  opacity: 0.1;
+}
+.cc-panel--quote::after {
+  bottom: -24px;
+  left: -24px;
+  width: 90px;
+  height: 90px;
+  opacity: 0.08;
+}
+
+.cc-quote-mark {
+  display: block;
+  width: 34px;
+  position: relative;
+}
+.cc-quote-mark--open {
+  margin-bottom: 16px;
+}
+.cc-quote-mark--close {
+  margin-top: 14px;
+  transform: scaleX(-1);
+}
+
+/* body:not(.block-editor-page) prefix: beats the equal-specificity
+   :root :where(p) { font-size: ... } WordPress prints globally — see the
+   theme's own style.css for the same fight against .block-toggle-btn. */
+body:not(.block-editor-page) .cc-quote {
+  position: relative;
+  margin: 0;
+  color: #ffffff;
+  font-family: "Urbanist", Georgia, serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: var(--wp--preset--font-size--large);
+}
+.cc-quote sup {
+  font-size: 0.6em;
+}
+
+/* Optional attribution, e.g. "— Dr. Jane Smith, DVM". Not italic/serif like
+   the quote itself, so it reads as a caption rather than more quote text. */
+body:not(.block-editor-page) .cc-quote-source {
+  margin: 14px 0 0;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: var(--wp--preset--font-size--small);
+  font-weight: 600;
+}
+.cc-quote-source::before {
+  content: "— ";
+}
+.cc-quote-source a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.cc-quote-source a:hover {
+  color: var(--wp--preset--color--accent-3);
+}
+.cc-quote-source a:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
+/* ── Right panel: supporting copy + actions ───────────────────────────── */
+.cc-panel--body {
+  flex: 1;
+  background: #f4f6f7;
+  padding: 52px 48px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 20px;
+}
+
+body:not(.block-editor-page) .cc-lead {
+  margin: 0;
+  color: var(--wp--preset--color--accent-5);
+  font-size: var(--wp--preset--font-size--medium);
+  line-height: 1.65;
+  font-weight: 500;
+}
+
+.cc-divider {
+  height: 1px;
+  background: color-mix(
+    in srgb,
+    var(--wp--preset--color--accent-5) 12%,
+    transparent
+  );
+}
+
+body:not(.block-editor-page) .cc-support {
+  margin: 0;
+  color: var(--wp--preset--color--accent-4);
+  font-size: var(--wp--preset--font-size--small);
+  line-height: 1.6;
+  font-weight: 500;
+}
+
+.cc-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Mobile: stack the two panels ─────────────────────────────────────── */
+@media (max-width: 782px) {
+  .cc-card {
+    flex-direction: column;
+  }
+  .cc-panel--quote,
+  .cc-panel--body {
+    flex: 1 1 auto;
+  }
+}

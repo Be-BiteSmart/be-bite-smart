@@ -42,6 +42,7 @@ module.exports = {
     "learning-browse/index": "./src/learning-browse/index.js",
     "learning-browse/browse": "./src/learning-browse/browse.js",
     "hero/index": "./src/hero/index.js",
+    "callout-card/index": "./src/callout-card/index.js",
     "news-and-coverage/index": "./src/news-and-coverage/index.js",
     "pdf-toggle/index": "./src/pdf-toggle/index.js",
     "press-release/index": "./src/press-release/index.js",
