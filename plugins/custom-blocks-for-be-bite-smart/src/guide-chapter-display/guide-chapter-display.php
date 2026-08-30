@@ -25,6 +25,24 @@
  * results/browse list, and only gets heavier as the video-format logic
  * keeps growing.
  *
+ * Leaner still: `bitesmart_render_guide_toc_item()` below renders one Table
+ * of Contents entry (a plain link only — no badges, no summary/video/text/
+ * downloads at all) for the collapsible Table of Contents atop the Guide's
+ * own page (`bitesmart_render_guide_single()`, guide-single.php) — added
+ * 2026-08-28, per Janet: the full accordion rows' own spacing makes the
+ * page "impossible to read at a glance," so the ToC exists purely to let a
+ * visitor scan the guide's structure fast, distinct from every render above
+ * which shows a chapter's actual content. Briefly split out into its own
+ * separate block (`custom/guide-toc`, same day) so it could be placed
+ * independently of `custom/guide-single`, same precedent
+ * `custom/guide-description` already set 2026-08-16 — reverted back into
+ * `custom/guide-single`'s own output the SAME day once Janet decided one
+ * block was simpler/more efficient than two. `bitesmart_get_guide_chapters_with_sections()`
+ * below still exists as its own function (rather than folding straight back
+ * into `bitesmart_render_guide_single()`), now for a different reason: it's
+ * the one place backed by a real persistent cache (a transient, not just a
+ * per-request memo) — see that function's own comment.
+ *
  * See [[be-bitesmart-guide-cpt-plan]] in memory for the full feature. Not
  * registered as a block (no block.json) — chapters are never manually
  * inserted via the block editor, they render automatically wherever their
@@ -113,6 +131,99 @@ function bitesmart_guide_chapter_parent_guide( $chapter_id ) {
     }
 
     return $guide;
+}
+
+/**
+ * Every published chapter of $guide_id, in Chapter Number order, each
+ * paired with its Guide Section name ('' if untagged) and its own post ID
+ * (not the full WP_Post — see below) — the "give me the chapters,
+ * grouped/ordered for rendering" query `bitesmart_render_guide_single()`
+ * (guide-single.php) uses to build both the Table of Contents and the
+ * chapter accordion in one pass.
+ *
+ * Backed by a real, persistent cache (a transient, not just a per-request
+ * memo) — added 2026-08-28, per Janet: "there should still be memoization
+ * though since these files won't change often." Reuses the EXISTING
+ * `bitesmart_stage_cards_gen` generation counter (learning-search.php)
+ * rather than inventing a second invalidation mechanism — that counter
+ * already bumps on every `guide_chapter` save (`bitesmart_stage_cards_maybe_bump()`,
+ * hooked to `save_post_guide_chapter`), and `guide_section` was added to
+ * `bitesmart_stage_cards_maybe_bump_terms()`'s watched taxonomy list
+ * (learning-search.php) the same day so a Section term change made without
+ * a full save (e.g. quick-edit) invalidates this cache too. Bumping this
+ * counter also invalidates every OTHER cached Stage card list at once
+ * (there's no wildcard transient-delete API — see
+ * `bitesmart_stage_cards_bump_generation()`'s own comment) — a small,
+ * already-accepted over-invalidation, not a new cost this introduces.
+ *
+ * Deliberately does NOT reuse `bitesmart_stage_cards_template_version()`
+ * (the pooled search cache's OTHER invalidation ingredient, tracking
+ * render-template file mtimes): that ingredient exists because THAT cache
+ * stores fully rendered HTML, which goes stale the moment a template
+ * changes. This cache stores only raw query results (chapter ids + section
+ * names) — `bitesmart_render_guide_chapter_row()`/`bitesmart_render_guide_toc_item()`
+ * still run fresh on every single request — so a markup/template edit here
+ * can never make the CACHED DATA itself stale, and including template
+ * mtimes would just cause pointless cache misses on unrelated CSS/markup
+ * tweaks.
+ *
+ * Caches chapter IDs, not WP_Post objects — same "cache primitives, not
+ * whole post objects" discipline `bitesmart_build_stage_card_list()`
+ * already established (it caches rendered `html` strings + ids, not
+ * WP_Post). A caller needing the full post calls `get_post( $chapter_id )`
+ * itself (cheap — hits WordPress's own object cache).
+ *
+ * No separate "Section order" data needed: chapters are already queried in
+ * Chapter Number order, and the source document's own chapters are numbered
+ * sequentially BY section (Section I = Chapters 1–2, Section II = Chapters
+ * 3–5, etc.), so a caller walking this list and watching for the section
+ * name to change reproduces the right section order for free.
+ *
+ * @param int $guide_id
+ * @return array<int, array{chapter_id: int, section: string}>
+ */
+function bitesmart_get_guide_chapters_with_sections( $guide_id ) {
+    $gen       = (int) get_option( 'bitesmart_stage_cards_gen', 1 );
+    $cache_key = 'bitesmart_guide_chapters_' . md5( $guide_id . '|' . $gen );
+
+    $cached = get_transient( $cache_key );
+    if ( is_array( $cached ) ) {
+        return $cached;
+    }
+
+    $chapters = new WP_Query( array(
+        'post_type'      => 'guide_chapter',
+        'post_status'    => 'publish',
+        'posts_per_page' => -1,
+        'no_found_rows'  => true,
+        'meta_query'     => array(
+            'relation'      => 'AND',
+            'guide_clause'  => array(
+                'key'   => '_bitesmart_chapter_guide_id',
+                'value' => $guide_id,
+            ),
+            'number_clause' => array(
+                'key'     => '_bitesmart_chapter_number',
+                'type'    => 'NUMERIC',
+                'compare' => 'EXISTS',
+            ),
+        ),
+        'orderby'        => array( 'number_clause' => 'ASC' ),
+    ) );
+
+    $result = array();
+    foreach ( $chapters->posts as $chapter ) {
+        $section_terms = get_the_terms( $chapter->ID, 'guide_section' );
+        $section_name  = ( ! is_wp_error( $section_terms ) && ! empty( $section_terms ) ) ? $section_terms[0]->name : '';
+
+        $result[] = array(
+            'chapter_id' => $chapter->ID,
+            'section'    => $section_name,
+        );
+    }
+
+    set_transient( $cache_key, $result, DAY_IN_SECONDS );
+    return $result;
 }
 
 /**
@@ -292,6 +403,147 @@ function bitesmart_resolve_citation_refs( $html ) {
 }
 
 /**
+ * The eye/eye-slash icon pair shown inside a togglable Video/Text badge —
+ * added 2026-08-28, per Janet: the badges weren't obviously clickable
+ * (looked like plain colored status tags). Both icons are always rendered;
+ * which one is actually visible is pure CSS, keyed off the SAME
+ * .is-active/.is-off classes handleBadgeClick() already toggles
+ * (format-toggle.js) — see .guide-chapter-badge-icon-on/-off in this
+ * block's style.css. No JS changes needed for the icon swap at all.
+ * Decorative only (aria-hidden) — the button's own visible text label
+ * ("Video"/"Text") plus its aria-pressed state remain the real accessible
+ * name/state for a screen reader, same stroke-icon style (currentColor,
+ * aria-hidden, focusable="false") as this file's existing chevron SVGs.
+ *
+ * Extracted as its own tiny function only because bitesmart_render_guide_format_badges()
+ * below needs the identical pair twice (once per badge) — not meant to be
+ * called from anywhere else.
+ *
+ * @return string
+ */
+function bitesmart_render_guide_badge_icons() {
+    return '<svg class="guide-chapter-badge-icon guide-chapter-badge-icon-on" viewBox="0 0 20 20" width="14" height="14" aria-hidden="true" focusable="false"><path d="M2 10s3-5 8-5 8 5 8 5-3 5-8 5-8-5-8-5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="10" cy="10" r="2.2" fill="currentColor"/></svg>'
+        . '<svg class="guide-chapter-badge-icon guide-chapter-badge-icon-off" viewBox="0 0 20 20" width="14" height="14" aria-hidden="true" focusable="false"><path d="M2 10s3-5 8-5 8 5 8 5-3 5-8 5-8-5-8-5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="10" cy="10" r="2.2" fill="currentColor"/><line x1="3" y1="17" x2="17" y2="3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+}
+
+/**
+ * The Video/Text badge pair for one chapter — shared by
+ * bitesmart_render_guide_chapter_row()'s own <summary> AND (previously) the
+ * Table of Contents entries bitesmart_render_guide_single() builds
+ * (guide-single.php) — the ToC's own badges were reverted the same day they
+ * were added (2026-08-28), per Janet: she'd meant a plain link list, not a
+ * second interactive control surface for the same per-chapter toggle (see
+ * bitesmart_render_guide_toc_item()'s own comment). This function is kept
+ * as its own helper anyway — it's still the one place both the row's
+ * badges AND their new "obviously clickable" icons
+ * (bitesmart_render_guide_badge_icons() above) are defined.
+ *
+ * @param bool $has_video
+ * @param bool $has_text
+ * @return string
+ */
+function bitesmart_render_guide_format_badges( $has_video, $has_text ) {
+    ob_start();
+    ?>
+    <span class="guide-chapter-badges">
+        <?php
+        // Real <button>s, not <span>s — they're independently clickable
+        // toggles (format-toggle.js), not just status indicators. Sits
+        // inside a <summary>, so a click has to call preventDefault() there
+        // to stop the browser's native "toggle the enclosing <details>"
+        // behavior that normally fires for ANY click landing inside a
+        // <summary> — see handleBadgeClick() in format-toggle.js.
+        //
+        // Two independent layers of visibility, both true by default:
+        // bitesmart_render_guide_format_controls()'s checkboxes turn a
+        // format off EVERYWHERE (all chapters at once); this button turns
+        // it off/on for just THIS chapter — see applyFormatState() in
+        // format-toggle.js for how the two combine (both have to be "on"
+        // for the format to actually show for a given chapter).
+        //
+        // Only real toggle buttons when the chapter actually HAS that
+        // format — aria-pressed="true" starting state, class is-active
+        // (existing "has it" styling doubles as "on"), plus the eye/
+        // eye-slash icon pair (bitesmart_render_guide_badge_icons() above)
+        // so the toggle is visible at a glance, not just inferred from
+        // color/opacity. When the chapter has NO video/text at all,
+        // disabled: there is nothing to toggle, so it stays non-interactive
+        // (keeps the existing is-inactive "doesn't have this" look, no icon
+        // at all — visually distinct from is-off below, which means "has
+        // it, currently hidden for this chapter").
+        ?>
+        <button
+            type="button"
+            class="guide-chapter-badge<?php echo $has_video ? ' is-active' : ' is-inactive'; ?>"
+            data-format="video"
+            <?php echo $has_video ? 'aria-pressed="true"' : 'disabled'; ?>
+        >
+            <?php if ( $has_video ) : ?>
+                <?php echo bitesmart_render_guide_badge_icons(); // phpcs:ignore ?>
+            <?php endif; ?>
+            <?php esc_html_e( 'Video', 'custom-blocks' ); ?>
+        </button>
+        <button
+            type="button"
+            class="guide-chapter-badge<?php echo $has_text ? ' is-active' : ' is-inactive'; ?>"
+            data-format="text"
+            <?php echo $has_text ? 'aria-pressed="true"' : 'disabled'; ?>
+        >
+            <?php if ( $has_text ) : ?>
+                <?php echo bitesmart_render_guide_badge_icons(); // phpcs:ignore ?>
+            <?php endif; ?>
+            <?php esc_html_e( 'Text', 'custom-blocks' ); ?>
+        </button>
+    </span>
+    <?php
+    return ob_get_clean();
+}
+
+/**
+ * One Table of Contents entry for a chapter — a compact link only (jumps to
+ * and auto-opens that chapter's <details>, same native fragment-navigation +
+ * openHashTargetChapter() mechanism the "Part of"/deep-link surfaces already
+ * rely on — see format-toggle.js). Deliberately lean — no summary text, no
+ * Video/Text badges — since the point of the ToC is a fast scan of the
+ * guide's structure; both live already on each collapsed row below it
+ * (duplicating them here would just recreate the "too loose to skim"
+ * problem the ToC exists to fix). Only called from
+ * bitesmart_render_guide_single() (guide-single.php) — added 2026-08-28.
+ * Briefly lived in its own separate block (custom/guide-toc, same day),
+ * reverted back into custom/guide-single's own output the same day once
+ * Janet decided one block was simpler/more efficient than two — see
+ * [[be-bitesmart-guide-cpt-plan]] in memory.
+ *
+ * **Briefly rendered the Video/Text badges too** (same day) — reverted once
+ * Janet clarified she'd misread the original proposal and just wanted a
+ * plain link list, not a second interactive control surface for the same
+ * per-chapter toggle. `bitesmart_render_guide_format_badges()` stays (still
+ * used by the row's own <summary>); only this function's call into it was
+ * removed, along with the now-unneeded `data-chapter-id` on the <li> (see
+ * format-toggle.js's own history note for the matching JS revert).
+ *
+ * @param WP_Post $chapter
+ * @return string
+ */
+function bitesmart_render_guide_toc_item( $chapter ) {
+    $number    = get_post_meta( $chapter->ID, '_bitesmart_chapter_number', true );
+    $anchor_id = bitesmart_guide_chapter_anchor_id( $chapter );
+
+    ob_start();
+    ?>
+    <li class="guide-toc-chapter">
+        <a class="guide-toc-chapter-link" href="#<?php echo esc_attr( $anchor_id ); ?>">
+            <?php if ( $number ) : ?>
+                <span class="guide-toc-chapter-index"><?php echo esc_html( $number ); ?></span>
+            <?php endif; ?>
+            <span class="guide-toc-chapter-title"><?php echo esc_html( get_the_title( $chapter ) ); ?></span>
+        </a>
+    </li>
+    <?php
+    return ob_get_clean();
+}
+
+/**
  * Renders ONE chapter as a native <details> row — badges always visible,
  * expand to reveal video and/or text (each independently hideable by the
  * page-level format-toggle checkboxes — see format-toggle.js), plus, at the
@@ -402,50 +654,7 @@ function bitesmart_render_guide_chapter_row( $chapter_id, array $args = array() 
                 <span class="guide-chapter-main">
                     <span class="guide-chapter-title-row">
                         <span class="guide-chapter-title"><?php echo esc_html( get_the_title( $post ) ); ?></span>
-                        <span class="guide-chapter-badges">
-                            <?php
-                            // Real <button>s, not <span>s — they're independently
-                            // clickable toggles now (format-toggle.js), not just status
-                            // indicators. A click has to call preventDefault() to stop
-                            // the browser's native "toggle the enclosing <details>"
-                            // behavior, which normally fires for ANY click landing
-                            // inside a <summary>, buttons included — see
-                            // handleBadgeClick() in format-toggle.js.
-                            //
-                            // Two independent layers of visibility, both true by
-                            // default: bitesmart_render_guide_format_controls()'s
-                            // checkboxes turn a format off EVERYWHERE (all chapters at
-                            // once); this button turns it off/on for just THIS chapter
-                            // — see applyFormatState() in format-toggle.js for how the
-                            // two combine (both have to be "on" for the format to
-                            // actually show for a given chapter).
-                            //
-                            // Only real toggle buttons when the chapter actually HAS
-                            // that format — aria-pressed="true" starting state, class
-                            // is-active (existing "has it" styling doubles as "on").
-                            // When the chapter has NO video/text at all, disabled: there
-                            // is nothing to toggle, so it stays non-interactive (keeps
-                            // the existing is-inactive "doesn't have this" look, visually
-                            // distinct from is-off below, which means "has it, currently
-                            // hidden for this chapter").
-                            ?>
-                            <button
-                                type="button"
-                                class="guide-chapter-badge<?php echo $has_video ? ' is-active' : ' is-inactive'; ?>"
-                                data-format="video"
-                                <?php echo $has_video ? 'aria-pressed="true"' : 'disabled'; ?>
-                            >
-                                <?php esc_html_e( 'Video', 'custom-blocks' ); ?>
-                            </button>
-                            <button
-                                type="button"
-                                class="guide-chapter-badge<?php echo $has_text ? ' is-active' : ' is-inactive'; ?>"
-                                data-format="text"
-                                <?php echo $has_text ? 'aria-pressed="true"' : 'disabled'; ?>
-                            >
-                                <?php esc_html_e( 'Text', 'custom-blocks' ); ?>
-                            </button>
-                        </span>
+                        <?php echo bitesmart_render_guide_format_badges( $has_video, $has_text ); // phpcs:ignore ?>
                     </span>
                     <?php if ( $summary ) : ?>
                         <span class="guide-chapter-summary-text"><?php echo esc_html( $summary ); ?></span>
@@ -854,7 +1063,11 @@ function bitesmart_render_guide_format_controls() {
  * OWN tiny bit of CSS (.guide-description-block) lives in this same
  * style.css file rather than a dedicated stylesheet of its own, same
  * "minimal, piggyback on this file" precedent custom/guide-single's own
- * output already set.
+ * output already set. The Table of Contents' own .guide-toc* CSS lives here
+ * too (bitesmart_render_guide_toc_item()) — it's part of
+ * custom/guide-single's own output (briefly its own separate block,
+ * custom/guide-toc, reverted the same day — see that function's own
+ * comment), so no separate has_block() check is needed for it.
  *
  * Same webpack entry/asset.php/style-index.css pattern as pdf-toggle (see
  * that block's own manual enqueue in the main plugin file) — this file

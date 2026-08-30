@@ -19,6 +19,63 @@
   height: auto;
 }
 
+/* "Inside the Book" preview carousel (bitesmart_book_cover_gallery(),
+   book-display.php + gallery.js) — only present when a book has 1+ preview
+   images set; otherwise .book-card-cover has no .book-gallery class and none
+   of this applies. display:inline-block so the wrapper shrink-wraps to the
+   image's own rendered size (max-width: 160px above), which the arrows/
+   counter position themselves against. */
+.book-card-cover.book-gallery {
+  position: relative;
+  display: inline-block;
+}
+
+.book-gallery-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.book-gallery-arrow:hover {
+  background: rgba(0, 0, 0, 0.75);
+}
+
+.book-gallery-arrow:focus-visible {
+  outline: 2px solid var(--wp--preset--color--accent-2, #1f6a8f);
+  outline-offset: 2px;
+}
+
+.book-gallery-prev {
+  left: 4px;
+}
+
+.book-gallery-next {
+  right: 4px;
+}
+
+.book-gallery-counter {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 0.7em;
+}
+
 .wp-block-custom-book .book-card-body {
   flex: 1 1 240px;
   min-width: 0;
@@ -30,10 +87,10 @@
 
 /* Audience badge (bitesmart_book_audience_badge(), book-display.php) —
    static/informational, NOT interactive, unlike Guide Chapter's similarly
-   pill-shaped .guide-chapter-badge (which is a real clickable toggle). Two
-   calm, non-alarming accent colors from the theme's existing presets — no
-   new colors introduced. Shared between the full card (here) and the
-   search card (further down) so both stay visually identical. */
+   pill-shaped .guide-chapter-badge (which is a real clickable toggle). Four
+   calm, non-alarming accent colors from the theme's existing presets (see
+   the two new rules below for why accent-3 specifically was skipped) — no
+   brand-new colors introduced. */
 .book-audience-badge {
   display: inline-block;
   margin: 0 0 8px;
@@ -52,9 +109,42 @@
   color: var(--wp--preset--color--accent-1, #d16b0c);
 }
 
+/* Added 2026-08-29 for the Audience field's expansion to 4 values (see
+   book-cpt.php). Deliberately NOT accent-3 (#f5c842, a light gold/amber) —
+   sampled the live theme palette before choosing and it's roughly 1.6:1
+   contrast against a white card, well under WCAG AA's 4.5:1 for text this
+   small, so it'd be genuinely hard to read, not just a style mismatch.
+   accent-4/accent-5 (a slate blue-gray and a dark navy) both sampled at
+   7:1+ instead, keeping this badge readable the same way accent-1/accent-2
+   already are. */
+.book-audience-badge.is-younger-children {
+  color: var(--wp--preset--color--accent-4, #475966);
+}
+
+.book-audience-badge.is-older-children {
+  color: var(--wp--preset--color--accent-5, #0e3447);
+}
+
 .wp-block-custom-book .book-card-price {
   margin: 0 0 12px;
   font-weight: 600;
+}
+
+/* custom/book-summary-section's and custom/book-excerpt-section's own
+   heading ("Why BBS Recommends This Book" / "Book Excerpt") — added
+   2026-08-30 when both
+   sections became real nested blocks (see book-cpt.php's file header):
+   unlike the earlier RichText-field version, this label is now baked into
+   each section block's own save() output, so it's genuinely visible on the
+   front end (clarifying which words are BBS's own vs. the book's), not
+   just an editor-side hint. */
+.wp-block-custom-book .book-card-section-heading {
+  margin: 0 0 4px;
+  font-size: 0.8em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: #50575e;
 }
 
 .wp-block-custom-book .book-card-content {
@@ -65,51 +155,91 @@
   margin-bottom: 0;
 }
 
+/* Book Excerpt (custom/book-excerpt-section's own save() output, Custom
+   Blocks plugin) — originally reused the theme's own .wp-block-quote
+   styling (twentytwentyfive-child/style.css) for its accent-colored left
+   border. Large flanking quote marks + always-italic text added 2026-08-30
+   (Janet's ask) — the marks are generated CSS content, not real characters
+   typed into the RichText/paragraph content, so they're purely decorative:
+   never read twice by a screen reader, never accidentally deleted while
+   editing, and the blockquote's own semantics (plus book-cpt.php's block
+   ordering) already convey "this is a quote" to assistive tech on their
+   own. Extra padding makes room so the marks don't overlap the text;
+   accent-3 (gold) was flagged elsewhere in this file as too low-contrast
+   for badge TEXT, but that's a text-contrast rule — fine here since these
+   marks carry no information of their own.
+   Left border removed same day, once the quote marks made it redundant.
+   Deliberately NOT scoped under .wp-block-custom-book like the rest of this
+   file's rules — that ancestor only exists when this markup is rendered
+   through render_book_block() (the Books List page, or a manually-placed
+   custom/book block); WordPress's own "Preview" for a Book post renders
+   the block's raw save() output straight from the_content(), with no such
+   wrapper, so an ancestor-scoped rule would silently never apply there.
+   !important is deliberate, not laziness: the theme's own selector list
+   (twentytwentyfive-child/style.css) includes
+   `.entry-content blockquote:not(.is-style-plain)`, and the Books List page
+   wraps everything in a real `.entry-content` — so that variant ties this
+   rule's specificity exactly (both resolve to 0-2-1), and on a tie the
+   theme's <link> (printed later in <head> than this block's inlined
+   <style>) won regardless of how this selector was written. Chasing that
+   with an ever-more-specific selector is a losing game against a
+   3-selector theme rule covering different ancestor contexts; !important
+   here is scoped to ONE property on a uniquely-named class that nothing
+   else on the site uses, so it can't clobber anything else. Scoped to THIS
+   card only — other blockquotes on the site (e.g. Q&A content) keep the
+   theme's default border. */
+blockquote.wp-block-quote.book-card-excerpt {
+  border: none !important;
+}
+
+.wp-block-custom-book .book-card-excerpt {
+  position: relative;
+  margin: 0 0 16px;
+  padding: 8px 28px 8px 36px;
+}
+
+.wp-block-custom-book .book-card-excerpt > :last-child {
+  margin-bottom: 0;
+}
+
+.wp-block-custom-book .book-card-excerpt p,
+.wp-block-custom-book .book-card-excerpt li {
+  font-style: italic;
+}
+
+.wp-block-custom-book .book-card-excerpt::before,
+.wp-block-custom-book .book-card-excerpt::after {
+  position: absolute;
+  font-family: Georgia, "Times New Roman", serif;
+  font-style: normal;
+  font-size: 2.75em;
+  line-height: 1;
+  color: var(--wp--preset--color--accent-3, #f5c842);
+  pointer-events: none;
+}
+
+.wp-block-custom-book .book-card-excerpt::before {
+  content: "\201C";
+  top: 0.05em;
+  left: 4px;
+}
+
+.wp-block-custom-book .book-card-excerpt::after {
+  content: "\201D";
+  bottom: -0.25em;
+  right: 4px;
+}
+
 .wp-block-custom-book .book-card-link {
   display: inline-block;
 }
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   Book search card — reuses custom/qa-entry's accent-card/chevron shell
-   (see render_book_search_card() in book-display.php), these rules only
-   cover the parts unique to a book (cover thumbnail + price line laid out
-   alongside the excerpt/link).
-   ───────────────────────────────────────────────────────────────────────────── */
-
-.book-search-card-body {
+/* Wraps one or more Buy Links buttons (_bitesmart_book_buy_links,
+   book-cpt.php) — a book with multiple retailers (e.g. Amazon, Target)
+   gets that many buttons here, spaced out and wrapping onto a new line
+   rather than crowding together. */
+.wp-block-custom-book .book-card-buy-links {
   display: flex;
-  gap: 12px;
-  align-items: flex-start;
   flex-wrap: wrap;
-}
-
-.book-search-card-cover img {
-  display: block;
-  max-width: 80px;
-  height: auto;
-}
-
-.book-search-card-text {
-  flex: 1 1 200px;
-  min-width: 0;
-}
-
-.book-search-card-price {
-  margin: 0 0 8px;
-  font-weight: 600;
-}
-
-.book-search-card-excerpt {
-  margin: 0 0 12px;
-}
-
-/* the_content output can be several <p>/<ul> elements (see
-   render_book_search_card() in book-display.php) — drop the last one's own
-   bottom margin so it doesn't double up with .book-search-card-excerpt's. */
-.book-search-card-excerpt > :last-child {
-  margin-bottom: 0;
-}
-
-.book-search-card-link {
-  display: inline-block;
+  gap: 8px;
 }

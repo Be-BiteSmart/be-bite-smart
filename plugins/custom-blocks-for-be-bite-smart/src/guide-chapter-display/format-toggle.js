@@ -10,7 +10,9 @@ import "./citation-tooltip.js"; // separate, self-contained script — see its o
 //  2. Each chapter row's own Video/Text badge buttons — turn a format
 //     off/on for just THAT chapter, layered under (never overriding) the
 //     global checkboxes above — see applyFormatState() for how the two
-//     combine.
+//     combine. (The Table of Contents, guide-single.php, deliberately
+//     doesn't carry its own copy of these — plain links only, see
+//     bitesmart_render_guide_toc_item()'s own comment for why.)
 //  3. Each chapter row's video language picker.
 //  Both (2) and (3) are event-delegated (document-level listeners, not
 //  bound to specific elements up front) — see the "why" in

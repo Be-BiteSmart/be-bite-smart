@@ -14,5 +14,6 @@
     "html": false
   },
   "editorScript": "file:./index.js",
+  "viewScript": "file:./gallery.js",
   "style": "file:./style-index.css"
 }

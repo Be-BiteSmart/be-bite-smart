@@ -6,8 +6,8 @@
  * for the full "why"). Briefly also rendered its own copy of the
  * type-filter checkboxes (2026-08-16 through 2026-08-28) — dropped once the
  * browse list started auto-hiding while a search is active (see
- * learning-search/view.js's setBrowseListsHidden()), since a visitor would
- * otherwise see the same checkbox row twice on one Stage page. The
+ * learning-search/view.js's setPersistentListsHidden()), since a visitor
+ * would otherwise see the same checkbox row twice on one Stage page. The
  * checkboxes now render ONLY in the sibling custom/learning-search block;
  * see bitesmart_render_learning_search_type_filter()'s own docblock.
  *
@@ -78,9 +78,9 @@ function render_learning_browse_block( $attributes ) {
         // as of 2026-08-28 (was, 2026-08-16 through 2026-08-28) — the
         // sibling custom/learning-search block's own copy is enough now
         // that the browse list auto-hides while a search is active (see
-        // view.js's setBrowseListsHidden()), so a visitor would otherwise
-        // see this same checkbox row rendered twice on one Stage page. This
-        // block's own getEnabledTypes()/syncTypeCheckboxes() in browse.js
+        // view.js's setPersistentListsHidden()), so a visitor would
+        // otherwise see this same checkbox row rendered twice on one Stage
+        // page. This block's own getEnabledTypes()/syncTypeCheckboxes() in browse.js
         // still read/sync checkboxes page-wide rather than "this block's
         // own", so removing this block's copy doesn't change its filtering
         // behavior at all — it just stops duplicating the UI.

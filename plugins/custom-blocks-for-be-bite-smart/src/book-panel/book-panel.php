@@ -2,16 +2,17 @@
 /**
  * Enqueues custom/book-panel's editor script (src/book-panel/index.js).
  *
- * UNLIKE every *-fields block in this plugin, this isn't a block at all —
- * no block.json, no register_block_type() — it's a PluginDocumentSettingPanel
- * (a sidebar panel), because book's editor canvas is deliberately left
- * unlocked (see book-cpt.php in the Custom Post Types for BBS plugin): a
- * book's "why we recommend it" text is real rich content, restricted to
- * Paragraph/List blocks, authored directly in the canvas. Everything else
- * (Price/Availability, Buy/More Info URL, Keywords) lives in this panel
- * instead. Same "manual enqueue instead of block.json" mechanism as
- * custom/guide-chapter-panel — see that file's own comment for the full
- * "why".
+ * UNLIKE the custom/book-fields block (Book's OWN locked-canvas fields
+ * block, as of 2026-08-30 — see book-cpt.php in the Custom Post Types for
+ * BBS plugin), this isn't a block at all — no block.json, no
+ * register_block_type() — it's a PluginDocumentSettingPanel (a sidebar
+ * panel). Audience, Price/Availability, Buy/More Info URL, and
+ * Inside-the-Book preview images live here; "Why BBS Recommends This Book"
+ * and Book Excerpt (the book's actual write-up) live in the locked canvas
+ * block instead —
+ * see that block's own src/book-fields/index.js header for why both exist
+ * side by side rather than everything living in one place the way Q&A
+ * Entry's single fields block does.
  */
 
 function bitesmart_enqueue_book_panel() {
@@ -40,25 +41,11 @@ function bitesmart_enqueue_book_panel() {
         true
     );
 
-    // Same per-language data shape bitesmart_localize_video_language_editors()
-    // (site-lang.php) gives every other fields block's editor script, for
-    // the same reason: so this panel's Keywords fields reflect
-    // bitesmart_site_languages() (TranslatePress-derived) instead of
-    // shared/languages.js's hardcoded DEFAULT_SITE_LANGUAGES fallback.
-    $languages = array();
-    foreach ( bitesmart_site_languages() as $lang ) {
-        $languages[] = array(
-            'code'      => $lang['code'],
-            'label'     => $lang['label'],
-            'name'      => $lang['name'],
-            'analytics' => $lang['analytics'],
-        );
-    }
-
-    wp_localize_script(
-        'book-panel',
-        'bitesmartLanguages',
-        array( 'languages' => $languages )
-    );
+    // No wp_localize_script() here (unlike guide-chapter-panel and friends)
+    // — this panel had per-language Search Keywords fields until 2026-08-30
+    // (removed along with everything else that only ever existed for the
+    // Learning Hub search Book left on 2026-08-28 — see book-cpt.php's file
+    // header), which is what the language list was for. Nothing left in
+    // this panel needs it.
 }
 add_action( 'enqueue_block_editor_assets', 'bitesmart_enqueue_book_panel' );
