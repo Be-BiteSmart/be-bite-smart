@@ -10,27 +10,14 @@
  * Types for BBS plugin's includes/coloring-book-cpt.php for the post type /
  * meta this reads from.
  *
- * render_coloring_book_search_card() is the compact version shown in
- * Learning Hub Search results (see bitesmart_build_stage_card_list() in
- * learning-search.php) — Download buttons only, no inline PDF viewer.
- * Unlike Episode's search card (which links out to the episode's real
- * embed instead of duplicating its video player), this one embeds the
- * actual Download buttons inline: a coloring book's "real thing" is two
- * buttons, light enough to not be worth an extra click for. See the
- * 2026-08-13 conversation captured in [[be-bitesmart-downloads-planning]]
- * (memory) for the reasoning either way.
- *
- * Visually, the search card deliberately reuses custom/qa-entry's own
- * markup/classes (.wp-block-custom-qa-entry, .qa-entry-card-container,
- * etc.) — the same blue accent-card + chevron <details>/<summary>
- * disclosure every other search result uses — rather than the white
- * .download-card-block look of the full card. Per Janet: the Download
- * buttons stay hidden until a parent clicks the chevron, same reveal
- * behavior as a Q&A Entry's answer, instead of always being visible like
- * the original mismatched layout. Same reasoning as
- * render_episode_search_card() reusing qa-entry's markup — free CSS
- * (accent-card look, chevron rotation, focus styles), already enqueued
- * whenever custom/learning-search is present.
+ * This file used to also hold render_coloring_book_search_card() — a
+ * compact card shown in Learning Hub Search results (Download buttons
+ * only, no inline PDF viewer, reusing custom/qa-entry's accent-card +
+ * chevron <details>/<summary> markup). Deleted 2026-08-30 along with the
+ * rest of Coloring Book's search-only plumbing, once Janet removed the CPT
+ * from that search/browse listing (her plan is to fold coloring books
+ * under one Q&A Entry instead) — see coloring-book-cpt.php's file header
+ * and [[be-bitesmart-coloring-book-status]] in memory for the full history.
  */
 
 /**
@@ -68,7 +55,7 @@ function bitesmart_coloring_book_anchor_id( $post ) {
  * @param string $pdf_url              Uploaded PDF URL, '' if none.
  * @param string $target_id            DOM id of this language's viewer <div>.
  * @param string $group_id             Shared toggle group id (closes the other language's viewer).
- * @param bool   $include_viewer_toggle Whether to render the View PDF toggle (full card) or Download-only (search card).
+ * @param bool   $include_viewer_toggle Whether to render the View PDF toggle alongside the Download link. Always true from this file's remaining caller since the Download-only search-card mode (render_coloring_book_search_card(), deleted 2026-08-30) was removed — kept as a param rather than hardcoded in case a future caller needs the Download-only mode again.
  * @param bool   $coming_soon_when_empty Whether to render a Coming Soon pill when $pdf_url is empty.
  * @return string
  */
@@ -133,9 +120,7 @@ function bitesmart_coloring_book_language_row( $lang, $pdf_url, $target_id, $gro
  * Full download card — title/episode chip, View PDF + Download per
  * language, inline (initially hidden) PDF viewers. Used only by
  * render_coloring_book_block(), i.e. the white .download-card-block look
- * for /learning/downloads/ itself. The search card
- * (render_coloring_book_search_card() below) is visually unrelated —
- * see this file's header comment for why.
+ * for /learning/downloads/ itself.
  *
  * @param WP_Post $post
  * @return string
@@ -216,63 +201,3 @@ function render_coloring_book_block( $attributes ) {
     return bitesmart_render_coloring_book_card( $post );
 }
 
-/**
- * Compact search-result card for "custom/learning-search" — see
- * bitesmart_build_stage_card_list() in learning-search.php. Reuses
- * custom/qa-entry's accent-card + chevron <details>/<summary> markup (see
- * this file's header comment) so it looks like every other search result:
- * title always visible, Download buttons revealed only once a parent
- * clicks the chevron. Download buttons only, no View PDF toggle/viewer —
- * a search results list is the wrong place for an inline PDF iframe, and
- * the button pair alone is already the whole "real thing".
- */
-function render_coloring_book_search_card( $attributes ) {
-    $coloring_book_id = isset( $attributes['coloringBookId'] ) ? (int) $attributes['coloringBookId'] : 0;
-    $post             = $coloring_book_id ? get_post( $coloring_book_id ) : null;
-
-    if ( ! $post || 'coloring_book' !== $post->post_type || 'publish' !== $post->post_status ) {
-        return '';
-    }
-
-    $number = get_post_meta( $post->ID, '_bitesmart_coloring_book_episode_number', true );
-    $pdf_en = get_post_meta( $post->ID, '_bitesmart_coloring_book_pdf_url_en', true );
-    $pdf_es = get_post_meta( $post->ID, '_bitesmart_coloring_book_pdf_url_es', true );
-
-    // Episode # is optional — when it's not filled in yet, skip straight to
-    // the title rather than leaving a dangling "Coloring Book Episode ".
-    $heading = $number
-        /* translators: 1: episode number, 2: coloring book title */
-        ? sprintf( __( 'Coloring Book Episode %1$s %2$s', 'custom-blocks' ), $number, get_the_title( $post ) )
-        /* translators: %s: coloring book title */
-        : sprintf( __( 'Coloring Book %s', 'custom-blocks' ), get_the_title( $post ) );
-
-    // No View PDF toggle here (2nd/3rd args false/n-a), so target/group ids
-    // are never used by bitesmart_coloring_book_language_row() in this
-    // mode — passed empty rather than computing real ones.
-    $en_row = bitesmart_coloring_book_language_row( 'en', $pdf_en, '', '', false, true );
-    $es_row = bitesmart_coloring_book_language_row( 'es', $pdf_es, '', '', false, true );
-
-    ob_start();
-    ?>
-    <article class="wp-block-custom-qa-entry">
-        <details class="qa-entry-card-container custom-block-accent-card">
-            <summary class="qa-entry-summary">
-                <h3 class="qa-entry-question custom-block-accent-heading"><?php echo esc_html( $heading ); ?></h3>
-                <svg class="qa-entry-chevron" viewBox="0 0 20 20" width="20" height="20" aria-hidden="true" focusable="false">
-                    <polyline points="5 7.5 10 12.5 15 7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline>
-                </svg>
-            </summary>
-
-            <div class="qa-entry-body">
-                <div class="download-card-buttons download-card-buttons--inline">
-                    <?php
-                    echo $en_row; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- already-escaped HTML from bitesmart_coloring_book_language_row()
-                    echo $es_row; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- already-escaped HTML from bitesmart_coloring_book_language_row()
-                    ?>
-                </div>
-            </div>
-        </details>
-    </article>
-    <?php
-    return ob_get_clean();
-}

@@ -284,10 +284,14 @@ add_action( 'init', 'books_list_register_block' );
 // 2026-08-16 split — the paginated "browse all" list moved to the sibling
 // custom/learning-browse block just below (place both, same Stage, on a
 // real Stage page). It reuses render_qa_entry_block() / render_resource_block()
-// / render_coloring_book_search_card() (registered just above) to build the
-// data its front-end Fuse.js search reads, so require order matters here:
-// this file must load after qa-entry-display.php, resource-display.php,
-// and coloring-book-display.php, which it does.
+// (registered just above) to build the data its front-end Fuse.js search
+// reads, so require order matters here: this file must load after
+// qa-entry-display.php and resource-display.php, which it does.
+// (coloring_book was also part of this search/browse listing until
+// 2026-08-30 — see learning-search.php's own history for why it no longer
+// needs coloring-book-display.php loaded before it for that reason;
+// coloring-book-display.php is still loaded above, just for its own
+// custom/coloring-book / custom/coloring-books-list blocks now.)
 require_once __DIR__ . '/src/learning-search/learning-search.php';
 
 // Logs zero-result searches from that same block — its own file since it
@@ -470,12 +474,16 @@ function custom_blocks_scripts() {
     // three educational-*-download blocks gets this same CSS anyway via its
     // own block.json's automatic per-block enqueue whenever that block is
     // literally present on a page. It matters now because
-    // render_coloring_book_search_card() (coloring-book-display.php) is
-    // injected into custom/learning-search's output via PHP, the same way
-    // render_qa_entry_block()/render_resource_block() are — WordPress's
-    // automatic has_block() detection can't see it, so it needs an explicit
-    // enqueue. Fixed to point at the real path instead of adding yet
-    // another special case.
+    // render_coloring_book_block() (coloring-book-display.php) is injected
+    // into custom/coloring-books-list's output via PHP (coloring-books-list.php)
+    // the same way render_qa_entry_block()/render_resource_block() are inside
+    // custom/learning-search — WordPress's automatic has_block() detection
+    // can't see it, so it needs an explicit enqueue. Fixed to point at the
+    // real path instead of adding yet another special case. (Originally
+    // written about render_coloring_book_search_card(), which was injected
+    // into custom/learning-search's output the same way — that function was
+    // deleted 2026-08-30 once Coloring Book left that search listing, but
+    // this global enqueue is still needed for the reason above.)
     $download_card_css = plugin_dir_path( __FILE__ ) . 'build/educational-content-download/style-index.css';
     if ( file_exists( $download_card_css ) ) {
         $download_card_asset = include plugin_dir_path( __FILE__ ) . 'build/educational-content-download/index.asset.php';

@@ -4,7 +4,6 @@ import { useBlockProps, MediaUpload, MediaUploadCheck } from "@wordpress/block-e
 import { useEntityProp } from "@wordpress/core-data";
 import { TextControl, Button } from "@wordpress/components";
 import { __ } from "@wordpress/i18n";
-import { getSiteLanguages } from "../shared/languages";
 
 // This block IS the Coloring Book edit screen's main content — locked into
 // place via the 'template' + template_lock: 'all' args on the coloring_book
@@ -18,9 +17,11 @@ import { getSiteLanguages } from "../shared/languages";
 //
 // PDFs are English/Spanish only (two explicit MediaUpload fields, not
 // looped over every site language) — matches the two languages
-// custom/educational-coloring-book-download originally supported. Keywords
-// still loops over every site language, same as Episode/Resource, since
-// that's a search-matching field independent of which PDFs exist.
+// custom/educational-coloring-book-download originally supported. Had a
+// per-language Search Keywords section (same idiom as Episode/Resource)
+// until 2026-08-30, when it was removed along with the rest of this CPT's
+// Learning Hub search plumbing — see coloring-book-cpt.php's file header
+// and [[be-bitesmart-coloring-book-status]] in memory.
 
 function ColoringBookFieldsEdit() {
   const blockProps = useBlockProps({ className: "coloring-book-fields-editor" });
@@ -29,12 +30,8 @@ function ColoringBookFieldsEdit() {
   // post's entity record resolves in the data store — default to {} so the
   // fields below don't throw and take the block down with them.
   const [meta = {}, setMeta] = useEntityProp("postType", "coloring_book", "meta");
-  const languages = getSiteLanguages();
-  const keywords = meta._bitesmart_coloring_book_keywords_by_lang || {};
 
   const updateMeta = (key, value) => setMeta({ ...meta, [key]: value });
-  const setKeywords = (code, text) =>
-    updateMeta("_bitesmart_coloring_book_keywords_by_lang", { ...keywords, [code]: text });
 
   return el(
     "div",
@@ -125,25 +122,6 @@ function ColoringBookFieldsEdit() {
         "Leave a language blank to show a “Coming Soon” state for it instead of a Download button.",
         "custom-blocks",
       ),
-    ),
-
-    el("h3", { className: "coloring-book-fields-subheading" }, __("Search Keywords", "custom-blocks")),
-    el(
-      "p",
-      { className: "coloring-book-fields-hint" },
-      __(
-        "Internal search-matching phrases, not shown to visitors — not automatically translated, so fill in each language directly.",
-        "custom-blocks",
-      ),
-    ),
-    ...languages.map((lang) =>
-      el(TextControl, {
-        key: lang.code,
-        label: `${__("Keywords", "custom-blocks")} (${lang.name})`,
-        value: keywords[lang.code] || "",
-        onChange: (val) => setKeywords(lang.code, val),
-        placeholder: __("e.g. coloring page, activity sheet, printable", "custom-blocks"),
-      }),
     ),
   );
 }
