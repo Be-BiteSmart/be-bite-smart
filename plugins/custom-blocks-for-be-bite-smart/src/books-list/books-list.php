@@ -240,6 +240,41 @@ function bitesmart_books_list_apply_order( array $cards, array $order ) {
 }
 
 /**
+ * Makes one already-rendered card's cover image inert until Show More
+ * actually reveals it — added 2026-08-31, per Janet: `display:none` alone
+ * (the Show More/Show Less toggle's own mechanism) does NOT stop a real
+ * `<img src>` from downloading immediately, since CSS display doesn't block
+ * the fetch; every hidden card's cover was loading regardless of whether
+ * anyone ever clicked Show More. Same "keep the real URL out of `src` until
+ * actually needed" idea bitesmart_book_cover_gallery() (book-display.php)
+ * already uses for preview-carousel slides, applied here to the one real
+ * `<img>` a card always has (its cover) — read-more.js's expand() hydrates
+ * `data-src` back into `src` the moment a group is actually opened (click or
+ * hash deep-link), so a visitor who never clicks Show More never downloads
+ * those covers at all.
+ *
+ * A narrow, anchored regex rather than a general HTML parse — safe here
+ * specifically because this only ever runs against render_book_block()'s
+ * own known output (this codebase's control, not arbitrary editor content;
+ * see [[be-bitesmart-book-cpt-status]] in memory for why regex surgery on
+ * REAL editor content bit this project once already, a different situation
+ * from this one). Only the exact `class="book-gallery-image"` cover tag
+ * matches — every other `src` elsewhere in a card's markup (there are none
+ * today, but defensively) is left untouched.
+ *
+ * @param string $card_html One rendered card, from render_book_block().
+ * @return string Same HTML, cover `src` renamed to `data-src`.
+ */
+function bitesmart_books_list_make_cover_lazy( $card_html ) {
+    return preg_replace(
+        '/(<img\s+class="book-gallery-image"\s+)src="([^"]*)"/',
+        '$1data-src="$2"',
+        $card_html,
+        1 // one cover per card — never touch a second match.
+    );
+}
+
+/**
  * Render callback for "custom/books-list". Renders ONLY the matching Books'
  * cards for this instance's chosen Audience — no heading, no intro text, no
  * grouping logic at all. An editor places a real Heading block above each
@@ -272,15 +307,50 @@ function render_books_list_block( $attributes ) {
 
     ob_start();
     ?>
+    <?php
+    // Only the first (already-ordered) card shows by default — the rest sit
+    // behind a Show More/Show Less toggle, added 2026-08-31 per Janet once
+    // 4 groups on one page made the full list of every book feel too long.
+    // Reuses read-more.js verbatim (already enqueued site-wide, already
+    // handles multiple independent .expandable-article-block instances on
+    // one page — see that file, and book-display.php's own Book Excerpt
+    // toggle for the established div-based usage this mirrors) — no new JS
+    // needed here, just the same markup shape. Custom
+    // data-label-collapsed/-expanded (Janet's own wording, "Show More"/
+    // "Show Less", not the shared script's "Read More"/"Read Less" default)
+    // is exactly what those data attributes exist for (see read-more.js).
+    // The wrapper's existing `id="books-list-{slug}"` (unchanged, was already
+    // here for editor/CSS targeting) doubles as this section's link target —
+    // a hyperlink to e.g. #books-list-older_children lands here, and
+    // read-more.js's own hash-check (added the same day) finds the
+    // .expandable-article-block nested inside and auto-opens it, so a parent
+    // following that link always sees every book, not just the first.
+    $first_card      = array_shift( $cards );
+    $remaining_cards = $cards; // whatever's left after the shift, [] if only one book total.
+    ?>
     <div id="books-list-<?php echo esc_attr( $audience_slug ); ?>" class="wp-block-custom-books-list wp-block-group">
-        <?php if ( empty( $cards ) ) : ?>
+        <?php if ( empty( $first_card ) ) : ?>
             <?php if ( current_user_can( 'edit_posts' ) ) : ?>
                 <p class="books-list-empty"><?php esc_html_e( 'No Books are tagged with this Audience yet.', 'custom-blocks' ); ?></p>
             <?php endif; ?>
         <?php else : ?>
-            <?php foreach ( $cards as $card_html ) : ?>
-                <?php echo $card_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- already-escaped HTML from render_book_block() ?>
-            <?php endforeach; ?>
+            <?php echo $first_card; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- already-escaped HTML from render_book_block() ?>
+            <?php if ( ! empty( $remaining_cards ) ) : ?>
+                <div class="expandable-article-block books-list-expandable">
+                    <div class="expandable-content">
+                        <?php foreach ( $remaining_cards as $card_html ) : ?>
+                            <?php echo bitesmart_books_list_make_cover_lazy( $card_html ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- already-escaped HTML from render_book_block(), only the cover's src->data-src attribute renamed ?>
+                        <?php endforeach; ?>
+                    </div>
+                    <button
+                        type="button"
+                        class="read-more-toggle block-toggle-btn is-style-outline"
+                        data-expanded="false"
+                        data-label-collapsed="<?php echo esc_attr__( 'Show More', 'custom-blocks' ); ?>"
+                        data-label-expanded="<?php echo esc_attr__( 'Show Less', 'custom-blocks' ); ?>"
+                    ><?php esc_html_e( 'Show More', 'custom-blocks' ); ?></button>
+                </div>
+            <?php endif; ?>
         <?php endif; ?>
     </div>
     <?php
