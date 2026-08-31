@@ -69,11 +69,12 @@ function bitesmart_books_list_template_version() {
  * EDITOR-UI signage only ("which group is this instance showing") — they
  * are NOT rendered on the front end at all; the actual on-page heading text
  * is a real, separate Heading block Janet places herself. The Audience
- * field's own slug set is separately maintained in book-cpt.php's REST
- * enum, book-panel/index.js's RadioControl, and
- * bitesmart_book_audience_badge() in book-display.php — see the comments on
- * each of those for why there's no single shared constant across the two
- * plugins.
+ * field's own slug set is separately maintained in book-cpt.php's REST enum
+ * and book-panel/index.js's RadioControl — see the comments on each of
+ * those for why there's no single shared constant across the two plugins.
+ * (As of 2026-08-31, Audience no longer drives a card badge at all — see
+ * bitesmart_book_target_audience_badge() in book-display.php, a separate
+ * freeform field with no fixed slug set of its own.)
  *
  * @return array<string, string> Audience meta value => editor-only label.
  */

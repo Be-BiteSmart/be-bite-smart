@@ -30,7 +30,7 @@ import { __ } from "@wordpress/i18n";
 // via parse_blocks()/render_block(), the same mechanism already proven
 // during this project's earlier post_content migrations.
 //
-// Audience, Price/Availability, Buy/More Info URL, and the "Inside the
+// Audience, Pages, Buy/More Info URL, and the "Inside the
 // Book" preview-image picker stay in the existing custom/book-panel
 // sidebar panel — this restructuring is scoped to just the two write-up
 // sections, not a full migration of every Book field into this locked
@@ -47,7 +47,7 @@ registerBlockType("custom/book-fields", {
         "p",
         { className: "book-fields-hint" },
         __(
-          "The book title goes in the “Add title” field above. Audience, Price/Availability, Buy/More Info URL, and Inside-the-Book preview images are all in the sidebar panel.",
+          "The book title goes in the “Add title” field above. Audience, Pages, Buy/More Info URL, and Inside-the-Book preview images are all in the sidebar panel.",
           "custom-blocks",
         ),
       ),
