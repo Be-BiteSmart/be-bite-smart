@@ -305,8 +305,8 @@
    color. */
 .wp-block-custom-book .book-card-pages {
   margin: 0 0 12px;
-  font-size: 0.9em;
-  font-weight: 400;
+  font-size: 1em;
+  font-weight: 500;
   color: var(--wp--preset--color--accent-4, #475966);
 }
 
