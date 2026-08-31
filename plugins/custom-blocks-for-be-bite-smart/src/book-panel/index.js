@@ -1,6 +1,11 @@
 import { registerPlugin } from "@wordpress/plugins";
 import { PluginDocumentSettingPanel } from "@wordpress/editor";
-import { createElement as el, useEffect, useRef } from "@wordpress/element";
+import {
+  createElement as el,
+  useEffect,
+  useRef,
+  useState,
+} from "@wordpress/element";
 import { useEntityProp } from "@wordpress/core-data";
 import { useDispatch, useSelect, select as dataSelect } from "@wordpress/data";
 import {
@@ -52,6 +57,54 @@ function BookPanel() {
   const buyLinks = meta._bitesmart_book_buy_links || [];
 
   const updateMeta = (key, value) => setMeta({ ...meta, [key]: value });
+
+  // Pages needs to reject non-numeric text with an explicit error (Janet's
+  // ask, 2026-08-31), rather than silently saving whatever the server-side
+  // sanitizer coerces it to (bitesmart_sanitize_book_pages(), book-cpt.php,
+  // already defensively coerces anything invalid to 0 — this is a second,
+  // editor-side layer that actually explains WHY, before publish). Tracked
+  // as its own local text value (not derived straight from meta) so an
+  // invalid value the user just typed stays visible, with its error
+  // message, instead of the field silently snapping back to the last valid
+  // number. A plain TextControl, not type="number": a native number input's
+  // typed-text handling is inconsistent enough across browsers (invalid
+  // input often just reports back an empty string) that it can't reliably
+  // surface "you typed letters" the way a controlled text field can.
+  const [pagesInput, setPagesInput] = useState("");
+  const [pagesError, setPagesError] = useState(false);
+  const pagesSynced = useRef(false);
+  useEffect(() => {
+    if (pagesSynced.current) {
+      return;
+    }
+    if (typeof meta._bitesmart_book_pages === "undefined") {
+      return; // still waiting on the entity record to resolve.
+    }
+    pagesSynced.current = true;
+    setPagesInput(
+      meta._bitesmart_book_pages ? String(meta._bitesmart_book_pages) : "",
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [meta._bitesmart_book_pages]);
+
+  const handlePagesChange = (val) => {
+    setPagesInput(val);
+    const trimmed = val.trim();
+    if (trimmed === "") {
+      setPagesError(false);
+      updateMeta("_bitesmart_book_pages", 0);
+      return;
+    }
+    if (!/^\d+$/.test(trimmed)) {
+      // Leave the stored meta untouched until this is fixed — don't save a
+      // 0 behind the scenes while the field visibly still shows what was
+      // typed, which would be confusing.
+      setPagesError(true);
+      return;
+    }
+    setPagesError(false);
+    updateMeta("_bitesmart_book_pages", parseInt(trimmed, 10));
+  };
 
   // One-time migration nudge, per Janet: a book saved before Buy Links
   // existed only has the old single _bitesmart_book_url field. The first
@@ -114,15 +167,17 @@ function BookPanel() {
     // some are written for an adult reader — Stage alone doesn't capture
     // that (a book can suit every Stage the way general dog-body-language
     // knowledge is useful at any age). Same RadioControl toggle pattern as
-    // Q&A Entry's own Answer Type field (see qa-entry-fields/index.js) —
-    // visual badge only on the front end (see book-display.php), not wired
-    // into any search/browse filter. Expanded 2026-08-29, per Janet, from
-    // two options to four — her Books page groups recommendations more
-    // finely than "any age vs. adult" could express. Fixed order is hers:
-    // Younger Children, Older Children, Adults, All Ages (With Guidance) —
-    // the last one covers her original "works for both" case (a kid-friendly
-    // book a parent can read too), just relabeled for clarity now that it
-    // sits alongside two age-specific options.
+    // Q&A Entry's own Answer Type field (see qa-entry-fields/index.js).
+    // Controls which group of the Books List page a book appears under
+    // (books-list.php) — as of 2026-08-31, no longer rendered as a card
+    // badge itself (see Target Audience below, which replaced it there).
+    // Expanded 2026-08-29, per Janet, from two options to four — her Books
+    // page groups recommendations more finely than "any age vs. adult"
+    // could express. Fixed order is hers: Younger Children, Older Children,
+    // Adults, All Ages (With Guidance) — the last one covers her original
+    // "works for both" case (a kid-friendly book a parent can read too),
+    // just relabeled for clarity now that it sits alongside two
+    // age-specific options.
     el(RadioControl, {
       label: __("Audience", "custom-blocks"),
       selected: meta._bitesmart_book_audience || "all_ages",
@@ -144,12 +199,36 @@ function BookPanel() {
       onChange: (val) => updateMeta("_bitesmart_book_audience", val),
     }),
 
+    // Added 2026-08-31, per Janet: a card's badge just repeating the same
+    // words as the Audience group heading it already sits under on the
+    // Books List page was redundant. Target Audience is a separate,
+    // genuinely optional freeform blurb (e.g. "Ages 4-7", "New puppy
+    // owners") that becomes the card's badge instead — see
+    // bitesmart_book_target_audience_badge() in book-display.php. Doesn't
+    // affect grouping/querying at all; that's still Audience above.
     el(TextControl, {
-      label: __("Price / Availability", "custom-blocks"),
-      value: meta._bitesmart_book_price_availability || "",
-      onChange: (val) => updateMeta("_bitesmart_book_price_availability", val),
-      placeholder: __("e.g. $8.99 and widely available", "custom-blocks"),
+      label: __("Target Audience", "custom-blocks"),
+      value: meta._bitesmart_book_target_audience || "",
+      onChange: (val) => updateMeta("_bitesmart_book_target_audience", val),
+      placeholder: __("e.g. Ages 4-7 (optional — leave blank to hide the badge)", "custom-blocks"),
     }),
+
+    el(TextControl, {
+      label: __("Pages", "custom-blocks"),
+      inputMode: "numeric",
+      value: pagesInput,
+      onChange: handlePagesChange,
+      placeholder: __("e.g. 32", "custom-blocks"),
+    }),
+    pagesError &&
+      el(
+        Notice,
+        { status: "error", isDismissible: false, className: "book-pages-error" },
+        __(
+          "Pages must be a whole number (e.g. 32) — letters and symbols aren't allowed, so this won't be saved until it's fixed.",
+          "custom-blocks",
+        ),
+      ),
 
     // Added 2026-08-30, per Janet: a book can be available from more than
     // one retailer (e.g. Amazon, Target), each wanting its own button label —

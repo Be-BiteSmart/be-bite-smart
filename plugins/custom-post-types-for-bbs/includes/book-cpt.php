@@ -48,8 +48,8 @@
  * (book-display.php) extracts the two sections via `parse_blocks()` +
  * `render_block()`.
  *
- * Everything ELSE (Audience, Price/Availability, Buy Links,
- * Inside-the-Book preview images) stays in the existing sidebar panel
+ * Everything ELSE (Audience, Pages, Buy Links, Inside-the-Book preview
+ * images) stays in the existing sidebar panel
  * (custom/book-panel, a PluginDocumentSettingPanel) — this restructuring
  * was scoped to just the two write-up sections, not a full migration of
  * every Book field into the locked canvas the way Q&A Entry has everything.
@@ -180,9 +180,9 @@ function bitesmart_book_meta_auth_callback( $allowed, $meta_key, $post_id ) {
  * original slugs/behavior are kept unchanged (no data migration needed —
  * every existing book is already 'all_ages' or 'adult'); only 'all_ages'
  * gained a new display LABEL ("All Ages (With Guidance)", see
- * bitesmart_book_audience_badge() in book-display.php), not a new slug.
- * Fixed order used everywhere (this field's enum, the book-panel RadioControl,
- * the badge, and the books-list.php grouping): Younger Children, Older
+ * bitesmart_books_list_audience_groups() in books-list.php), not a new
+ * slug. Fixed order used everywhere (this field's enum, the book-panel
+ * RadioControl, and the books-list.php grouping): Younger Children, Older
  * Children, Adults, All Ages (With Guidance) — Janet's own stated order.
  *
  * @param mixed $value Raw value.
@@ -259,13 +259,29 @@ function bitesmart_sanitize_book_buy_links( $value ) {
 }
 
 /**
+ * Sanitize the page-count field (_bitesmart_book_pages) — a plain positive
+ * integer, e.g. 32. Anything not a positive whole number (blank, negative,
+ * non-numeric junk) coerces to 0, which render_book_block() (book-display.php)
+ * treats as "not set" and skips rendering entirely, same posture as every
+ * other optional Book field here.
+ *
+ * @param mixed $value Raw value.
+ * @return int
+ */
+function bitesmart_sanitize_book_pages( $value ) {
+    $pages = absint( $value );
+    return $pages > 0 ? $pages : 0;
+}
+
+/**
  * All custom fields for the Book CPT. Native fields (title, thumbnail) need
  * no registration here. "Why BBS Recommends This Book" and Book Excerpt —
  * the book's actual write-up — are NOT meta fields; they're real nested
  * Paragraph/List blocks inside post_content, locked into two named sections
  * via custom/book-fields
  * (Custom Blocks plugin) — see the file header for why. Only the OTHER
- * fields below (Audience, preview images, price, URL) are post meta.
+ * fields below (Audience, Target Audience, page count, preview images, URL)
+ * are post meta.
  */
 function bitesmart_register_book_meta() {
     // Added 2026-08-16, per Janet: some book recommendations are kid-facing,
@@ -274,11 +290,12 @@ function bitesmart_register_book_meta() {
     // body language" knowledge is useful at any age). Janet's own framing
     // of the split — "For Readers of any age" vs. "For Adult Readers" —
     // rather than a literal "kids vs. adults" choice, since a kid-friendly
-    // book is still perfectly fine for a parent to read too. Visual badge
-    // only (see render_book_block()/render_book_search_card() in
-    // book-display.php, Custom Blocks plugin) — deliberately NOT wired into
-    // any Learning Hub search/browse filter; see
-    // [[be-bitesmart-book-cpt-status]] in memory for the full reasoning.
+    // book is still perfectly fine for a parent to read too. Drives Books
+    // List grouping (books-list.php) — NOT rendered as a card badge as of
+    // 2026-08-31 (see _bitesmart_book_target_audience below for what
+    // replaced it on the card, and [[be-bitesmart-book-cpt-status]] in
+    // memory for why: a card's badge just repeating the same words as its
+    // surrounding group heading on the Books List page was redundant).
     // Expanded 2026-08-29 to four values — see bitesmart_sanitize_book_audience()
     // above for the full reasoning and fixed order.
     register_post_meta( 'book', '_bitesmart_book_audience', array(
@@ -292,6 +309,25 @@ function bitesmart_register_book_meta() {
                 'enum' => array( 'younger_children', 'older_children', 'adult', 'all_ages' ),
             ),
         ),
+        'auth_callback'     => 'bitesmart_book_meta_auth_callback',
+    ) );
+
+    // Added 2026-08-31, per Janet: a short freeform blurb (e.g. "Ages 4-7",
+    // "New puppy owners") shown as the card's own badge — see
+    // bitesmart_book_target_audience_badge() in book-display.php. Separate
+    // from Audience above on purpose: Audience is a fixed 4-value category
+    // that controls WHICH group of the Books List page a book appears
+    // under; Target Audience is purely descriptive text for the card badge,
+    // has no bearing on grouping/querying, and — unlike Audience — is
+    // genuinely optional. Blank by default; the badge simply doesn't render
+    // when it's blank, since freeform text has no meaningful placeholder
+    // state the way the old 4-value badge did.
+    register_post_meta( 'book', '_bitesmart_book_target_audience', array(
+        'type'              => 'string',
+        'single'            => true,
+        'default'           => '',
+        'sanitize_callback' => 'sanitize_text_field',
+        'show_in_rest'      => true,
         'auth_callback'     => 'bitesmart_book_meta_auth_callback',
     ) );
 
@@ -315,16 +351,17 @@ function bitesmart_register_book_meta() {
         'auth_callback'     => 'bitesmart_book_meta_auth_callback',
     ) );
 
-    // Freeform price/availability blurb, e.g. "$8.99 and widely available"
-    // or "$20.00 at Dogwise.com and others" — matches how this info reads
-    // in the hand-authored version this CPT replaces, kept as plain text
-    // rather than a structured price+retailer pair since it's shown
-    // verbatim, not computed on.
-    register_post_meta( 'book', '_bitesmart_book_price_availability', array(
-        'type'              => 'string',
+    // Added 2026-08-31, per Janet, replacing the old freeform
+    // Price/Availability blurb (see bitesmart_sanitize_book_pages() above) —
+    // how many pages the book has, shown on the card so a parent can gauge
+    // length at a glance. 0 means "not set"; render_book_block()
+    // (book-display.php) skips the line entirely in that case, same
+    // conditional-render posture as the field it replaces.
+    register_post_meta( 'book', '_bitesmart_book_pages', array(
+        'type'              => 'integer',
         'single'            => true,
-        'default'           => '',
-        'sanitize_callback' => 'sanitize_text_field',
+        'default'           => 0,
+        'sanitize_callback' => 'bitesmart_sanitize_book_pages',
         'show_in_rest'      => true,
         'auth_callback'     => 'bitesmart_book_meta_auth_callback',
     ) );

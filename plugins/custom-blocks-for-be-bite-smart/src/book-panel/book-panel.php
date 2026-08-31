@@ -6,7 +6,7 @@
  * block, as of 2026-08-30 — see book-cpt.php in the Custom Post Types for
  * BBS plugin), this isn't a block at all — no block.json, no
  * register_block_type() — it's a PluginDocumentSettingPanel (a sidebar
- * panel). Audience, Price/Availability, Buy/More Info URL, and
+ * panel). Audience, Pages, Buy/More Info URL, and
  * Inside-the-Book preview images live here; "Why BBS Recommends This Book"
  * and Book Excerpt (the book's actual write-up) live in the locked canvas
  * block instead —

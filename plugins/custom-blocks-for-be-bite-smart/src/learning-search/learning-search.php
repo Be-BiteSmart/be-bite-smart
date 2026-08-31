@@ -144,41 +144,36 @@ function bitesmart_stage_cards_bump_generation() {
 }
 
 /**
- * Invalidate the cache when a Q&A Entry, Resource, Episode, Coloring Book,
- * or Guide Chapter is saved (including status transitions —
- * draft/publish/trash all fire save_post) or when its Stage/Topic terms
- * change independently of a full save (e.g. quick-edit). Episode is
- * included because it's shown in this list too now — see
- * render_episode_search_card() in episode-display.php and its use in
- * bitesmart_build_stage_card_list() below. Coloring Book is included for
- * the same reason (see render_coloring_book_search_card() in
- * coloring-book-display.php) AND because
- * bitesmart_build_downloads_page_card_list() (coloring-books-list.php)
- * deliberately reuses this same generation counter for its own,
- * differently-scoped cache — see that function's header comment. Guide
- * Chapter is included for the same reason as Episode/Coloring Book (see
+ * Invalidate the cache when a Q&A Entry, Resource, Episode, or Guide Chapter
+ * is saved (including status transitions — draft/publish/trash all fire
+ * save_post) or when its Stage/Topic terms change independently of a full
+ * save (e.g. quick-edit). Episode is included because it's shown in this
+ * list too now — see render_episode_search_card() in episode-display.php
+ * and its use in bitesmart_build_stage_card_list() below. Guide Chapter is
+ * included for the same reason as Episode (see
  * render_guide_chapter_search_card() in guide-chapter-display.php) — a
  * chapter's Stage terms changing matters here twice over: it can change
  * which REAL Stage's list it appears in, AND (since every chapter also
  * auto-carries the "Guide" pseudo-stage term — see
  * [[be-bitesmart-guide-cpt-plan]] in memory) editing a chapter always
- * affects the pooled Guide-pseudo-stage list too. Book is deliberately NOT
- * included (removed 2026-08-28, was here for the same reason as Episode/
- * Coloring Book) — book posts no longer appear in this search/browse list
- * at all, see bitesmart_build_stage_card_list() below, so a Book save has
- * nothing left here to invalidate. The `book` CPT itself is untouched;
- * Janet's plan is a separate Q&A entry linking out to a books page instead.
+ * affects the pooled Guide-pseudo-stage list too. Book and Coloring Book are
+ * deliberately NOT included (Book removed 2026-08-28, Coloring Book removed
+ * 2026-08-30, both were here for the same reason as Episode/Guide Chapter) —
+ * neither post type appears in this search/browse list at all any more, see
+ * bitesmart_build_stage_card_list() below, so saving one has nothing left
+ * here to invalidate. Both CPTs themselves are untouched; Book links out to
+ * a separate books page, and Coloring Book is being folded into one Q&A
+ * Entry instead (Janet's calls).
  */
 function bitesmart_stage_cards_maybe_bump( $post_id, $post = null ) {
     $post_type = $post ? $post->post_type : get_post_type( $post_id );
-    if ( in_array( $post_type, array( 'qa_entry', 'resource', 'episode', 'coloring_book', 'guide_chapter' ), true ) ) {
+    if ( in_array( $post_type, array( 'qa_entry', 'resource', 'episode', 'guide_chapter' ), true ) ) {
         bitesmart_stage_cards_bump_generation();
     }
 }
 add_action( 'save_post_qa_entry', 'bitesmart_stage_cards_maybe_bump', 10, 2 );
 add_action( 'save_post_resource', 'bitesmart_stage_cards_maybe_bump', 10, 2 );
 add_action( 'save_post_episode', 'bitesmart_stage_cards_maybe_bump', 10, 2 );
-add_action( 'save_post_coloring_book', 'bitesmart_stage_cards_maybe_bump', 10, 2 );
 add_action( 'save_post_guide_chapter', 'bitesmart_stage_cards_maybe_bump', 10, 2 );
 add_action( 'delete_post', 'bitesmart_stage_cards_maybe_bump' );
 
@@ -221,9 +216,17 @@ add_action( 'set_object_terms', 'bitesmart_stage_cards_maybe_bump_terms', 10, 4 
  * entirely — see bitesmart_build_stage_card_list() below; the meta field
  * itself was deleted outright on 2026-08-30 (no longer exists on the
  * `book` CPT at all — see [[be-bitesmart-book-cpt-status]] in memory).
+ * Coloring Book's (`_bitesmart_coloring_book_keywords_by_lang`) was mapped
+ * here until 2026-08-30, when coloring_book posts were removed from this
+ * search list too — see bitesmart_build_stage_card_list() below; the meta
+ * field itself was deleted outright the same day, along with the rest of
+ * Coloring Book's search-only plumbing (Stage/Media Type taxonomy
+ * attachment, the "Search Keywords" editing UI section, the orphaned
+ * render_coloring_book_search_card()) — see [[be-bitesmart-coloring-book-status]]
+ * in memory.
  *
  * @param int    $post_id Post ID.
- * @param string $type    'qa_entry', 'resource', 'episode', 'coloring_book', or 'guide_chapter'.
+ * @param string $type    'qa_entry', 'resource', 'episode', or 'guide_chapter'.
  * @param string $lang    Short language code.
  * @return string
  */
@@ -232,7 +235,6 @@ function bitesmart_stage_card_keywords( $post_id, $type, $lang ) {
         'qa_entry'      => '_bitesmart_qa_synonyms_by_lang',
         'resource'      => '_bitesmart_resource_keywords_by_lang',
         'episode'       => '_bitesmart_episode_keywords_by_lang',
-        'coloring_book' => '_bitesmart_coloring_book_keywords_by_lang',
         'guide_chapter' => '_bitesmart_chapter_keywords_by_lang',
     );
 
@@ -266,16 +268,18 @@ function bitesmart_stage_cards_template_version() {
         __DIR__ . '/../qa-entry-display/qa-entry-display.php',
         __DIR__ . '/../resource-display/resource-display.php',
         __DIR__ . '/../episode-display/episode-display.php', // holds render_episode_search_card() too, not just render_episode_block()
-        __DIR__ . '/../coloring-book-display/coloring-book-display.php', // holds render_coloring_book_search_card() too, not just render_coloring_book_block()
         __DIR__ . '/../guide-chapter-display/guide-chapter-display.php', // holds render_guide_chapter_search_card()/render_guide_chapter_pooled_card() too, not just bitesmart_render_guide_chapter_row()
         __FILE__, // this file's own bitesmart_build_stage_card_list() builds each card's SHAPE (id/type/mediaTypes/html/searchText), not just its 'html' — added 2026-08-28 when 'mediaTypes' was added, after a stale-cache Undefined-array-key warning on 'mediaTypes' surfaced: a cache built by the OLD version of this function (no 'mediaTypes' key) was still valid by generation-counter/other-templates' mtimes, so it kept being served as-is. Same reasoning as every other file in this array, just easy to miss since this file authors the array shape rather than any one card's HTML.
     );
-    // book-display.php deliberately NOT in this list (removed 2026-08-28) —
-    // book posts no longer appear in this search/browse list at all, see
-    // bitesmart_build_stage_card_list() below. (render_book_search_card(),
-    // the function this comment used to reference, was deleted outright on
-    // 2026-08-30 — book-display.php no longer has anything search-related
-    // in it at all.)
+    // book-display.php and coloring-book-display.php deliberately NOT in
+    // this list — neither book nor coloring_book posts appear in this
+    // search/browse list at all any more, see bitesmart_build_stage_card_list()
+    // below. render_book_search_card() (book-display.php) and
+    // render_coloring_book_search_card() (coloring-book-display.php) — the
+    // functions this comment used to reference — were both deleted outright
+    // on 2026-08-30 (Book's the same day it was removed from this list,
+    // 2026-08-28; Coloring Book's on its own removal day) — neither file has
+    // anything search-related left in it.
 
     $stamps = array_map(
         function ( $file ) {
@@ -290,8 +294,8 @@ function bitesmart_stage_cards_template_version() {
 /**
  * Build (or fetch from cache) the full, ordered list of rendered cards for
  * one Stage, in the current request's language. Every Q&A Entry + Resource
- * + Episode + Coloring Book + Guide Chapter published and tagged with
- * $stage_slug, alphabetical by title — EXCEPT the pooled Guide pseudo-stage
+ * + Episode + Guide Chapter published and tagged with $stage_slug,
+ * alphabetical by title — EXCEPT the pooled Guide pseudo-stage
  * (`'guide' === $stage_slug`, its own query branch below), ordered by
  * Chapter Number instead (added 2026-08-28), so this array's own order
  * matches the Guide's own page. Book is deliberately EXCLUDED (removed
@@ -300,16 +304,21 @@ function bitesmart_stage_cards_template_version() {
  * Audience — see [[be-bitesmart-book-cpt-status]] in memory), but its old
  * compact search-card render function, render_book_search_card(), was
  * deleted outright on 2026-08-30 along with everything else that only
- * existed for this search listing. Episode is included as a compact
- * Question/title card (see render_episode_search_card() in
+ * existed for this search listing. Coloring Book is likewise EXCLUDED
+ * (removed 2026-08-30, Janet's call) — the `coloring_book` CPT and its
+ * `custom/coloring-book`/`custom/coloring-books-list` display blocks are
+ * untouched, but Janet's plan is to fold coloring books under one Q&A Entry
+ * instead of surfacing individual coloring-book cards in search/browse
+ * results; its old compact search-card render function,
+ * render_coloring_book_search_card(), was also deleted outright the same
+ * day, same as Book's — see [[be-bitesmart-coloring-book-status]] in
+ * memory. Episode is included as a
+ * compact Question/title card (see render_episode_search_card() in
  * episode-display.php), not its full video-player embed — Episodes already
  * default to the Preschool stage term on save (see episode-cpt.php), so
  * this "just works" for the Preschool page's search/browse list without
- * any extra tagging. Coloring Book, unlike Episode, embeds its actual
- * Download buttons inline (see render_coloring_book_search_card() in
- * coloring-book-display.php) rather than linking out — no stage default,
- * since coloring books aren't necessarily Preschool-specific. Guide
- * Chapter is the one type whose rendering DIFFERS by which Stage this is:
+ * any extra tagging. Guide Chapter is the one type whose rendering DIFFERS
+ * by which Stage this is:
  * on a REAL Stage (this function's `else` branch below), it renders a
  * compact teaser (see render_guide_chapter_search_card() in
  * guide-chapter-display.php), same "link out to the real thing" idea as
@@ -400,7 +409,7 @@ function bitesmart_build_stage_card_list( $stage_slug, $lang ) {
         // since the pooled-accordion render only applies when
         // stage_slug === 'guide' specifically.
         $query = new WP_Query( array(
-            'post_type'      => array( 'qa_entry', 'resource', 'episode', 'coloring_book', 'guide_chapter' ),
+            'post_type'      => array( 'qa_entry', 'resource', 'episode', 'guide_chapter' ),
             'post_status'    => 'publish',
             'posts_per_page' => -1,
             'orderby'        => 'title',
@@ -409,7 +418,7 @@ function bitesmart_build_stage_card_list( $stage_slug, $lang ) {
         ) );
     } else {
         $query = new WP_Query( array(
-            'post_type'      => array( 'qa_entry', 'resource', 'episode', 'coloring_book', 'guide_chapter' ),
+            'post_type'      => array( 'qa_entry', 'resource', 'episode', 'guide_chapter' ),
             'post_status'    => 'publish',
             'posts_per_page' => -1,
             'orderby'        => 'title',
@@ -432,8 +441,6 @@ function bitesmart_build_stage_card_list( $stage_slug, $lang ) {
             $html = render_qa_entry_block( array( 'entryId' => $post->ID ) );
         } elseif ( 'resource' === $post->post_type ) {
             $html = render_resource_block( array( 'resourceId' => $post->ID ) );
-        } elseif ( 'coloring_book' === $post->post_type ) {
-            $html = render_coloring_book_search_card( array( 'coloringBookId' => $post->ID ) );
         } elseif ( 'guide_chapter' === $post->post_type ) {
             // Full accordion row on the pooled Guide pseudo-stage (every
             // result there IS a chapter); a compact link-out teaser on a

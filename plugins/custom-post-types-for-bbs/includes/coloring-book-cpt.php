@@ -14,26 +14,26 @@
  *
  * Built as a real CPT — like Episode, Q&A Entry, and Resource — rather than
  * as raw block attributes on whatever page happens to embed a coloring book
- * (which is how custom/educational-coloring-book-download works). Two
- * reasons, both from a 2026-08-13 conversation with Janet:
+ * (which is how custom/educational-coloring-book-download works). Original
+ * reason, from a 2026-08-13 conversation with Janet: editor ergonomics —
+ * adding a new coloring book is "Add New Coloring Book" in wp-admin, filling
+ * in a structured form, same workflow as every other content type here —
+ * not opening /learning/downloads/ in the block editor and hand-duplicating
+ * a block instance.
  *
- *   1. Editor ergonomics: adding a new coloring book is "Add New Coloring
- *      Book" in wp-admin, filling in a structured form, same workflow as
- *      every other content type here — not opening /learning/downloads/ in
- *      the block editor and hand-duplicating a block instance.
- *   2. It plugs straight into the existing Learning Hub Search machinery
- *      (see learning-search.php's bitesmart_build_stage_card_list()) the
- *      same way Episode/Q&A Entry/Resource already do, once Stage/Topic
- *      terms are set — no separate Resource entry + stable-anchor-id
- *      workaround needed just to make a coloring book findable in search.
- *
- * Search cards show the coloring book's own EN/ES Download buttons inline
- * (see render_coloring_book_search_card() in coloring-book-display.php) —
- * unlike Episode, which links out to its own real embed instead of
- * duplicating a video player inline. That's a deliberate difference: a
- * coloring book's "real thing" is just two buttons, light enough to embed
- * directly, where Episode's real thing (video player, language picker,
- * thumbnail) genuinely isn't.
+ * Originally also plugged straight into the Learning Hub Search machinery
+ * (learning-search.php's bitesmart_build_stage_card_list()) the same way
+ * Episode/Q&A Entry/Resource do, via a compact search card
+ * (render_coloring_book_search_card(), coloring-book-display.php) showing
+ * the coloring book's own EN/ES Download buttons inline. Removed from that
+ * search/browse listing 2026-08-30 (Janet's plan is to fold coloring books
+ * under one Q&A Entry instead), and the search-only plumbing that reason
+ * justified — Stage/Media Type taxonomy attachment, the per-language Search
+ * Keywords field, render_coloring_book_search_card() itself — was removed
+ * the same day (see [[be-bitesmart-coloring-book-status]] in memory). Topic
+ * and Series stay attached: Topic is general editorial tagging, and Series
+ * feeds this CPT's own stable anchor id (bitesmart_coloring_book_anchor_id(),
+ * coloring-book-display.php), neither of which is search-specific.
  *
  * "Headless" CPT, same reasoning as Episode/Resource: no theme in this
  * install to render a standalone permalink page, so public/publicly_queryable
@@ -81,12 +81,16 @@ function bitesmart_register_coloring_book_post_type() {
         'capability_type'     => 'post',
     ) );
 
-    // Attaches Coloring Book to the shared Stage/Topic taxonomies
-    // (includes/stage-taxonomy.php, includes/topic-taxonomy.php, this
-    // plugin) so coloring books can be tagged and picked up by
-    // bitesmart_build_stage_card_list() in learning-search.php, same as
-    // Q&A Entry/Resource/Episode.
-    register_taxonomy_for_object_type( 'stage', 'coloring_book' );
+    // Attaches Coloring Book to the shared Topic taxonomy
+    // (includes/topic-taxonomy.php, this plugin) — general editorial
+    // tagging, same as every other content type. Stage and Media Type were
+    // also attached here until 2026-08-30 — both existed purely to drive
+    // the Learning Hub search/browse listing's Stage grouping and "Filter
+    // by type" checkboxes, and were dropped once Coloring Book was removed
+    // from that listing (see coloring-book-display.php's file header and
+    // [[be-bitesmart-coloring-book-status]] in memory). Any Stage/Media
+    // Type terms already saved on existing coloring books are untouched in
+    // the DB — harmless leftover data, not cleaned up.
     register_taxonomy_for_object_type( 'topic', 'coloring_book' );
 
     // Attaches Coloring Book to the Series taxonomy
@@ -94,15 +98,9 @@ function bitesmart_register_coloring_book_post_type() {
     // same as Episode. Used to build a stable per-coloring-book anchor id
     // (e.g. "coloring-book-paws-to-prevent-ep-1") in the Custom Blocks
     // plugin's coloring-book-display.php — see
-    // bitesmart_coloring_book_anchor_id() there.
+    // bitesmart_coloring_book_anchor_id() there. Not search-specific, so
+    // kept attached.
     register_taxonomy_for_object_type( 'series', 'coloring_book' );
-
-    // Attaches Coloring Book to the shared Media Type taxonomy
-    // (includes/media-type-taxonomy.php) — drives the Learning Hub's
-    // "Filter by type" checkboxes (see
-    // bitesmart_default_coloring_book_media_type_term() below for the
-    // default this CPT applies).
-    register_taxonomy_for_object_type( 'media_type', 'coloring_book' );
 
     bitesmart_register_coloring_book_meta();
 }
@@ -127,48 +125,6 @@ function bitesmart_default_coloring_book_series_term( $post_id, $post, $update )
 add_action( 'save_post_coloring_book', 'bitesmart_default_coloring_book_series_term', 10, 3 );
 
 /**
- * Coloring book content is relevant to both Toddler and Preschool (unlike
- * Episode, which is Preschool-only), so new Coloring Book posts default to
- * BOTH stage terms — same reasoning and same known WP core autosave edge
- * case as bitesmart_default_episode_stage_term() in episode-cpt.php (see
- * its comment for why this is a save_post hook rather than the
- * 'default_term' taxonomy arg). Only fires when the post genuinely has
- * zero stage terms at save time, so it never overrides an editor's real
- * choice — including an editor who deliberately narrows it to just one of
- * the two afterward.
- */
-function bitesmart_default_coloring_book_stage_terms( $post_id, $post, $update ) {
-    if ( wp_is_post_revision( $post_id ) || wp_is_post_autosave( $post_id ) ) {
-        return;
-    }
-
-    if ( ! has_term( '', 'stage', $post_id ) ) {
-        wp_set_object_terms( $post_id, array( 'toddler', 'preschool' ), 'stage' );
-    }
-}
-add_action( 'save_post_coloring_book', 'bitesmart_default_coloring_book_stage_terms', 10, 3 );
-
-/**
- * A Coloring Book is a downloadable PDF of pages to color, so new Coloring
- * Book posts default to the "Image" Media Type term — same reasoning and
- * same known WP core autosave edge case as
- * bitesmart_default_episode_stage_term() in episode-cpt.php (see its comment
- * for why this is a save_post hook rather than the 'default_term' taxonomy
- * arg). Only fires when the post genuinely has zero Media Type terms at save
- * time, so it never overrides an editor's real choice.
- */
-function bitesmart_default_coloring_book_media_type_term( $post_id, $post, $update ) {
-    if ( wp_is_post_revision( $post_id ) || wp_is_post_autosave( $post_id ) ) {
-        return;
-    }
-
-    if ( ! has_term( '', 'media_type', $post_id ) ) {
-        wp_set_object_terms( $post_id, 'image', 'media_type' );
-    }
-}
-add_action( 'save_post_coloring_book', 'bitesmart_default_coloring_book_media_type_term', 10, 3 );
-
-/**
  * The native Title field sits above the locked custom/coloring-book-fields
  * block with nothing visually tying the two together — same placeholder fix
  * as Episode's, see bitesmart_episode_title_placeholder() in episode-cpt.php.
@@ -189,31 +145,6 @@ add_filter( 'enter_title_here', 'bitesmart_coloring_book_title_placeholder', 10,
  */
 function bitesmart_coloring_book_meta_auth_callback( $allowed, $meta_key, $post_id ) {
     return current_user_can( 'edit_post', $post_id );
-}
-
-/**
- * Sanitize the per-language search-matching Keywords map — same shape and
- * reasoning as bitesmart_sanitize_resource_keywords_by_lang() in
- * resource-cpt.php / bitesmart_sanitize_episode_keywords_by_lang() in
- * episode-cpt.php (free-form comma-separated phrases per language).
- *
- * @param mixed $value Raw value.
- * @return array<string, string>
- */
-function bitesmart_sanitize_coloring_book_keywords_by_lang( $value ) {
-    $clean = array();
-
-    if ( is_array( $value ) ) {
-        foreach ( $value as $code => $text ) {
-            $code = sanitize_key( $code );
-            $text = sanitize_text_field( (string) $text );
-            if ( $code && $text !== '' ) {
-                $clean[ $code ] = $text;
-            }
-        }
-    }
-
-    return $clean;
 }
 
 /**
@@ -248,24 +179,6 @@ function bitesmart_register_coloring_book_meta() {
         'default'           => '',
         'sanitize_callback' => 'esc_url_raw',
         'show_in_rest'      => true,
-        'auth_callback'     => 'bitesmart_coloring_book_meta_auth_callback',
-    ) );
-
-    // Per-language search-matching phrases — plain internal data, NOT
-    // rendered as visible page text, so TranslatePress's normal translation
-    // won't pick it up automatically (same caveat as Episode's/Resource's
-    // Keywords — see [[be-bitesmart-qa-resource-data-model]] in memory).
-    register_post_meta( 'coloring_book', '_bitesmart_coloring_book_keywords_by_lang', array(
-        'type'              => 'object',
-        'single'            => true,
-        'default'           => array(),
-        'sanitize_callback' => 'bitesmart_sanitize_coloring_book_keywords_by_lang',
-        'show_in_rest'      => array(
-            'schema' => array(
-                'type'                 => 'object',
-                'additionalProperties' => array( 'type' => 'string' ),
-            ),
-        ),
         'auth_callback'     => 'bitesmart_coloring_book_meta_auth_callback',
     ) );
 }

@@ -11,5 +11,10 @@
         }
       ]
     }
+  },
+  "styles": {
+    "typography": {
+      "fontSize": null
+    }
   }
 }

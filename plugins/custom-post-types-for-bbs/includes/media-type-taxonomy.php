@@ -121,11 +121,15 @@ function bitesmart_backfill_media_type_terms() {
         return;
     }
 
+    // 'coloring_book' was removed from this map 2026-08-30 — Media Type was
+    // detached from that CPT entirely (its only purpose there was driving
+    // the Learning Hub's "Filter by type" checkboxes, and Coloring Book was
+    // removed from that listing the same day — see
+    // [[be-bitesmart-coloring-book-status]] in memory).
     $defaulters = array(
         'episode'       => 'bitesmart_default_episode_media_type_term',
         'resource'      => 'bitesmart_default_resource_media_type_term',
         'qa_entry'      => 'bitesmart_default_qa_entry_media_type_term',
-        'coloring_book' => 'bitesmart_default_coloring_book_media_type_term',
         'guide_chapter' => 'bitesmart_default_guide_chapter_media_type_term',
     );
 

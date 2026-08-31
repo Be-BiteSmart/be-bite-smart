@@ -19,15 +19,189 @@
   height: auto;
 }
 
-/* "Inside the Book" preview carousel (bitesmart_book_cover_gallery(),
-   book-display.php + gallery.js) — only present when a book has 1+ preview
-   images set; otherwise .book-card-cover has no .book-gallery class and none
-   of this applies. display:inline-block so the wrapper shrink-wraps to the
-   image's own rendered size (max-width: 160px above), which the arrows/
-   counter position themselves against. */
+/* Cover carousel + "View Larger Image" lightbox (bitesmart_book_cover_gallery(),
+   book-display.php + gallery.js/gallery-modal.js) — always present on any
+   book with a Featured Image, whether or not it has "Inside the Book"
+   preview images set (arrows/counter only appear with 2+ slides; the
+   enlarge button/click-to-zoom apply either way — see gallery.js's file
+   header). display:inline-block so the wrapper shrink-wraps to the image's
+   own rendered size (max-width: 160px above), which the enlarge button
+   below then matches the width of too. The arrows/counter position
+   themselves against .book-gallery-frame (below), not this element — see
+   that rule's own comment. */
 .book-card-cover.book-gallery {
-  position: relative;
   display: inline-block;
+}
+
+/* Wraps just the <img> + arrows/counter (book-display.php), sized to
+   exactly the image — position:relative here, not on the outer
+   .book-gallery, is what the arrows/counter (position:absolute) anchor
+   against, so they stay pinned to the image's own corners regardless of
+   whatever flows below (the "View Larger Image" button). */
+.book-gallery-frame {
+  position: relative;
+}
+
+.wp-block-custom-book .book-gallery-image {
+  cursor: zoom-in;
+}
+
+/* "View Larger Image" button (gallery.js) — sits below the cover image as a
+   plain block flowing under the inline-block wrapper above, not absolutely
+   positioned like the arrows/counter. Kept full-width of the cover so it
+   reads as one obvious, easy-to-hit control for a parent scanning the card,
+   not a tiny inline link easy to miss. */
+.book-gallery-enlarge {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 4px 8px;
+  border: 1px solid var(--wp--preset--color--accent-2, #1f6a8f);
+  border-radius: 4px;
+  background: #fff;
+  color: var(--wp--preset--color--accent-2, #1f6a8f);
+  font-size: 0.75em;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.book-gallery-enlarge:hover {
+  background: var(--wp--preset--color--accent-2, #1f6a8f);
+  color: #fff;
+}
+
+.book-gallery-enlarge:focus-visible {
+  outline: 2px solid var(--wp--preset--color--accent-2, #1f6a8f);
+  outline-offset: 2px;
+}
+
+/* "View Larger Image" modal (gallery-modal.js) — one dialog appended to
+   <body>, shared by every .book-gallery on the page. Same accessible-dialog
+   shape as video-lang-restart-modal.css (fixed full-screen overlay,
+   dismissible backdrop, focus-trapped panel), sized and laid out around a
+   photo instead of a text confirm/cancel choice. */
+.book-gallery-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.book-gallery-modal[hidden] {
+  display: none;
+}
+
+.book-gallery-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(26, 46, 59, 0.75);
+}
+
+.book-gallery-modal__panel {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 640px);
+  max-height: 90vh;
+  overflow: auto;
+  margin: 0;
+  padding: 2.75rem 1.5rem 1.5rem;
+  border: none;
+  border-radius: 0.75rem;
+  background: #fff;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+  font-family: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.book-gallery-modal__title {
+  margin: 1rem 0 1rem 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #1a2e3b;
+  text-align: center;
+}
+
+/* Close button: icon + a real visible/accessible "Close" label — never
+   icon-only, so it's unmistakable for a parent who doesn't know or trust
+   the Escape key or clicking outside the photo. */
+.book-gallery-modal__close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 0.4rem 0.75rem;
+  border: 2px solid #cdd8e0;
+  border-radius: 9999px;
+  background: #fff;
+  color: #1a2e3b;
+  font-size: 0.9rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.book-gallery-modal__close span[aria-hidden] {
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.book-gallery-modal__close:hover {
+  background: #f8fafc;
+}
+
+.book-gallery-modal__close:focus-visible,
+.book-gallery-modal__arrow:focus-visible {
+  outline: 2px solid var(--wp--preset--color--accent-2, #1f6a8f);
+  outline-offset: 2px;
+}
+
+.book-gallery-modal__figure {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+}
+
+.book-gallery-modal__image {
+  display: block;
+  max-width: 100%;
+  max-height: 70vh;
+  height: auto;
+  border-radius: 0.5rem;
+}
+
+/* Reuses .book-gallery-arrow's round/translucent look (bigger here, and a
+   44px touch target) — same Prev/Next visual language as the small inline
+   carousel, so opening the modal doesn't ask a parent to learn a new UI. */
+.book-gallery-modal__arrow {
+  width: 44px;
+  height: 44px;
+  font-size: 26px;
+}
+
+.book-gallery-modal__prev {
+  left: -8px;
+}
+
+.book-gallery-modal__next {
+  right: -8px;
+}
+
+.book-gallery-modal__counter {
+  margin-top: 0.75rem;
+  color: #5a7282;
+  font-size: 0.85em;
 }
 
 .book-gallery-arrow {
@@ -46,6 +220,25 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Bug fix (2026-08-31, per Janet): a book with only a cover — no "Inside
+   the Book" preview images — opened the "View Larger Image" modal and
+   still showed Prev/Next arrows for its one and only slide.
+   gallery-modal.js's renderModalSlide() already sets `hidden` correctly on
+   prevBtn/nextBtn when slides.length is 1, but the base .book-gallery-arrow
+   rule above sets `display: flex` unconditionally — an author-stylesheet
+   `display` declaration always wins over the UA stylesheet's own
+   `[hidden] { display: none }` rule regardless of selector specificity (any
+   normal-priority author rule outranks any UA-origin rule), so the arrows
+   stayed visually flex-displayed despite being `hidden`. This is the same
+   family of bug as the Read More centering fix above (CSS silently
+   overriding element state), just via cascade ORIGIN this time rather than
+   specificity. The modal's own .book-gallery-modal[hidden] rule already
+   handles this correctly for the whole modal — this does the same for the
+   individual arrow buttons. */
+.book-gallery-arrow[hidden] {
+  display: none;
 }
 
 .book-gallery-arrow:hover {
@@ -85,49 +278,36 @@
   margin: 0 0 4px;
 }
 
-/* Audience badge (bitesmart_book_audience_badge(), book-display.php) —
-   static/informational, NOT interactive, unlike Guide Chapter's similarly
-   pill-shaped .guide-chapter-badge (which is a real clickable toggle). Four
-   calm, non-alarming accent colors from the theme's existing presets (see
-   the two new rules below for why accent-3 specifically was skipped) — no
-   brand-new colors introduced. */
+/* Target Audience badge (bitesmart_book_target_audience_badge(),
+   book-display.php) — static/informational, NOT interactive, unlike Guide
+   Chapter's similarly pill-shaped .guide-chapter-badge (which is a real
+   clickable toggle). One flat color (accent-2, the same blue this card's
+   other UI already uses — the "View Larger Image" button, Buy Links) —
+   as of 2026-08-31 this badge shows genuinely freeform text
+   (_bitesmart_book_target_audience) rather than one of a fixed set of
+   values, so the earlier per-value color-coding (one accent color per
+   Audience option) no longer applies; see [[be-bitesmart-book-cpt-status]]
+   in memory for the full history. */
 .book-audience-badge {
   display: inline-block;
-  margin: 0 0 8px;
+  margin: 8px 0 8px 0;
   padding: 2px 10px;
   border-radius: 20px;
-  font-size: 0.75em;
+  font-size: 1em;
   font-weight: 600;
   border: 1px solid currentColor;
-}
-
-.book-audience-badge.is-all-ages {
   color: var(--wp--preset--color--accent-2, #1f6a8f);
 }
 
-.book-audience-badge.is-adult {
-  color: var(--wp--preset--color--accent-1, #d16b0c);
-}
-
-/* Added 2026-08-29 for the Audience field's expansion to 4 values (see
-   book-cpt.php). Deliberately NOT accent-3 (#f5c842, a light gold/amber) —
-   sampled the live theme palette before choosing and it's roughly 1.6:1
-   contrast against a white card, well under WCAG AA's 4.5:1 for text this
-   small, so it'd be genuinely hard to read, not just a style mismatch.
-   accent-4/accent-5 (a slate blue-gray and a dark navy) both sampled at
-   7:1+ instead, keeping this badge readable the same way accent-1/accent-2
-   already are. */
-.book-audience-badge.is-younger-children {
-  color: var(--wp--preset--color--accent-4, #475966);
-}
-
-.book-audience-badge.is-older-children {
-  color: var(--wp--preset--color--accent-5, #0e3447);
-}
-
-.wp-block-custom-book .book-card-price {
+/* Muted meta line (2026-08-31, per Janet) — a quiet fact, not competing for
+   attention with the colored Target Audience badge above it. Reuses the
+   theme's slate-gray accent (accent-4) rather than introducing a new
+   color. */
+.wp-block-custom-book .book-card-pages {
   margin: 0 0 12px;
-  font-weight: 600;
+  font-size: 1em;
+  font-weight: 500;
+  color: var(--wp--preset--color--accent-4, #475966);
 }
 
 /* custom/book-summary-section's and custom/book-excerpt-section's own
@@ -143,6 +323,7 @@
   font-size: 0.8em;
   font-weight: 600;
   text-transform: uppercase;
+  text-align: center;
   letter-spacing: 0.02em;
   color: #50575e;
 }
@@ -230,6 +411,69 @@ blockquote.wp-block-quote.book-card-excerpt {
   right: 4px;
 }
 
+/* Book Excerpt "Read More"/"Read Less" toggle (book-display.php) — reuses
+   read-more.js, the same shared toggle script custom/read-more,
+   custom/article-or-commentary, and custom/press-release already use
+   (enqueued globally, custom_blocks_scripts() in the main plugin file), so
+   no new JS was needed here. bitesmart_book_excerpt_is_long()
+   (book-display.php) decides whether a given book's excerpt gets this
+   wrapper at all — a short one renders exactly as before, no button.
+   Same body:not(.block-editor-page) guard the other three copies use, so
+   the custom/book block's own ServerSideRender editor preview always shows
+   the excerpt in full rather than collapsed. */
+body:not(.block-editor-page)
+  .wp-block-custom-book
+  .expandable-article-block
+  .expandable-content {
+  display: none;
+}
+
+body:not(.block-editor-page)
+  .wp-block-custom-book
+  .expandable-article-block
+  .expandable-content.expanded {
+  display: block;
+}
+
+/* Centered (2026-08-31, per Janet) — same
+   display:block/margin:auto/width:fit-content idiom
+   article-or-commentary/style.css's own Read More button already uses.
+   Book's card had been left-aligned here specifically, but Buy Links
+   became centered the same day (see .book-card-buy-links below), so this
+   brings Read More in line with the card's other buttons rather than
+   standing out as the one left-aligned control.
+
+   REQUIRES the body:not(.block-editor-page) prefix + a real type selector
+   (body/article), NOT just class selectors — first attempt at this rule
+   used `.wp-block-custom-book .book-card-excerpt-expandable
+   .read-more-toggle` alone and silently lost to the theme's own button
+   rule (twentytwentyfive-child/style.css: `body:not(.block-editor-page)
+   :is(.block-toggle-btn, .wp-block-file__button, .wp-block-file
+   .wp-element-button) { display: inline-flex; ... }`), which still
+   overrode display back to inline-flex even after a hard refresh —
+   nothing to do with caching. Root cause: :is()'s specificity is computed
+   from its MOST specific branch regardless of which branch actually
+   matches — here that's `.wp-block-file .wp-element-button` (2 classes),
+   not the 1-class `.block-toggle-btn` branch that's actually in play — so
+   the theme rule's real specificity is (0 id, 3 classes, 1 type) from
+   body + :not()'s argument + :is()'s worst-case branch, beating a
+   3-classes-0-type selector on the class column tie. Matching
+   article-or-commentary's own working copy of this exact rule (which
+   already carries this same body:not(.block-editor-page)+type-selector
+   shape) pushes this rule to (0, 4, 1), which wins outright — this isn't
+   a specificity TIE needing !important (unlike the blockquote-border
+   override elsewhere in this file), it's a genuine specificity deficit
+   that a stronger selector fixes cleanly. */
+body:not(.block-editor-page)
+  .wp-block-custom-book
+  .book-card-excerpt-expandable
+  .read-more-toggle {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  width: fit-content;
+}
+
 .wp-block-custom-book .book-card-link {
   display: inline-block;
 }
@@ -237,9 +481,12 @@ blockquote.wp-block-quote.book-card-excerpt {
 /* Wraps one or more Buy Links buttons (_bitesmart_book_buy_links,
    book-cpt.php) — a book with multiple retailers (e.g. Amazon, Target)
    gets that many buttons here, spaced out and wrapping onto a new line
-   rather than crowding together. */
+   rather than crowding together. Centered (2026-08-31, per Janet) to match
+   the "Where to Buy" heading above it, which is also centered
+   (.book-card-section-heading's text-align: center). */
 .wp-block-custom-book .book-card-buy-links {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 8px;
 }
