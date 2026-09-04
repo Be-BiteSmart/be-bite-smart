@@ -88,22 +88,6 @@
   line-height: 1.5;
 }
 
-/* ── Unfunded badge ── */
-.uec-badge {
-  position: absolute;
-  top: 16px;
-  right: 20px;
-  background: #e8eef3;
-  border: 1px solid #cdd8e0;
-  border-radius: 20px;
-  padding: 3px 10px;
-  font-size: var(--wp--preset--font-size--small);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--wp--preset--color--accent-4);
-}
-
 /* ── Editor-only: field panel ── */
 .uec-fields {
   border: 1px dashed #cdd8e0;
@@ -150,16 +134,5 @@
   /* Tighten body padding */
   .uec-body {
     padding: 14px 18px 18px;
-  }
-
-  /*remove "needs funding" badge on mobile screens, the pending funding covers it for small screens. Looks too busy with both of them on mobile. */
-  .uec-badge {
-    display: none;
-  }
-
-  /* Re-order so badge sits above the episode number */
-  .uec-inner {
-    display: flex;
-    flex-direction: column;
   }
 }

@@ -20,6 +20,12 @@
  * reason as Episode and Resource: no theme in this install to render a
  * standalone permalink page, so it's only ever displayed embedded via
  * custom/qa-entry.
+ *
+ * Added since that original spec, per [[be-bitesmart-qa-chapter-link-plan]]
+ * in memory: an optional link to a Guide Chapter this entry covers one
+ * aspect of (_bitesmart_qa_link_chapter_id, entirely separate from Link
+ * Destination above), plus which of that chapter's Synonyms this entry
+ * opts out of inheriting (_bitesmart_qa_chapter_synonym_excludes_by_lang).
  */
 
 function bitesmart_register_qa_entry_post_type() {
@@ -156,6 +162,51 @@ function bitesmart_sanitize_qa_entry_synonyms_by_lang( $value ) {
 }
 
 /**
+ * Sanitize the per-language chapter-synonym excludes map — the tokens a Q&A
+ * Entry has opted OUT of inheriting from its linked Guide Chapter's Synonyms
+ * (_bitesmart_qa_link_chapter_id / _bitesmart_chapter_keywords_by_lang, see
+ * guide-chapter-cpt.php). See [[be-bitesmart-qa-chapter-link-plan]] in
+ * memory for the full design: this entry never stores a copy of the
+ * chapter's synonym list, only which of the chapter's current tokens it's
+ * turned off — everything else in the chapter's list still applies
+ * automatically, by default. Matching against the chapter's list happens by
+ * trimmed, case-insensitive text (bitesmart_qa_entry_chapter_keywords() in
+ * learning-search.php, custom-blocks plugin) rather than a stable id,
+ * deliberately — see that function's own comment for why a text-based match
+ * is safe here (the chapter's own Synonyms field became add/remove-only,
+ * not rename-in-place, specifically so this couldn't drift).
+ *
+ * @param mixed $value Raw value.
+ * @return array<string, array<int, string>>
+ */
+function bitesmart_sanitize_qa_chapter_synonym_excludes_by_lang( $value ) {
+    $clean = array();
+
+    if ( is_array( $value ) ) {
+        foreach ( $value as $code => $tokens ) {
+            $code = sanitize_key( $code );
+            if ( ! $code || ! is_array( $tokens ) ) {
+                continue;
+            }
+
+            $tokens = array_map(
+                function ( $token ) {
+                    return sanitize_text_field( trim( (string) $token ) );
+                },
+                $tokens
+            );
+            $tokens = array_values( array_unique( array_filter( $tokens ) ) );
+
+            if ( $tokens ) {
+                $clean[ $code ] = $tokens;
+            }
+        }
+    }
+
+    return $clean;
+}
+
+/**
  * Answer Type is a fixed two-value toggle (Short Answer / Long Answer) —
  * anything else input falls back to 'short' rather than being stored as-is.
  *
@@ -246,6 +297,48 @@ function bitesmart_register_qa_entry_meta() {
         'default'           => '',
         'sanitize_callback' => 'esc_url_raw',
         'show_in_rest'      => true,
+        'auth_callback'     => 'bitesmart_qa_entry_meta_auth_callback',
+    ) );
+
+    // Optional link to a Guide Chapter this entry covers one aspect of (see
+    // guide-chapter-cpt.php) — same relationship-via-meta pattern as
+    // _bitesmart_qa_link_resource_id above, entirely independent of Link
+    // Destination/_bitesmart_qa_link_type (a Q&A Entry can be linked to a
+    // chapter AND separately link out to a Resource or URL). When set, this
+    // entry inherits the chapter's Synonyms for search matching instead of
+    // its own _bitesmart_qa_synonyms_by_lang — see
+    // bitesmart_qa_entry_chapter_keywords() in learning-search.php
+    // (custom-blocks plugin) and [[be-bitesmart-qa-chapter-link-plan]] in
+    // memory for the full design.
+    register_post_meta( 'qa_entry', '_bitesmart_qa_link_chapter_id', array(
+        'type'          => 'integer',
+        'single'        => true,
+        'default'       => 0,
+        'show_in_rest'  => true,
+        'auth_callback' => 'bitesmart_qa_entry_meta_auth_callback',
+    ) );
+
+    // Which of the linked chapter's current Synonyms (see
+    // _bitesmart_qa_link_chapter_id above) this entry has opted OUT of —
+    // everything else in the chapter's list still applies by default.
+    // Meaningless when _bitesmart_qa_link_chapter_id is 0; the editing UI
+    // (qa-entry-fields/index.js) resets this to {} whenever the chapter link
+    // changes or is cleared, since an exclude list only makes sense relative
+    // to the specific chapter it was recorded against.
+    register_post_meta( 'qa_entry', '_bitesmart_qa_chapter_synonym_excludes_by_lang', array(
+        'type'              => 'object',
+        'single'            => true,
+        'default'           => array(),
+        'sanitize_callback' => 'bitesmart_sanitize_qa_chapter_synonym_excludes_by_lang',
+        'show_in_rest'      => array(
+            'schema' => array(
+                'type'                 => 'object',
+                'additionalProperties' => array(
+                    'type'  => 'array',
+                    'items' => array( 'type' => 'string' ),
+                ),
+            ),
+        ),
         'auth_callback'     => 'bitesmart_qa_entry_meta_auth_callback',
     ) );
 

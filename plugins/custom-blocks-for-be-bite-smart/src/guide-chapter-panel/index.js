@@ -3,7 +3,7 @@ import { registerPlugin } from "@wordpress/plugins";
 import { PluginDocumentSettingPanel } from "@wordpress/editor";
 import { createElement as el } from "@wordpress/element";
 import { useEntityProp } from "@wordpress/core-data";
-import { TextControl, TextareaControl, ToggleControl } from "@wordpress/components";
+import { TextControl, TextareaControl, ToggleControl, FormTokenField } from "@wordpress/components";
 import { __ } from "@wordpress/i18n";
 import { getSiteLanguages } from "../shared/languages";
 
@@ -25,6 +25,23 @@ import { getSiteLanguages } from "../shared/languages";
 // the "Cite" RichText format available in the chapter's own canvas text —
 // see citation-format.js's own header comment for the full "why" it lives
 // here instead of its own separate bundle.
+//
+// Search Synonyms is a FormTokenField (add/remove chips) as of 2026-09-04,
+// NOT a plain text field like every other *-fields block's Synonyms/Keywords
+// section — this chapter's Synonyms can now be inherited by a linked Q&A
+// Entry (_bitesmart_qa_link_chapter_id, qa-entry-cpt.php), which stores
+// which tokens it's opted OUT of by their TEXT, not a stable id (see
+// bitesmart_qa_entry_chapter_keywords() in learning-search.php, custom-blocks
+// plugin, and [[be-bitesmart-qa-chapter-link-plan]] in memory for the full
+// reasoning). A plain text field lets an editor rename a token in place
+// (e.g. fixing a typo) without changing what LOOKS like the same entry,
+// which would silently break any linked Q&A's exclude for that text. Chips
+// make "rename" impossible — only remove-and-add, which correctly reads as
+// a different token to any linked entry. Storage is untouched either way:
+// value/onChange here just split/join the same comma-separated string
+// _bitesmart_chapter_keywords_by_lang has always stored (see
+// keywordTokens()/setKeywordTokens() below) — no meta shape, sanitize
+// callback, or REST schema change on this field.
 //
 // NO parent-Guide picker here anymore (an earlier version had a
 // ComboboxControl + a lockPostSaving()-based "must pick one" requirement,
@@ -53,6 +70,16 @@ function GuideChapterPanel() {
     updateMeta("_bitesmart_chapter_videos_by_lang", { ...videos, [code]: url });
   const setKeywords = (code, text) =>
     updateMeta("_bitesmart_chapter_keywords_by_lang", { ...keywords, [code]: text });
+  // Tokens in, comma-string out — storage/sanitize/REST schema on this meta
+  // field stay exactly what they were before FormTokenField existed here
+  // (see the "Search Synonyms" section below for why this is a token field
+  // now, not a plain text field).
+  const keywordTokens = (code) =>
+    (keywords[code] || "")
+      .split(",")
+      .map((token) => token.trim())
+      .filter(Boolean);
+  const setKeywordTokens = (code, tokens) => setKeywords(code, tokens.join(", "));
 
   return el(
     PluginDocumentSettingPanel,
@@ -100,7 +127,7 @@ function GuideChapterPanel() {
       onChange: (val) => updateMeta("_bitesmart_chapter_question", val),
       placeholder: __("e.g. What should I do if my dog won't stop growling?", "custom-blocks"),
       help: __(
-        "Shown as the heading on this chapter's compact search-result card on real Stage pages. Leave blank to use the chapter title instead.",
+        "A parent-facing question about this chapter, for future use linking it from a Q&A Entry. Not shown anywhere on the site yet.",
         "custom-blocks",
       ),
     }),
@@ -150,16 +177,16 @@ function GuideChapterPanel() {
       "p",
       { className: "components-base-control__help", style: { marginTop: 0 } },
       __(
-        "Internal search-matching phrases, not shown to visitors — not automatically translated, so fill in each language directly.",
+        "Internal search-matching phrases, not shown to visitors — not automatically translated, so fill in each language directly. A Q&A Entry can link to this chapter and inherit these terms (see [[be-bitesmart-qa-chapter-link-plan]] in memory) — to fix a typo, remove the old token and add the corrected one, rather than editing it in place, so any Q&A Entry that had it toggled off doesn't silently get it back under new text.",
         "custom-blocks",
       ),
     ),
     ...languages.map((lang) =>
-      el(TextControl, {
+      el(FormTokenField, {
         key: `keyword-${lang.code}`,
         label: `${__("Synonyms", "custom-blocks")} (${lang.name})`,
-        value: keywords[lang.code] || "",
-        onChange: (val) => setKeywords(lang.code, val),
+        value: keywordTokens(lang.code),
+        onChange: (tokens) => setKeywordTokens(lang.code, tokens),
         placeholder: __("e.g. growl, growling, snapped, aggressive", "custom-blocks"),
       }),
     ),
