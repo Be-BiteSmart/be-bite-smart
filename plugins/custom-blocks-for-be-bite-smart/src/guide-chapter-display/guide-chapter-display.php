@@ -10,20 +10,17 @@
  *    learning-browse.php, Stage=Guide), via render_guide_chapter_pooled_card()
  *    below
  *
- * A REAL Stage page (mixed with Q&A/Resource/Episode/Coloring Book content)
- * is different: `render_guide_chapter_search_card()` below renders a
- * COMPACT teaser instead — title + summary + a "View full chapter page"
- * link out to the chapter's own real permalink, not the full video/text/
- * downloads body. Added 2026-08-16, per Janet: "on the stages page's the
- * guides information should minimally appear since the video logic ect
- * will get more complicated once we've finished it... like the video, for
- * stages pages it should only appear as a teaser" — same "compact card
- * reusing custom/qa-entry's markup, links out to the real thing" pattern
- * `render_episode_search_card()` already uses for Episode (see
- * episode-display.php), for the same underlying reason: a chapter's full
- * video/text/download body is too heavy for a dense, mixed-content
- * results/browse list, and only gets heavier as the video-format logic
- * keeps growing.
+ * A REAL Stage page (mixed with Q&A/Resource/Episode content) used to be
+ * different, 2026-08-16 through 2026-09-04: `render_guide_chapter_search_card()`
+ * rendered a COMPACT teaser instead — title + summary + a "View full chapter
+ * page" link out to the chapter's own real permalink, not the full
+ * video/text/downloads body — same "compact card reusing custom/qa-entry's
+ * markup, links out to the real thing" pattern `render_episode_search_card()`
+ * still uses for Episode (see episode-display.php). Deleted 2026-09-04 along
+ * with the real-Stage listing it belonged to: guide_chapter posts no longer
+ * appear on a real Stage page at all (Janet's call: chapters will be linked
+ * out from a Q&A Entry instead — see [[be-bitesmart-search-status]] in
+ * memory).
  *
  * Leaner still: `bitesmart_render_guide_toc_item()` below renders one Table
  * of Contents entry (a plain link only — no badges, no summary/video/text/
@@ -730,16 +727,19 @@ function bitesmart_render_guide_chapter_row( $chapter_id, array $args = array() 
                     // independent of whichever formats a visitor currently has
                     // shown. One button per language that actually has a PDF —
                     // same plain-Download-link idiom (no inline viewer/toggle)
-                    // as render_coloring_book_search_card()'s Download buttons
-                    // (coloring-book-display.php), since a search/browse
+                    // as bitesmart_coloring_book_language_row()'s own Download
+                    // links (coloring-book-display.php), since a search/browse
                     // context is the wrong place for an inline PDF iframe.
-                    // This full row (Download section included) still shows
-                    // up on the pooled Guide search/browse pages
-                    // (render_guide_chapter_pooled_card() below) — a real
-                    // Stage's search/browse results show the much lighter
-                    // render_guide_chapter_search_card() teaser instead
-                    // (added 2026-08-16), which doesn't call this function
-                    // at all, so this section never renders there.
+                    // This full row (Download section included) shows up on
+                    // the pooled Guide search/browse pages
+                    // (render_guide_chapter_pooled_card() below) — the only
+                    // place a chapter still appears in Learning Hub search as
+                    // of 2026-09-04, guide_chapter having been removed from
+                    // real Stage pages' search/browse results entirely (see
+                    // that function's own docblock; the real-Stage teaser
+                    // that used to render here instead,
+                    // render_guide_chapter_search_card(), was deleted the
+                    // same day).
                     //
                     // $pdf_urls comes from the parent GUIDE now, not this
                     // chapter (see the $pdf_urls assignment above) — every
@@ -882,11 +882,19 @@ function bitesmart_render_guide_chapter_row( $chapter_id, array $args = array() 
  * type exists) should be independently openable, not forced into a single
  * "one at a time" group the way a single Guide's own page uses.
  *
- * Named `_pooled_card`, NOT `_search_card`, specifically so the more
- * general `render_guide_chapter_search_card()` name below stays free for
- * the actual compact teaser used on a REAL Stage's search/browse results —
- * matching what `_search_card` means for every other content type in this
- * codebase, now that a genuine teaser exists for chapters too.
+ * Named `_pooled_card` (not `_search_card`, unlike every other content
+ * type's own compact-teaser function — see render_episode_search_card() in
+ * episode-display.php, etc.) because a genuine `render_guide_chapter_search_card()`
+ * compact teaser also existed here from 2026-08-16 to 2026-09-04, used on a
+ * REAL Stage's search/browse results — deleted outright once guide_chapter
+ * was removed from that listing entirely (Janet's call: chapters will be
+ * linked out from a Q&A Entry instead — see [[be-bitesmart-search-status]]
+ * in memory), same "delete once nothing reuses it" follow-up Book's/Coloring
+ * Book's own orphaned search-card functions got (see
+ * [[be-bitesmart-book-cpt-status]] / [[be-bitesmart-coloring-book-status]]
+ * in memory). Its Question heading (_bitesmart_chapter_question,
+ * guide-chapter-cpt.php) is kept, unread by anything front-end for now —
+ * see that field's own comment.
  *
  * @param array $attributes Block-style attributes ({ chapterId }).
  * @return string
@@ -897,90 +905,6 @@ function render_guide_chapter_pooled_card( $attributes ) {
     return bitesmart_render_guide_chapter_row( $chapter_id, array(
         'show_guide_link' => true,
     ) );
-}
-
-/**
- * Renders one chapter as a COMPACT TEASER for a real Stage's Learning Hub
- * Search/Browse results (custom/learning-search / custom/learning-browse
- * with an ordinary Stage picked, e.g. Preschool — NOT the pooled Guide
- * pseudo-stage, which uses render_guide_chapter_pooled_card() above
- * instead). Added 2026-08-16, per Janet: "on the stages page's the guides
- * information should minimally appear since the video logic ect will get
- * more complicated once we've finished it... like the video, for stages
- * pages it should only appear as a teaser." Same "compact card reusing
- * custom/qa-entry's own markup/classes, links out to the real thing"
- * pattern render_episode_search_card() already uses for Episode (see
- * episode-display.php) — same reasoning applies even more here: a
- * chapter's full body (video iframe, do_blocks() text, PDF downloads,
- * badges) is heavier than Episode's, and only gets heavier as the
- * video-format logic keeps growing, so none of that belongs mixed into a
- * dense Q&A/Resource/Episode results list. Picks up qa-entry-display's CSS
- * (accent-card look, chevron accordion, focus styles) for free, already
- * enqueued whenever a Learning Hub Search/Browse block is present — see
- * bitesmart_learning_search_enqueue_card_styles() in learning-search.php.
- *
- * Heading is a real, editor-authored Question (_bitesmart_chapter_question,
- * guide-chapter-cpt.php), falling back to the plain chapter title when
- * Question hasn't been filled in — NOT the "Chapter {number}: {title}"
- * phrasing this used before 2026-08-28 (that sprintf() logic was removed
- * entirely, not just bypassed). This is scoped to THIS compact Stage-page
- * teaser only — render_guide_chapter_pooled_card() /
- * bitesmart_render_guide_chapter_row() below (the pooled multi-Guide search
- * page's full chapter accordion) are untouched and still show "Chapter
- * {number}: {title}" via _bitesmart_chapter_number, per Janet's decision to
- * keep that page's rich chapter view as-is. The revealed body shows the
- * chapter's Summary (its own "shown even when collapsed" field — see
- * guide-chapter-cpt.php — reused here as the teaser's own hook text) plus
- * a single "View full chapter page" link to the chapter's real permalink
- * (get_permalink() — same link text as bitesmart_render_guide_chapter_row()'s
- * own self-link, added the same day). No badges, no video/text preview, no
- * PDF download buttons — deliberately minimal, matching Janet's own
- * wording; can always grow later if a lighter status indicator turns out
- * to be wanted.
- *
- * @param array $attributes Block-style attributes ({ chapterId }), matching
- *     the shape every other *_search_card() function in this codebase uses.
- * @return string HTML, or '' if the chapter doesn't resolve to something
- *     publishable.
- */
-function render_guide_chapter_search_card( $attributes ) {
-    $chapter_id = isset( $attributes['chapterId'] ) ? (int) $attributes['chapterId'] : 0;
-    $post       = $chapter_id ? get_post( $chapter_id ) : null;
-
-    if ( ! $post || 'guide_chapter' !== $post->post_type || 'publish' !== $post->post_status ) {
-        return '';
-    }
-
-    $summary  = get_post_meta( $chapter_id, '_bitesmart_chapter_summary', true );
-    $title    = get_the_title( $post );
-    $question = get_post_meta( $chapter_id, '_bitesmart_chapter_question', true );
-    if ( ! $question ) {
-        $question = $title; // no editor-authored Question yet — plain title, not "Chapter N: Title".
-    }
-
-    ob_start();
-    ?>
-    <article class="wp-block-custom-qa-entry">
-        <details class="qa-entry-card-container custom-block-accent-card">
-            <summary class="qa-entry-summary">
-                <h3 class="qa-entry-question custom-block-accent-heading"><?php echo esc_html( $question ); ?></h3>
-                <svg class="qa-entry-chevron" viewBox="0 0 20 20" width="20" height="20" aria-hidden="true" focusable="false">
-                    <polyline points="5 7.5 10 12.5 15 7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline>
-                </svg>
-            </summary>
-
-            <div class="qa-entry-body">
-                <?php if ( $summary ) : ?>
-                    <p><?php echo esc_html( $summary ); ?></p>
-                <?php endif; ?>
-                <a href="<?php echo esc_url( get_permalink( $chapter_id ) ); ?>" class="qa-entry-guide-link block-toggle-btn is-style-outline">
-                    <?php esc_html_e( 'View full chapter page', 'custom-blocks' ); ?>
-                </a>
-            </div>
-        </details>
-    </article>
-    <?php
-    return ob_get_clean();
 }
 
 /**

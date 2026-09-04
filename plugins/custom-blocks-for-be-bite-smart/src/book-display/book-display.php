@@ -107,10 +107,22 @@ function bitesmart_book_cover_gallery( $post ) {
     }
 
     $thumbnail_id = get_post_thumbnail_id( $post );
-    $cover_url    = wp_get_attachment_image_url( $thumbnail_id, 'medium' );
-    if ( ! $cover_url ) {
+    // wp_get_attachment_image_src(), not just _url() — the real intrinsic
+    // width/height (not the CSS-displayed 160px, book-display/style.css)
+    // is what lets the browser reserve the cover's correct final height
+    // before the file itself has downloaded, added 2026-08-31 per Janet
+    // (covers vary in aspect ratio book to book, so a fixed CSS height
+    // isn't an option — this is the standard per-image fix). Matters most
+    // for the Show More/Show Less lazy covers (bitesmart_books_list_make_cover_lazy(),
+    // books-list.php) — width/height are on the tag from the start
+    // regardless of src/data-src, so a card popped open by the toggle
+    // reserves its right-sized space immediately, before its now-hydrated
+    // src has actually loaded.
+    $cover_src = wp_get_attachment_image_src( $thumbnail_id, 'medium' );
+    if ( ! $cover_src ) {
         return ''; // defensively, no resolvable cover URL at all.
     }
+    list( $cover_url, $cover_width, $cover_height ) = $cover_src;
     $cover_alt = get_post_meta( $thumbnail_id, '_wp_attachment_image_alt', true );
     if ( ! $cover_alt ) {
         $cover_alt = get_the_title( $post );
@@ -120,9 +132,11 @@ function bitesmart_book_cover_gallery( $post ) {
     // start" the same as any other slide index instead of special-casing it.
     $slides = array(
         array(
-            'url'   => $cover_url,
-            'large' => bitesmart_book_large_image_url( $thumbnail_id, $cover_url ),
-            'alt'   => $cover_alt,
+            'url'    => $cover_url,
+            'width'  => $cover_width,
+            'height' => $cover_height,
+            'large'  => bitesmart_book_large_image_url( $thumbnail_id, $cover_url ),
+            'alt'    => $cover_alt,
         ),
     );
 
@@ -153,6 +167,8 @@ function bitesmart_book_cover_gallery( $post ) {
             <img
                 class="book-gallery-image"
                 src="<?php echo esc_url( $slides[0]['url'] ); ?>"
+                width="<?php echo esc_attr( $slides[0]['width'] ); ?>"
+                height="<?php echo esc_attr( $slides[0]['height'] ); ?>"
                 alt="<?php echo esc_attr( $slides[0]['alt'] ); ?>"
             />
             <div class="book-gallery-controls"></div>

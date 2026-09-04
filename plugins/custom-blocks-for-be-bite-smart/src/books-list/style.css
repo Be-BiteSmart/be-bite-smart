@@ -1,0 +1,30 @@
+/* ── Show More/Show Less (books-list-expandable) ──
+   Mirrors book-display/style.css's own .book-card-excerpt-expandable rules
+   verbatim (down to the specificity fix noted there) — this project has no
+   single global rule for .expandable-content/.read-more-toggle, each usage
+   scopes its own. REQUIRES the body:not(.block-editor-page) + a real class
+   selector chain, not just .read-more-toggle alone — the theme's own
+   button rule (twentytwentyfive-child/style.css:
+   body:not(.block-editor-page) :is(.block-toggle-btn, ...) { ... }) beats a
+   weaker selector regardless of source order. */
+body:not(.block-editor-page)
+  .wp-block-custom-books-list
+  .expandable-article-block
+  .expandable-content {
+  display: none;
+}
+
+body:not(.block-editor-page)
+  .wp-block-custom-books-list
+  .expandable-article-block
+  .expandable-content.expanded {
+  display: block;
+}
+
+body:not(.block-editor-page)
+  .wp-block-custom-books-list
+  .books-list-expandable
+  .read-more-toggle {
+  display: block;
+  margin: 24px auto 0;
+}

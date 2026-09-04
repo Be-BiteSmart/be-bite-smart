@@ -111,6 +111,7 @@ registerBlockType("custom/read-more", {
             "core/quote",
             "core/image",
             "custom/unfunded-episode",
+            "custom/episode",
           ],
           template: [["core/paragraph", {}]],
         }),

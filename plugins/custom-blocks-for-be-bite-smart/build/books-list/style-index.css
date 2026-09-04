@@ -1,0 +1,1 @@
+body:not(.block-editor-page) .wp-block-custom-books-list .expandable-article-block .expandable-content{display:none}body:not(.block-editor-page) .wp-block-custom-books-list .expandable-article-block .expandable-content.expanded{display:block}body:not(.block-editor-page) .wp-block-custom-books-list .books-list-expandable .read-more-toggle{display:block;margin:24px auto 0}

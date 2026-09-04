@@ -64,10 +64,9 @@
  * Janet asks; the feature's young enough that this was judged not worth
  * the extra code yet).
  *
- * A chapter is also independently discoverable via search: it shows up in
- * its real Stage's `custom/learning-search` feed (via the normal Stage
- * tax_query below) AND, unconditionally, in the pooled multi-Guide search
- * page that reuses that same block — see
+ * A chapter is also independently discoverable via search: unconditionally,
+ * in the pooled multi-Guide search page (custom/learning-search with
+ * `stageSlug` set to the "guide" pseudo-stage) — see
  * bitesmart_build_stage_card_list()'s `'guide' === $stage_slug` branch in
  * learning-search.php. That pooled page does NOT depend on this chapter
  * carrying any particular taxonomy term (an earlier version tried a
@@ -77,7 +76,14 @@
  * real bug Janet hit: a brand-new chapter's Stage was never being
  * "turned on" in the first place, not un-set after the fact. Querying
  * `post_type => 'guide_chapter'` directly instead, with no tagging
- * dependency, can't have that failure mode).
+ * dependency, can't have that failure mode). UNTIL 2026-09-04 a chapter was
+ * ALSO independently discoverable on its own real Stage's
+ * `custom/learning-search` feed (via a Stage tax_query, same as Q&A
+ * Entry/Resource/Episode) — removed that day, Janet's call: chapters will
+ * be linked out from a Q&A Entry instead of appearing directly in that
+ * mixed listing (see [[be-bitesmart-search-status]] in memory); the Stage
+ * taxonomy attachment that made it possible was un-registered from this CPT
+ * the same day, see below.
  */
 
 function bitesmart_register_guide_chapter_post_type() {
@@ -120,17 +126,27 @@ function bitesmart_register_guide_chapter_post_type() {
         'capability_type'     => 'post',
     ) );
 
-    // Each CHAPTER carries its own Stage/Topic tags, independently of its
-    // parent Guide (decided over the simpler "inherit the Guide's Stage"
-    // alternative — see [[be-bitesmart-guide-cpt-plan]] in memory) — same
-    // taxonomies, same attach pattern as Episode/Q&A Entry/Resource. This is
-    // what lets a chapter show up on its own Stage page (alongside Q&A
-    // Entry/Resource/Episode cards) even when other chapters in the same
-    // Guide target a different Stage. Requires stage-taxonomy.php/
-    // topic-taxonomy.php to already be registered; see the load-order note
-    // in each of those files (already satisfied by the main plugin file's
-    // require order).
-    register_taxonomy_for_object_type( 'stage', 'guide_chapter' );
+    // Each CHAPTER used to carry its own Stage tag too, independently of its
+    // parent Guide — same taxonomy, same attach pattern as Episode/Q&A
+    // Entry/Resource, and it's what let a chapter show up on its own real
+    // Stage page (alongside Q&A Entry/Resource/Episode cards). Removed
+    // 2026-09-04 (follow-up to the same-day change below): Janet had
+    // chapters removed from that mixed listing entirely — see
+    // [[be-bitesmart-search-status]] in memory, chapters will be linked out
+    // from a Q&A Entry instead — so the Stage tag had nothing left reading
+    // it. Un-registered outright rather than left attached-but-dead, same
+    // "actually remove it" treatment Coloring Book's own remaining
+    // search-only plumbing got in its later cleanup pass. Any Stage term
+    // relationships already stored on existing chapters are now simply
+    // unreachable via the (gone) Stage panel in this CPT's editor — not
+    // deleted from the DB, just orphaned data with no UI; harmless. Topic
+    // stays attached — same taxonomy, same attach pattern as Episode/Q&A
+    // Entry/Resource, and (like theirs) it currently has zero front-end
+    // effect of its own for anyone; see [[be-bitesmart-search-status]]'s
+    // "Explicitly deferred" note on Topic-based filtering being deferred
+    // site-wide, not specific to chapters. Requires topic-taxonomy.php to
+    // already be registered; see the load-order note in that file (already
+    // satisfied by the main plugin file's require order).
     register_taxonomy_for_object_type( 'topic', 'guide_chapter' );
 
     // Guide Section (added 2026-08-16, guide-section-taxonomy.php) — which
@@ -388,20 +404,24 @@ function bitesmart_register_guide_chapter_meta() {
         'auth_callback'     => 'bitesmart_guide_chapter_meta_auth_callback',
     ) );
 
-    // Real editor-authored question shown as the H3 heading on this
-    // chapter's compact Stage-page search-result card
-    // (render_guide_chapter_search_card(), guide-chapter-display.php) —
-    // added 2026-08-28, same field/reasoning as Episode's
-    // _bitesmart_episode_question (episode-cpt.php): replaces an earlier
-    // "Chapter {number}: {title}" sprintf() heading. Single plain string
-    // (not per-language), since it renders as real visible text and
-    // TranslatePress picks it up normally. Deliberately does NOT affect the
-    // pooled multi-Guide search page's full chapter accordion
+    // Real editor-authored parent-facing question about this chapter. Added
+    // 2026-08-28, same field/reasoning as Episode's _bitesmart_episode_question
+    // (episode-cpt.php), originally to head a compact Stage-page
+    // search-result card — that card
+    // (render_guide_chapter_search_card(), guide-chapter-display.php),
+    // replacing an earlier "Chapter {number}: {title}" sprintf() heading —
+    // was deleted 2026-09-04 along with the real-Stage listing it belonged
+    // to (see [[be-bitesmart-search-status]] in memory), so this field is
+    // currently UNREAD by any front-end code; kept rather than removed,
+    // deliberately, since it's exactly the kind of parent-question content
+    // the still-pending Q&A-Entry-linking follow-up will want per chapter —
+    // 1 of 15 chapters already has one filled in. Single plain string (not
+    // per-language), since it renders as real visible text and
+    // TranslatePress picks it up normally, whenever it's read again. Never
+    // affected the pooled multi-Guide search page's full chapter accordion
     // (render_guide_chapter_pooled_card() -> bitesmart_render_guide_chapter_row(),
-    // guide-chapter-display.php), which still shows "Chapter {number}:
-    // {title}" exactly as before — this field is read only by the compact
-    // Stage-page teaser. Left blank, the render function falls back to the
-    // plain post title (get_the_title()).
+    // guide-chapter-display.php), which shows "Chapter {number}: {title}"
+    // regardless.
     register_post_meta( 'guide_chapter', '_bitesmart_chapter_question', array(
         'type'              => 'string',
         'single'            => true,

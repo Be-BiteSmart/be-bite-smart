@@ -4,7 +4,7 @@
   "name": "custom/qa-entry-fields",
   "title": "Q&A Entry Fields",
   "category": "widgets",
-  "description": "Answer type/text, Link Destination (Resource post or URL), and per-language search synonyms for a Q&A Entry post. Only ever appears via the Q&A Entry post type's locked content template (see qa-entry-cpt.php) — not meant to be inserted anywhere else.",
+  "description": "Answer type/text, Link Destination (Resource post or URL), an optional Guide Chapter link, and per-language search synonyms for a Q&A Entry post. Only ever appears via the Q&A Entry post type's locked content template (see qa-entry-cpt.php) — not meant to be inserted anywhere else.",
   "supports": {
     "inserter": false,
     "html": false,

@@ -42,7 +42,7 @@ This setup has been reviewed at the design level (see the Security Review sectio
 ## Files
 
 - `sync-staging-db.sh` - Main sync script that copies production database and media to staging, excluding Wordfence tables
-- `sync-to-staging-post.sh` - Post-sync cleanup that deactivates Wordfence on staging only, if it's installed there
+- `sync-to-staging-post.sh` - Post-sync cleanup that deactivates Wordfence and purges WP Super Cache on staging (each only if installed there) — runs after both `sync-staging-db.sh` and `import-local-db-to-staging.sh`, since either one can leave WP Super Cache serving stale HTML for content the DB sync just changed
 - `deploy-staging-branch.sh` - Checks out and pulls a specific branch on staging (used for PR deployments; validates branch name against strict allowlist before any git operations)
 - `staging-deploy-wrapper.sh` - **Deprecated** - Wrapper script that combines git pull and sync. Not recommended due to privilege escalation risk. Use separate SSH keys instead (see Step 4).
 - `import-local-db-to-staging.sh` - Imports a developer's local DB dump into staging (local → staging, the reverse direction of `sync-staging-db.sh`). Backs up staging's current DB first. Triggered manually from a developer's machine via `local-only-scripts/push-local-db-to-staging.sh` (outside this repo, not committed) — never by CI. **Important:** the next CI-triggered sync (every PR) will overwrite whatever this pushes with production's DB again — this is for transient manual testing, not a durable state.

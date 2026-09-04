@@ -1,3 +1,4 @@
+import "./style.css";
 import { registerBlockType } from "@wordpress/blocks";
 import { createElement as el, useMemo } from "@wordpress/element";
 import { useBlockProps } from "@wordpress/block-editor";
