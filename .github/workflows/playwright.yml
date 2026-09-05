@@ -34,6 +34,15 @@ jobs:
     environment: staging
     steps:
       - name: Sync production to staging
+        # TEMPORARILY DISABLED (2026-09-05, janet): the /parents + /learn ->
+        # /learning/kids content consolidation only exists in staging's DB
+        # (pushed manually via local-only-scripts/push-local-db-to-staging.sh),
+        # not in production yet. This sync overwrites staging with prod's DB
+        # on every PR, which reverts that content before tests run and 404s
+        # the Learn a11y test. Re-enable once the migration ships to prod.
+        # NOTE: staging is shared across all open PRs — other PRs' test runs
+        # will also see local/stale content while this is off.
+        if: false
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.DREAMHOST_HOST }}
