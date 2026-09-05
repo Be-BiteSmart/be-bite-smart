@@ -19,7 +19,6 @@ export const CRITICAL_PAGES = [
   { path: "/partnerships/", label: "Partnerships" },
   { path: "/contact/", label: "Contact" },
   { path: "/donate/", label: "Donate" },
-  { path: "/parents/", label: "Parents" },
   { path: "/legal/", label: "Legal" },
   { path: "/advisors/", label: "Advisors" },
   { path: "/team/", label: "Team" },
