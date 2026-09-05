@@ -2,7 +2,7 @@
 export const HOME_PATH = "/";
 
 /** WordPress page slug for the Learn / education content page. */
-export const EDUCATION_PATH = "/learn/";
+export const EDUCATION_PATH = "/learning/kids";
 
 /** Research articles page (formerly `/library`). */
 export const EVIDENCE_PATH = "/evidence/";
@@ -19,7 +19,6 @@ export const CRITICAL_PAGES = [
   { path: "/partnerships/", label: "Partnerships" },
   { path: "/contact/", label: "Contact" },
   { path: "/donate/", label: "Donate" },
-  { path: "/parents/", label: "Parents" },
   { path: "/legal/", label: "Legal" },
   { path: "/advisors/", label: "Advisors" },
   { path: "/team/", label: "Team" },
