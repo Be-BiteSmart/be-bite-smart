@@ -2,7 +2,7 @@
 export const HOME_PATH = "/";
 
 /** WordPress page slug for the Learn / education content page. */
-export const EDUCATION_PATH = "/learn/";
+export const EDUCATION_PATH = "/learning/kids";
 
 /** Research articles page (formerly `/library`). */
 export const EVIDENCE_PATH = "/evidence/";
