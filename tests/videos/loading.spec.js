@@ -1,13 +1,19 @@
 import { test, expect } from "@playwright/test";
-import { gotoExpectOk, EDUCATION_PATH, spyOnPlausible } from "../analytics/helpers/plausible.js";
+import {
+  gotoExpectOk,
+  EDUCATION_PATH,
+  VIDEO_QUOTE_PAGES,
+  spyOnPlausible,
+} from "../analytics/helpers/plausible.js";
 import {
   assertVimeoPlayerLoads,
   episodeLangSegments,
   getEpisodeVideoIds,
+  expandAllDevelopedEpisodes,
 } from "./helpers/videos.js";
 
 test.describe("Documentary video (video-quote block)", () => {
-  for (const path of ["/", EDUCATION_PATH]) {
+  for (const { path } of VIDEO_QUOTE_PAGES) {
     test(`${path} play button pill loads Vimeo embed`, async ({ page }, testInfo) => {
       await gotoExpectOk(page, path);
 
@@ -53,101 +59,101 @@ test.describe("Documentary video (video-quote block)", () => {
         forceCaptions: true,
       });
     });
-  }
 
-  test(`${EDUCATION_PATH} switching to Spanish before pressing play uses Spanish captions/audio`, async ({
-    page,
-  }, testInfo) => {
-    await gotoExpectOk(page, EDUCATION_PATH);
-
-    const block = page.locator(".video-quote-block").first();
-    await expect(block, `No video-quote block on ${EDUCATION_PATH}`).toBeVisible();
-
-    // Hindi isn't configured in TranslatePress on this site yet — Spanish is
-    // the only non-English language we can reliably test against for now.
-    const esSegment = block.locator(
-      '.lang-segment[data-lang="es"], .toggle-label[data-lang="es"]',
-    );
-    if ((await esSegment.count()) === 0) {
-      testInfo.skip();
-      return;
-    }
-
-    const vimeoId = await block.getAttribute("data-quote-vimeo-id");
-
-    // Click Spanish BEFORE playing — this is the exact scenario that used to
-    // silently play English with no feedback when Spanish wasn't actually on
-    // the video. Clicking here only updates picker state; assertVimeoPlayerLoads
-    // below is what actually presses play.
-    await esSegment.first().click();
-    await expect(esSegment.first()).toHaveClass(/active/);
-
-    await spyOnPlausible(page);
-
-    await assertVimeoPlayerLoads(page, block, block.locator(".play-button"), {
-      vimeoId,
-      lang: "es",
-      forceCaptions: true,
-    });
-  });
-
-  // Play-button label / transient status coverage (the button now names the
-  // currently-selected language, e.g. "Play (Spanish)", and briefly confirms
-  // a switch with a "Switched to Spanish." status) moved to
-  // language-feedback.spec.js — that per-language label behavior used to be
-  // asserted as a non-goal here before it was deliberately added back in a
-  // different, safer form (site's own language names the target language;
-  // never translates the whole button into that language's script). See
-  // CHANGES.md, "Make video language toggle visibly change something".
-
-  test(`${EDUCATION_PATH} switching language while playing keeps the same video loaded`, async ({
-    page,
-  }, testInfo) => {
-    await gotoExpectOk(page, EDUCATION_PATH);
-
-    const block = page.locator(".video-quote-block").first();
-    await expect(block, `No video-quote block on ${EDUCATION_PATH}`).toBeVisible();
-
-    const segments = episodeLangSegments(block);
-    const segmentCount = await segments.count();
-    if (segmentCount < 2) {
-      testInfo.skip();
-      return;
-    }
-
-    const vimeoId = await block.getAttribute("data-quote-vimeo-id");
-    const siteLang = (await block.getAttribute("data-site-lang")) || "en";
-
-    await spyOnPlausible(page);
-
-    const iframe = await assertVimeoPlayerLoads(
+    test(`${path} switching to Spanish before pressing play uses Spanish captions/audio`, async ({
       page,
-      block,
-      block.locator(".play-button"),
-      { vimeoId, lang: siteLang, forceCaptions: true },
-    );
-    const srcBeforeSwitch = await iframe.getAttribute("src");
+    }, testInfo) => {
+      await gotoExpectOk(page, path);
 
-    const activeLang = await block
-      .locator(".lang-segment.active, .toggle-label.active")
-      .first()
-      .getAttribute("data-lang");
-    const otherSegment = block
-      .locator(
-        `.lang-segment[data-lang]:not([data-lang="${activeLang}"]), .toggle-label[data-lang]:not([data-lang="${activeLang}"])`,
-      )
-      .first();
+      const block = page.locator(".video-quote-block").first();
+      await expect(block, `No video-quote block on ${path}`).toBeVisible();
 
-    await otherSegment.click();
-    await expect(otherSegment).toHaveClass(/active/);
+      // Hindi isn't configured in TranslatePress on this site yet — Spanish is
+      // the only non-English language we can reliably test against for now.
+      const esSegment = block.locator(
+        '.lang-segment[data-lang="es"], .toggle-label[data-lang="es"]',
+      );
+      if ((await esSegment.count()) === 0) {
+        testInfo.skip();
+        return;
+      }
 
-    // video-quote switches subtitle/audio tracks live via the Vimeo Player
-    // SDK — unlike episode-card, it never loads a different video. The
-    // iframe's src attribute (and the iframe element itself) must stay
-    // exactly as it was; the SDK calls don't touch it at all.
-    await expect(iframe).toHaveAttribute("src", srcBeforeSwitch);
-    await expect(block.locator(".video-player iframe")).toHaveCount(1);
-  });
+      const vimeoId = await block.getAttribute("data-quote-vimeo-id");
+
+      // Click Spanish BEFORE playing — this is the exact scenario that used to
+      // silently play English with no feedback when Spanish wasn't actually on
+      // the video. Clicking here only updates picker state; assertVimeoPlayerLoads
+      // below is what actually presses play.
+      await esSegment.first().click();
+      await expect(esSegment.first()).toHaveClass(/active/);
+
+      await spyOnPlausible(page);
+
+      await assertVimeoPlayerLoads(page, block, block.locator(".play-button"), {
+        vimeoId,
+        lang: "es",
+        forceCaptions: true,
+      });
+    });
+
+    // Play-button label / transient status coverage (the button now names the
+    // currently-selected language, e.g. "Play (Spanish)", and briefly confirms
+    // a switch with a "Switched to Spanish." status) moved to
+    // language-feedback.spec.js — that per-language label behavior used to be
+    // asserted as a non-goal here before it was deliberately added back in a
+    // different, safer form (site's own language names the target language;
+    // never translates the whole button into that language's script). See
+    // CHANGES.md, "Make video language toggle visibly change something".
+
+    test(`${path} switching language while playing keeps the same video loaded`, async ({
+      page,
+    }, testInfo) => {
+      await gotoExpectOk(page, path);
+
+      const block = page.locator(".video-quote-block").first();
+      await expect(block, `No video-quote block on ${path}`).toBeVisible();
+
+      const segments = episodeLangSegments(block);
+      const segmentCount = await segments.count();
+      if (segmentCount < 2) {
+        testInfo.skip();
+        return;
+      }
+
+      const vimeoId = await block.getAttribute("data-quote-vimeo-id");
+      const siteLang = (await block.getAttribute("data-site-lang")) || "en";
+
+      await spyOnPlausible(page);
+
+      const iframe = await assertVimeoPlayerLoads(
+        page,
+        block,
+        block.locator(".play-button"),
+        { vimeoId, lang: siteLang, forceCaptions: true },
+      );
+      const srcBeforeSwitch = await iframe.getAttribute("src");
+
+      const activeLang = await block
+        .locator(".lang-segment.active, .toggle-label.active")
+        .first()
+        .getAttribute("data-lang");
+      const otherSegment = block
+        .locator(
+          `.lang-segment[data-lang]:not([data-lang="${activeLang}"]), .toggle-label[data-lang]:not([data-lang="${activeLang}"])`,
+        )
+        .first();
+
+      await otherSegment.click();
+      await expect(otherSegment).toHaveClass(/active/);
+
+      // video-quote switches subtitle/audio tracks live via the Vimeo Player
+      // SDK — unlike episode-card, it never loads a different video. The
+      // iframe's src attribute (and the iframe element itself) must stay
+      // exactly as it was; the SDK calls don't touch it at all.
+      await expect(iframe).toHaveAttribute("src", srcBeforeSwitch);
+      await expect(block.locator(".video-player iframe")).toHaveCount(1);
+    });
+  }
 });
 
 test.describe("Episode videos (education page)", () => {
@@ -157,7 +163,7 @@ test.describe("Episode videos (education page)", () => {
     test.setTimeout(180_000);
     await gotoExpectOk(page, EDUCATION_PATH);
 
-    const episodes = page.locator("#developed-episodes article");
+    const episodes = page.locator("#developed-episodes .wp-block-custom-episode");
     const episodeCount = await episodes.count();
     expect(
       episodeCount,
@@ -197,7 +203,10 @@ test.describe("Episode videos (education page)", () => {
         ).toBeTruthy();
 
         await gotoExpectOk(page, EDUCATION_PATH);
-        const episode = page.locator("#developed-episodes article").nth(plan.index);
+        // Every reload starts collapsed again — episodes past the first are
+        // hidden behind Show More until this runs.
+        await expandAllDevelopedEpisodes(page);
+        const episode = page.locator("#developed-episodes .wp-block-custom-episode").nth(plan.index);
         const segment = episode.locator(
           `.lang-segment[data-lang='${lang}'], .toggle-label[data-lang='${lang}']`,
         );
@@ -237,7 +246,7 @@ test.describe("Episode videos (education page)", () => {
   }) => {
     await gotoExpectOk(page, EDUCATION_PATH);
 
-    const episode = page.locator("#developed-episodes article").first();
+    const episode = page.locator("#developed-episodes .wp-block-custom-episode").first();
     const videoIds = await getEpisodeVideoIds(episode);
     const defaultLang =
       (await episode

@@ -62,6 +62,23 @@ export async function assertVimeoPlayerLoads(page, container, trigger, {
   return iframe;
 }
 
+/**
+ * Reveals every developed episode collapsed behind custom/read-more's Show
+ * More toggle. #developed-episodes only renders the first episode directly;
+ * the rest sit inside .expandable-content (display:none) until the toggle
+ * is clicked — and every fresh page load/reload starts collapsed again, so
+ * any test that interacts with an episode past the first needs this first
+ * or the click just times out waiting for a hidden element to become visible.
+ */
+export async function expandAllDevelopedEpisodes(page) {
+  const toggles = page.locator(
+    '#developed-episodes .read-more-toggle[data-expanded="false"]',
+  );
+  while ((await toggles.count()) > 0) {
+    await toggles.first().click();
+  }
+}
+
 export function episodeLangSegments(episode) {
   return episode.locator(
     ".lang-segment[data-lang], .toggle-label[data-lang]",

@@ -1,6 +1,8 @@
 import { expect } from "@playwright/test";
 export {
   EDUCATION_PATH,
+  LEARNING_HUB_PATH,
+  VIDEO_QUOTE_PAGES,
   EVIDENCE_PATH,
   HOME_PATH,
   CRITICAL_PAGES,

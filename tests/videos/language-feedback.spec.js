@@ -1,5 +1,10 @@
 import { test, expect } from "@playwright/test";
-import { gotoExpectOk, EDUCATION_PATH, spyOnPlausible } from "../analytics/helpers/plausible.js";
+import {
+  gotoExpectOk,
+  EDUCATION_PATH,
+  VIDEO_QUOTE_PAGES,
+  spyOnPlausible,
+} from "../analytics/helpers/plausible.js";
 import {
   assertVimeoPlayerLoads,
   episodeLangSegments,
@@ -40,101 +45,109 @@ function activeLangOf(container) {
     .getAttribute("data-lang");
 }
 
-test.describe("Documentary video (video-quote block)", () => {
-  test(`${EDUCATION_PATH} play button names the site's default language on load`, async ({
-    page,
-  }, testInfo) => {
-    await gotoExpectOk(page, EDUCATION_PATH);
+for (const { path, label } of VIDEO_QUOTE_PAGES) {
+  test.describe(`Documentary video (video-quote block) — ${label} (${path})`, () => {
+    test(`play button names the site's default language on load`, async ({
+      page,
+    }, testInfo) => {
+      await gotoExpectOk(page, path);
 
-    const block = page.locator(".video-quote-block").first();
-    await expect(block, `No video-quote block on ${EDUCATION_PATH}`).toBeVisible();
+      const block = page.locator(".video-quote-block").first();
+      await expect(block, `No video-quote block on ${path}`).toBeVisible();
 
-    if ((await episodeLangSegments(block).count()) < 2) {
-      testInfo.skip();
-      return;
-    }
+      if ((await episodeLangSegments(block).count()) < 2) {
+        testInfo.skip();
+        return;
+      }
 
-    const siteLang = (await block.getAttribute("data-site-lang")) || "en";
-    const label = block.locator(".play-button .play-button-label");
-    await expect(label).toHaveText(await expectedPlayButtonLabel(page, siteLang));
-  });
-
-  test(`${EDUCATION_PATH} picking a different language before playing updates the play button and shows a status`, async ({
-    page,
-  }, testInfo) => {
-    await gotoExpectOk(page, EDUCATION_PATH);
-
-    const block = page.locator(".video-quote-block").first();
-    await expect(block, `No video-quote block on ${EDUCATION_PATH}`).toBeVisible();
-
-    if ((await episodeLangSegments(block).count()) < 2) {
-      testInfo.skip();
-      return;
-    }
-
-    const activeLang = await activeLangOf(block);
-    const segment = otherLangSegment(block, activeLang);
-    const otherLang = await segment.getAttribute("data-lang");
-
-    const label = block.locator(".play-button .play-button-label");
-    const status = block.locator(".lang-change-status");
-
-    // No status before any interaction — only a genuine change shows it.
-    await expect(status).not.toHaveClass(/is-visible/);
-
-    await segment.click();
-    await expect(segment).toHaveClass(/active/);
-
-    await expect(label).toHaveText(await expectedPlayButtonLabel(page, otherLang));
-    await expect(status).toHaveClass(/is-visible/);
-    await expect(status).toHaveText(await expectedLangChangeStatus(page, otherLang));
-
-    // Fades back out on its own (~2.5s) without needing another click — the
-    // label is not transient and must still read the newly-picked language.
-    await expect(status).not.toHaveClass(/is-visible/, { timeout: 4000 });
-    await expect(label).toHaveText(await expectedPlayButtonLabel(page, otherLang));
-  });
-
-  test(`${EDUCATION_PATH} a fully successful live track switch while playing also shows the status, never alongside the track-note`, async ({
-    page,
-  }, testInfo) => {
-    await gotoExpectOk(page, EDUCATION_PATH);
-
-    const block = page.locator(".video-quote-block").first();
-    await expect(block, `No video-quote block on ${EDUCATION_PATH}`).toBeVisible();
-
-    if ((await episodeLangSegments(block).count()) < 2) {
-      testInfo.skip();
-      return;
-    }
-
-    const vimeoId = await block.getAttribute("data-quote-vimeo-id");
-    const siteLang = (await block.getAttribute("data-site-lang")) || "en";
-
-    await spyOnPlausible(page);
-    await assertVimeoPlayerLoads(page, block, block.locator(".play-button"), {
-      vimeoId,
-      lang: siteLang,
-      forceCaptions: true,
+      const siteLang = (await block.getAttribute("data-site-lang")) || "en";
+      const buttonLabel = block.locator(".play-button .play-button-label");
+      await expect(buttonLabel).toHaveText(
+        await expectedPlayButtonLabel(page, siteLang),
+      );
     });
 
-    const activeLang = await activeLangOf(block);
-    const segment = otherLangSegment(block, activeLang);
-    const otherLang = await segment.getAttribute("data-lang");
+    test(`picking a different language before playing updates the play button and shows a status`, async ({
+      page,
+    }, testInfo) => {
+      await gotoExpectOk(page, path);
 
-    const status = block.locator(".lang-change-status");
-    const trackNote = block.locator(".video-quote-track-note");
+      const block = page.locator(".video-quote-block").first();
+      await expect(block, `No video-quote block on ${path}`).toBeVisible();
 
-    await segment.click();
+      if ((await episodeLangSegments(block).count()) < 2) {
+        testInfo.skip();
+        return;
+      }
 
-    // Only ever one of the two is visible at a time — a fully successful
-    // switch shows the status, never the track-note (that's reserved for a
-    // failed/partial switch — see showTrackNote()'s call sites).
-    await expect(status).toHaveClass(/is-visible/);
-    await expect(status).toHaveText(await expectedLangChangeStatus(page, otherLang));
-    await expect(trackNote).not.toHaveClass(/is-visible/);
+      const activeLang = await activeLangOf(block);
+      const segment = otherLangSegment(block, activeLang);
+      const otherLang = await segment.getAttribute("data-lang");
+
+      const buttonLabel = block.locator(".play-button .play-button-label");
+      const status = block.locator(".lang-change-status");
+
+      // No status before any interaction — only a genuine change shows it.
+      await expect(status).not.toHaveClass(/is-visible/);
+
+      await segment.click();
+      await expect(segment).toHaveClass(/active/);
+
+      await expect(buttonLabel).toHaveText(
+        await expectedPlayButtonLabel(page, otherLang),
+      );
+      await expect(status).toHaveClass(/is-visible/);
+      await expect(status).toHaveText(await expectedLangChangeStatus(page, otherLang));
+
+      // Fades back out on its own (~2.5s) without needing another click — the
+      // label is not transient and must still read the newly-picked language.
+      await expect(status).not.toHaveClass(/is-visible/, { timeout: 4000 });
+      await expect(buttonLabel).toHaveText(
+        await expectedPlayButtonLabel(page, otherLang),
+      );
+    });
+
+    test(`a fully successful live track switch while playing also shows the status, never alongside the track-note`, async ({
+      page,
+    }, testInfo) => {
+      await gotoExpectOk(page, path);
+
+      const block = page.locator(".video-quote-block").first();
+      await expect(block, `No video-quote block on ${path}`).toBeVisible();
+
+      if ((await episodeLangSegments(block).count()) < 2) {
+        testInfo.skip();
+        return;
+      }
+
+      const vimeoId = await block.getAttribute("data-quote-vimeo-id");
+      const siteLang = (await block.getAttribute("data-site-lang")) || "en";
+
+      await spyOnPlausible(page);
+      await assertVimeoPlayerLoads(page, block, block.locator(".play-button"), {
+        vimeoId,
+        lang: siteLang,
+        forceCaptions: true,
+      });
+
+      const activeLang = await activeLangOf(block);
+      const segment = otherLangSegment(block, activeLang);
+      const otherLang = await segment.getAttribute("data-lang");
+
+      const status = block.locator(".lang-change-status");
+      const trackNote = block.locator(".video-quote-track-note");
+
+      await segment.click();
+
+      // Only ever one of the two is visible at a time — a fully successful
+      // switch shows the status, never the track-note (that's reserved for a
+      // failed/partial switch — see showTrackNote()'s call sites).
+      await expect(status).toHaveClass(/is-visible/);
+      await expect(status).toHaveText(await expectedLangChangeStatus(page, otherLang));
+      await expect(trackNote).not.toHaveClass(/is-visible/);
+    });
   });
-});
+}
 
 test.describe("Episode videos (education page)", () => {
   /**

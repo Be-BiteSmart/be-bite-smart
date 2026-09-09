@@ -4,8 +4,21 @@ export const HOME_PATH = "/";
 /** WordPress page slug for the Learn / education content page. */
 export const EDUCATION_PATH = "/learning/kids";
 
+/** The Learning hub landing page (content-hub-plan's "/learning/"). */
+export const LEARNING_HUB_PATH = "/learning/";
+
 /** Research articles page (formerly `/library`). */
 export const EVIDENCE_PATH = "/evidence/";
+
+/**
+ * Pages where the documentary "video-quote" block currently lives —
+ * moved off EDUCATION_PATH (2026-09-09) onto Home and the Learning hub.
+ * Update here (not per-test) if it moves again.
+ */
+export const VIDEO_QUOTE_PAGES = [
+  { path: HOME_PATH, label: "Home" },
+  { path: LEARNING_HUB_PATH, label: "Learning hub" },
+];
 
 /**
  * Critical site routes — single source of truth for smoke and E2E tests.
@@ -78,11 +91,6 @@ export const BLOCK_PRESENCE_PAGES = [
     label: "Learn",
     checks: [
       {
-        name: "documentary video block",
-        selector: ".video-quote-block",
-        minCount: 1,
-      },
-      {
         // Scoped to the episode card itself (episode-display.php's root
         // element), not the generic `article` tag — custom/read-more also
         // renders an `<article class="expandable-article-block">` wrapper
@@ -98,6 +106,19 @@ export const BLOCK_PRESENCE_PAGES = [
       },
     ],
   },
+  // The documentary video-quote block lives on Home and the Learning hub
+  // now, not on EDUCATION_PATH — see VIDEO_QUOTE_PAGES.
+  ...VIDEO_QUOTE_PAGES.map(({ path, label }) => ({
+    path,
+    label,
+    checks: [
+      {
+        name: "documentary video block",
+        selector: ".video-quote-block",
+        minCount: 1,
+      },
+    ],
+  })),
   {
     path: EVIDENCE_PATH,
     label: "Evidence",
