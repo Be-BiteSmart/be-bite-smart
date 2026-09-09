@@ -2,6 +2,7 @@ import { expect } from "@playwright/test";
 export {
   EDUCATION_PATH,
   LEARNING_HUB_PATH,
+  DOWNLOADS_PATH,
   VIDEO_QUOTE_PAGES,
   EVIDENCE_PATH,
   HOME_PATH,
@@ -172,7 +173,12 @@ export const downloadCardBlocks = {
   },
   coloring: {
     section: "#download-coloring-books",
-    block: ".educational-coloring-book-download-block",
+    // NOT .educational-coloring-book-download-block — that class doesn't
+    // exist in the actual markup (confirmed 2026-09-09 against real
+    // content). Coloring-book rows render as
+    // <section class="download-card-block coloring-book-card">, reusing
+    // the generic download-card-block wrapper with this modifier.
+    block: ".coloring-book-card",
     downloadSelector: ".download-card-pdf-download",
     downloadEvent: (lang) => `coloring-books-downloaded-${lang}`,
     pdfToggleSelector:

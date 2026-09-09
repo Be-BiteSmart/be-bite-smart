@@ -9,6 +9,7 @@ import {
   gotoExpectOk,
   EDUCATION_PATH,
   LEARNING_HUB_PATH,
+  DOWNLOADS_PATH,
   EVIDENCE_PATH,
   langCodeToAnalytics,
   langToEventSuffix,
@@ -88,7 +89,7 @@ test("Download video fires category-downloaded for all episodes in both language
   page,
 }, testInfo) => {
   test.setTimeout(60000);
-  await gotoExpectOk(page, EDUCATION_PATH);
+  await gotoExpectOk(page, DOWNLOADS_PATH);
 
   const { section, block, downloadEvent } = downloadCardBlocks.video;
   const sections = downloadCardSections(page, { section, block });
@@ -136,7 +137,7 @@ test("Download video fires category-downloaded for all episodes in both language
 test("Coloring Book PDF toggle fires coloring-books-viewed for all available episodes", async ({
   page,
 }, testInfo) => {
-  await gotoExpectOk(page, EDUCATION_PATH);
+  await gotoExpectOk(page, DOWNLOADS_PATH);
 
   const { section, block } = downloadCardBlocks.coloring;
   const sections = downloadCardSections(page, { section, block });
@@ -198,7 +199,7 @@ test("Coloring Book PDF toggle fires coloring-books-viewed for all available epi
 test("Coloring Book Download fires coloring-books-downloaded for available PDFs", async ({
   page,
 }, testInfo) => {
-  await gotoExpectOk(page, EDUCATION_PATH);
+  await gotoExpectOk(page, DOWNLOADS_PATH);
 
   const { section, block, downloadSelector, downloadEvent } =
     downloadCardBlocks.coloring;
@@ -250,10 +251,10 @@ test("Coloring Book Download fires coloring-books-downloaded for available PDFs"
 
 // *************** PDF NOT FIRING AGAIN ON CLOSE **************
 
-test("Education page PDF toggle does not fire again when closing", async ({
+test("Downloads page PDF toggle does not fire again when closing", async ({
   page,
 }, testInfo) => {
-  await gotoExpectOk(page, EDUCATION_PATH);
+  await gotoExpectOk(page, DOWNLOADS_PATH);
 
   const btn = await firstColoringViewPdfButton(page);
   await btn.click();

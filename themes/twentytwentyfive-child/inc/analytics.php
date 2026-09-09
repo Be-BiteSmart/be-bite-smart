@@ -164,14 +164,17 @@ function track_user_interactions() {
         }
 
         // Optional editor field PDF tracking slug → data-track on the block wrapper (save.js / pdf-toggle).
+        // NOT .educational-coloring-book-download-block — that class doesn't
+        // exist in the actual markup; coloring-book rows are
+        // .download-card-block.coloring-book-card (confirmed 2026-09-09).
         function pdfTrackingSlug(btn) {
-            const container = btn.closest('.educational-content-download-block, .educational-coloring-book-download-block, .pdf-toggle-block');
+            const container = btn.closest('.educational-content-download-block, .coloring-book-card, .pdf-toggle-block');
             return container?.dataset?.track || null;
         }
 
         function pdfViewCategory(btn) {
-            const container = btn.closest('.educational-coloring-book-download-block, .educational-content-download-block, .pdf-toggle-block');
-            if (container?.classList.contains('educational-coloring-book-download-block')) {
+            const container = btn.closest('.coloring-book-card, .educational-content-download-block, .pdf-toggle-block');
+            if (container?.classList.contains('coloring-book-card')) {
                 return 'coloring-books';
             }
             return null;
@@ -200,7 +203,7 @@ function track_user_interactions() {
             if (slug) {
                 return eventName(slug, 'downloaded', lang);
             }
-            if (link.closest('.educational-coloring-book-download-block')) {
+            if (link.closest('.coloring-book-card')) {
                 return eventName('coloring-books', 'downloaded', lang);
             }
             if (link.closest('.educational-content-download-block')) {
@@ -215,7 +218,7 @@ function track_user_interactions() {
     // Each block fires one Plausible custom event (kebab-case, no props).
     // Language variants append -english or -spanish; articles and the documentary omit language.
 
-    // Mini-documentary play buttons (home + education + Learning hub pages) — no language variant
+    // Mini-documentary play buttons (home + Learning hub pages) — no language variant
     $track_documentary = "
         document.querySelectorAll('.video-quote-block .play-button').forEach(function(btn) {
             btn.addEventListener('click', function() {
@@ -285,6 +288,21 @@ function track_user_interactions() {
     <?php if ( is_page( 'kids' ) ) : ?>
         // ── Education page ─────────────────────────────────────────────
 
+        // Episode video plays — getLang reads the active EN/ES toggle on the card
+        document.querySelectorAll('.video-episode-block .play-button').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                const lang = getLang(btn);
+                if (!lang) return;
+                track(eventName('episodes', 'watched', lang));
+            });
+        });
+
+
+    <?php elseif ( is_page( 'downloads' ) ) : ?>
+        // ── Downloads page ───────────────────────────────────────────
+        // Download-card / episode-video-download / coloring-book content
+        // moved here from the Education page (2026-09-09).
+
         // Episode video file downloads (educational-video-download block only)
         document.querySelectorAll('.educational-video-download-block .ecd-toggle--download').forEach(function(btn) {
             btn.addEventListener('click', function(event) {
@@ -303,19 +321,13 @@ function track_user_interactions() {
             });
         });
 
-        // Episode video plays — getLang reads the active EN/ES toggle on the card
-        document.querySelectorAll('.video-episode-block .play-button').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                const lang = getLang(btn);
-                if (!lang) return;
-                track(eventName('episodes', 'watched', lang));
-            });
-        });
-
         // PDF viewer opens (coloring-book + educational-content blocks; not video download rows)
         // Uses capture:true so this handler reads display state before toggle.js touches anything.
+        // NOT .educational-coloring-book-download-block — that class doesn't
+        // exist in the actual markup; coloring-book rows are
+        // .download-card-block.coloring-book-card (confirmed 2026-09-09).
         document.querySelectorAll(
-            '.educational-coloring-book-download-block .ecd-toggle:not(.ecd-toggle--download):not(.ecd-toggle--coming-soon), ' +
+            '.coloring-book-card .ecd-toggle:not(.ecd-toggle--download):not(.ecd-toggle--coming-soon), ' +
             '.educational-content-download-block .ecd-toggle:not(.ecd-toggle--download):not(.ecd-toggle--coming-soon)'
         ).forEach(function(btn) {
             btn.addEventListener('click', function() {
@@ -327,8 +339,6 @@ function track_user_interactions() {
                 trackPdfView(btn);
             }, { capture: true }); // capture:true — runs before toggle.js which resets data-expanded on click
         });
-
-        <?php echo $track_documentary; ?>
 
 
     <?php elseif ( is_page( ['news-media', 'legal'] ) ) : ?>

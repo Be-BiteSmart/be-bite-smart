@@ -7,6 +7,9 @@ export const EDUCATION_PATH = "/learning/kids";
 /** The Learning hub landing page (content-hub-plan's "/learning/"). */
 export const LEARNING_HUB_PATH = "/learning/";
 
+/** Downloadable Educational Resources page — download-card / PDF / episode-download content. */
+export const DOWNLOADS_PATH = "/learning/downloads";
+
 /** Research articles page (formerly `/library`). */
 export const EVIDENCE_PATH = "/evidence/";
 
@@ -26,7 +29,9 @@ export const VIDEO_QUOTE_PAGES = [
  */
 export const CRITICAL_PAGES = [
   { path: HOME_PATH, label: "Home" },
+  { path: LEARNING_HUB_PATH, label: "Learning hub" },
   { path: EDUCATION_PATH, label: "Learn" },
+  { path: DOWNLOADS_PATH, label: "Downloads" },
   { path: EVIDENCE_PATH, label: "Evidence" },
   { path: "/news-media/", label: "News & media" },
   { path: "/partnerships/", label: "Partnerships" },
@@ -99,11 +104,6 @@ export const BLOCK_PRESENCE_PAGES = [
         selector: "#developed-episodes .wp-block-custom-episode",
         minCount: 1,
       },
-      {
-        name: "download cards",
-        selector: ".download-card-block",
-        minCount: 1,
-      },
     ],
   },
   // The documentary video-quote block lives on Home and the Learning hub
@@ -119,6 +119,29 @@ export const BLOCK_PRESENCE_PAGES = [
       },
     ],
   })),
+  {
+    // Download cards, episode video downloads, and coloring-book PDFs all
+    // moved here from EDUCATION_PATH (2026-09-09) — see DOWNLOADS_PATH.
+    path: DOWNLOADS_PATH,
+    label: "Downloads",
+    checks: [
+      {
+        name: "download cards",
+        selector: ".download-card-block",
+        minCount: 1,
+      },
+      {
+        name: "episode video downloads section",
+        selector: "#download-videos",
+        minCount: 1,
+      },
+      {
+        name: "coloring book downloads section",
+        selector: "#download-coloring-books",
+        minCount: 1,
+      },
+    ],
+  },
   {
     path: EVIDENCE_PATH,
     label: "Evidence",
