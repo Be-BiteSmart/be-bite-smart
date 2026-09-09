@@ -215,7 +215,7 @@ function track_user_interactions() {
     // Each block fires one Plausible custom event (kebab-case, no props).
     // Language variants append -english or -spanish; articles and the documentary omit language.
 
-    // Mini-documentary play buttons (home + education pages) — no language variant
+    // Mini-documentary play buttons (home + education + Learning hub pages) — no language variant
     $track_documentary = "
         document.querySelectorAll('.video-quote-block .play-button').forEach(function(btn) {
             btn.addEventListener('click', function() {
@@ -282,7 +282,7 @@ function track_user_interactions() {
         trackThenNavigate(event, link, eventName('language', 'switched', lang));
     });
 
-    <?php if ( is_page( 'learn' ) ) : ?>
+    <?php if ( is_page( 'kids' ) ) : ?>
         // ── Education page ─────────────────────────────────────────────
 
         // Episode video file downloads (educational-video-download block only)
@@ -349,6 +349,12 @@ function track_user_interactions() {
         // ── Evidence / research articles page ──────────────────────────
 
         <?php echo $track_article_clicks; ?>
+
+
+    <?php elseif ( is_page( 'learning' ) ) : ?>
+        // ── Learning hub landing page ────────────────────────────────
+
+        <?php echo $track_documentary; ?>
 
 
     <?php elseif ( is_front_page() ) : ?>
