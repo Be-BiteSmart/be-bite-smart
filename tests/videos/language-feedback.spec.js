@@ -138,7 +138,7 @@ test.describe("Documentary video (video-quote block)", () => {
 
 test.describe("Episode videos (education page)", () => {
   /**
-   * The episode cards on /learn/ may still be the legacy custom/episode-card
+   * The episode cards on /learning/kids/ (formerly /learn/) may still be the legacy custom/episode-card
    * block's saved HTML from before this feature (or even the earlier "merge
    * Watch Now buttons" refactor) existed — that static markup won't gain
    * .play-button-label until the post is re-saved in the editor. Skip

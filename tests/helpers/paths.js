@@ -152,4 +152,4 @@ export const BLOCK_PRESENCE_PAGES = [
 ];
 
 /** Page slugs used in REST API smoke tests. */
-export const REST_PAGE_SLUGS = ["learn", "evidence", "contact"];
+export const REST_PAGE_SLUGS = ["kids", "evidence", "contact"];
