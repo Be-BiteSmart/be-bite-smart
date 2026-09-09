@@ -145,11 +145,19 @@ test.describe("Episode videos (education page)", () => {
    * cleanly rather than fail on stale content; the CPT-backed custom/episode
    * block (episode-display.php) always renders fresh, so these activate
    * automatically once content is migrated/re-saved.
+   *
+   * Only the first developed episode renders directly under
+   * #developed-episodes — the rest are wrapped in a custom/read-more block
+   * (collapsed by default, `display:none` until its toggle is clicked), so
+   * `.first()` here always exercises the one episode guaranteed visible on
+   * load without needing to open Show More first.
    */
   async function firstUpToDateEpisode(page, testInfo) {
     await gotoExpectOk(page, EDUCATION_PATH);
 
-    const episode = page.locator("#developed-episodes article").first();
+    const episode = page
+      .locator("#developed-episodes .wp-block-custom-episode")
+      .first();
     await expect(episode, "No episode cards in #developed-episodes").toBeVisible();
 
     if ((await episode.locator(".play-button-label").count()) === 0) {
@@ -244,5 +252,36 @@ test.describe("Episode videos (education page)", () => {
     await expect(label).toHaveText(await expectedPlayButtonLabel(page, otherLang));
     await expect(status).toHaveClass(/is-visible/);
     await expect(status).toHaveText(await expectedLangChangeStatus(page, otherLang));
+  });
+
+  test("only the first developed episode is visible by default; Show More reveals the rest", async ({
+    page,
+  }) => {
+    await gotoExpectOk(page, EDUCATION_PATH);
+
+    const episodes = page.locator("#developed-episodes .wp-block-custom-episode");
+    const episodeCount = await episodes.count();
+    expect(episodeCount, "No episode cards in #developed-episodes").toBeGreaterThan(0);
+    await expect(episodes.first()).toBeVisible();
+
+    if (episodeCount < 2) {
+      // Nothing wrapped in a read-more yet — nothing further to check.
+      return;
+    }
+
+    // The rest live inside custom/read-more's .expandable-article-block,
+    // collapsed (display:none) until its toggle is clicked.
+    const toggle = page.locator("#developed-episodes .read-more-toggle");
+    await expect(
+      toggle,
+      "Expected a Show More toggle wrapping the remaining episodes",
+    ).toBeVisible();
+    await expect(toggle).toHaveAttribute("data-expanded", "false");
+    await expect(episodes.nth(1)).toBeHidden();
+
+    await toggle.click();
+
+    await expect(toggle).toHaveAttribute("data-expanded", "true");
+    await expect(episodes.nth(1)).toBeVisible();
   });
 });

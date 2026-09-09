@@ -83,8 +83,12 @@ export const BLOCK_PRESENCE_PAGES = [
         minCount: 1,
       },
       {
+        // Scoped to the episode card itself (episode-display.php's root
+        // element), not the generic `article` tag — custom/read-more also
+        // renders an `<article class="expandable-article-block">` wrapper
+        // around the later episodes, which would otherwise double-count.
         name: "developed episode cards",
-        selector: "#developed-episodes article",
+        selector: "#developed-episodes .wp-block-custom-episode",
         minCount: 1,
       },
       {
