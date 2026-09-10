@@ -57,7 +57,16 @@ body:not(.block-editor-page) .guide-chapter-container.custom-block-card {
   margin-bottom: 4px;
 }
 
+/* font-size explicit, not just left to inherit — a plain <span> inside
+   <summary> never picks up the theme's normal paragraph size the way a
+   <p> inside .entry-content does (measured: 16px inherited here vs. 17.7px
+   for an ordinary theme paragraph), so without this the chapter title read
+   smaller than normal body text with nothing in this file visibly
+   "shrinking" it. Same preset token this codebase already uses elsewhere
+   for exactly this ("normal reading size," not the small/muted metadata
+   look) — see .capitalized-and-colored, .bright-chip (shared-block-styles.css). */
 .guide-chapter-title {
+  font-size: var(--wp--preset--font-size--medium);
   font-weight: 500;
   margin: 0;
 }
@@ -173,9 +182,15 @@ body:not(.block-editor-page) .guide-chapter-container.custom-block-card {
   display: none;
 }
 
+/* font-size was 0.9em (per Janet, 2026-09-09: read too small compared to
+   the rest of the site) — now the same "normal reading size" preset token
+   .guide-chapter-title uses above, not a muted/small-metadata look. This
+   is chapter preview text a visitor scans before deciding to open a
+   chapter, not secondary metadata like the byline-style text elsewhere in
+   this file that's deliberately small (e.g. .guide-chapter-video-duration). */
 .guide-chapter-summary-text {
   display: block;
-  font-size: 0.9em;
+  font-size: var(--wp--preset--font-size--medium);
   color: var(--wp--preset--color--contrast-2, #6b6b6b);
 }
 
@@ -528,10 +543,14 @@ body:not(.block-editor-page) .guide-chapter-download-buttons .block-toggle-btn {
 
 /* Section grouping inside the ToC — plain label, not a link (mirrors the
    real list's own .guide-section-heading, which likewise isn't
-   interactive). */
+   interactive). font-size: same "normal reading size" preset used
+   throughout this fix (was 0.85em, per Janet, 2026-09-09: too small) —
+   matches this codebase's OWN convention for an uppercase/letter-spaced
+   kicker-style label (.capitalized-and-colored, shared-block-styles.css),
+   which is likewise sized at the medium preset, not shrunk further. */
 .guide-toc-section-heading {
   margin-top: 14px;
-  font-size: 0.85em;
+  font-size: var(--wp--preset--font-size--medium);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.03em;
@@ -567,8 +586,11 @@ body:not(.block-editor-page) .guide-chapter-download-buttons .block-toggle-btn {
   flex-shrink: 0;
 }
 
+/* Was 0.95em (per Janet, 2026-09-09: too small) — same "normal reading
+   size" preset as .guide-chapter-title above, so a chapter's title reads
+   the same size whether scanned via the ToC or the full accordion list. */
 .guide-toc-chapter-title {
-  font-size: 0.95em;
+  font-size: var(--wp--preset--font-size--medium);
 }
 
 /* Chapter-page-only breadcrumb (bitesmart_render_guide_chapter_single()),
