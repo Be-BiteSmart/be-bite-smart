@@ -176,8 +176,16 @@ function bitesmart_render_guide_single( $guide_id ) {
                 if ( $section_name !== $current_section ) :
                     $current_section = $section_name;
                     if ( $section_name ) :
-                        $chapter_rows .= '<h2 class="guide-section-heading">' . esc_html( $section_name ) . '</h2>';
-                        $toc_items    .= '<li class="guide-toc-section-heading">' . esc_html( $section_name ) . '</li>';
+                        // id = sanitize_title() of the Section name — matches
+                        // the guide_section term's own slug exactly (verified:
+                        // every existing term's slug already equals
+                        // sanitize_title($name)), so the Learning Hub Menu's
+                        // "Parent Guide" dropdown can link straight to
+                        // /learning/guide#<this-id> without needing the term
+                        // object itself here.
+                        $section_anchor = sanitize_title( $section_name );
+                        $chapter_rows  .= '<h2 class="guide-section-heading" id="' . esc_attr( $section_anchor ) . '">' . esc_html( $section_name ) . '</h2>';
+                        $toc_items     .= '<li class="guide-toc-section-heading">' . esc_html( $section_name ) . '</li>';
                     endif;
                 endif;
 

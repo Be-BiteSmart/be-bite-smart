@@ -23,7 +23,7 @@ themes/twentytwentyfive-child/node_modules/
 !package.json
 !pnpm-lock.yaml
 
-!CHANGES.md
+!CHANGES*.md
 !TESTING.md
 !testing.md
 
