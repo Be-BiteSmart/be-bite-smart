@@ -495,38 +495,57 @@ document.addEventListener("DOMContentLoaded", function () {
             // what's really playing.
             const attemptedLang = currentLang;
 
-            // Silent lock only (no pause/overlay/status) — this call isn't
-            // user-initiated, fires right as autoplay starts, and is
-            // normally near-instant. But it still needs the same busy lock
-            // as the click-driven switch below, or a click landing while
-            // this is in flight races it — that race is what caused the
-            // original bug (see the module doc comment above
-            // TRACK_SWITCH_TIMEOUT_MS). The disabled-picker CSS still dims
-            // the toggle during this window, so it's not zero feedback.
-            trackSwitchBusy = true;
-            setLangPickerBusy(block, true);
+            // English has nothing to re-verify: buildVimeoPlayerSrc() never
+            // requests an explicit audiotrack override for "en" (unlike
+            // es/hi), so unlike those languages there's no "did the
+            // requested track actually apply" question to answer — English
+            // is just whatever the video's own original audio is, which by
+            // definition is always there. Calling switchLiveTrack() here
+            // anyway produced a real, confusing false positive: an
+            // occasional slow/timed-out selectDefaultAudioTrack() call (the
+            // same unpredictable Vimeo-side latency documented above,
+            // sometimes several seconds even when nothing is actually
+            // wrong) got reported as "English captions are on, but dubbed
+            // audio isn't available" while the visitor was actively
+            // hearing normal English audio the whole time — English is
+            // never a "dub" in the first place. Found 2026-09-10 by Janet
+            // playing the site in its own default language. Skipping the
+            // check entirely for "en" removes the false-positive path
+            // without weakening the real verification es/hi still get.
+            if (attemptedLang !== "en") {
+              // Silent lock only (no pause/overlay/status) — this call isn't
+              // user-initiated, fires right as autoplay starts, and is
+              // normally near-instant. But it still needs the same busy lock
+              // as the click-driven switch below, or a click landing while
+              // this is in flight races it — that race is what caused the
+              // original bug (see the module doc comment above
+              // TRACK_SWITCH_TIMEOUT_MS). The disabled-picker CSS still dims
+              // the toggle during this window, so it's not zero feedback.
+              trackSwitchBusy = true;
+              setLangPickerBusy(block, true);
 
-            switchLiveTrack(player, attemptedLang).then(
-              ({ audioOk, captionsOk }) => {
-                if (!audioOk && !captionsOk) {
-                  setEpisodeLanguage("en");
-                  showTrackNote(block, attemptedLang, {
-                    audioOk,
-                    captionsOk,
-                    totalFailure: true,
-                  });
-                } else if (!audioOk || !captionsOk) {
-                  showTrackNote(block, attemptedLang, {
-                    audioOk,
-                    captionsOk,
-                    totalFailure: false,
-                  });
-                }
+              switchLiveTrack(player, attemptedLang).then(
+                ({ audioOk, captionsOk }) => {
+                  if (!audioOk && !captionsOk) {
+                    setEpisodeLanguage("en");
+                    showTrackNote(block, attemptedLang, {
+                      audioOk,
+                      captionsOk,
+                      totalFailure: true,
+                    });
+                  } else if (!audioOk || !captionsOk) {
+                    showTrackNote(block, attemptedLang, {
+                      audioOk,
+                      captionsOk,
+                      totalFailure: false,
+                    });
+                  }
 
-                trackSwitchBusy = false;
-                setLangPickerBusy(block, false);
-              },
-            );
+                  trackSwitchBusy = false;
+                  setLangPickerBusy(block, false);
+                },
+              );
+            }
           })
           .catch((err) => {
             console.warn("Could not load the Vimeo Player SDK", err);
