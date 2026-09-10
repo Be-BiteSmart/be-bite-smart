@@ -93,8 +93,19 @@ body:not(.block-editor-page) .guide-chapter-container.custom-block-card {
   outline-offset: 2px;
 }
 
+/* NOT var(--wp--preset--color--accent-1) directly — that's #d16b0c, which
+   only reaches 3.6:1 contrast with the white text here (axe: color-contrast,
+   serious, needs 4.5:1 for 12px text). accent-1 is a shared, sitewide brand
+   token used well beyond this one badge, so darkening it globally in
+   theme.json was out of scope — this is a component-local override instead,
+   same approach already used for .is-off below (hardcoded colors, not the
+   preset var, chosen specifically to pass contrast). #b35a09 is the same
+   orange hue ~15% darker, giving white text 4.8:1 (verified via the WCAG
+   relative-luminance formula) — enough margin to stay AA-compliant across
+   rendering/anti-aliasing variance, while still reading as "the same brand
+   orange" rather than an unrelated color. */
 .guide-chapter-badge.is-active {
-  background: var(--wp--preset--color--accent-1, #d16b0c);
+  background: #b35a09;
   color: #fff;
 }
 
