@@ -1595,4 +1595,4 @@ Janet pasted her own `[lang-switch]` console output: clicked back to English whi
 
 **Verified, and the result was striking:** 4 EN-revert cycles (switch to Spanish, then click back to English, on Home) — in **all 4**, `selectDefaultAudioTrack()` never resolved or rejected at all (no "resolved"/"REJECTED" log line ever appeared, straight to "grace period elapsed" every time), and in all 4 the grace-period check correctly found English genuinely already active and reported full success. Before this fix, every one of these 4 would have taken the full 8s and reported a false failure — this specific scenario (revert to English mid-playback) looks like it was failing consistently, not just occasionally, making this arguably a bigger practical fix than the kind-parameter/sequential-calls work earlier today. Full `tests/videos` suite re-run for regressions after this change.
 
-**Commit:** `pending, this entry` — full `tests/videos` suite re-run after the fix: 24/24, no regressions.
+**Commit:** `94b3a80` — full `tests/videos` suite re-run after the fix: 24/24, no regressions.
