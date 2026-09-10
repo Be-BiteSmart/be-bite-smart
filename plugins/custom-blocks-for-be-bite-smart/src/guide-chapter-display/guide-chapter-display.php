@@ -675,7 +675,26 @@ function bitesmart_render_guide_chapter_row( $chapter_id, array $args = array() 
                 <?php endif; ?>
                 <span class="guide-chapter-main">
                     <span class="guide-chapter-title-row">
-                        <span class="guide-chapter-title"><?php echo esc_html( get_the_title( $post ) ); ?></span>
+                        <?php
+                        /*
+                         * <h3>, not <span> (2026-09-09 — a chapter title is
+                         * genuinely heading content, and unlike <p>, a
+                         * heading IS specifically permitted inside <summary>:
+                         * HTML's content model for <summary> as the first
+                         * child of <details> is "Phrasing content, optionally
+                         * intermixed with heading content" (WHATWG) — headings
+                         * may sit alongside other phrasing content (this
+                         * chevron SVG, the index/summary-text spans), not
+                         * restricted to being <summary>'s sole child the way
+                         * I'd first assumed. h3 to match the document outline
+                         * this page already establishes (h1 page title > h2
+                         * .guide-section-heading Section grouping > h3 here),
+                         * and matches the same choice this codebase already
+                         * makes for the identical <details>/<summary> pattern
+                         * in qa-entry-display.php/episode-display.php.
+                         */
+                        ?>
+                        <h3 class="guide-chapter-title"><?php echo esc_html( get_the_title( $post ) ); ?></h3>
                     </span>
                     <?php if ( $summary ) : ?>
                         <span class="guide-chapter-summary-text"><?php echo esc_html( $summary ); ?></span>

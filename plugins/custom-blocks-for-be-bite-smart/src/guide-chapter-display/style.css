@@ -57,26 +57,27 @@ body:not(.block-editor-page) .guide-chapter-container.custom-block-card {
   margin-bottom: 4px;
 }
 
-/* font-size explicit, not just left to inherit — a plain <span> inside
-   <summary> never picks up the theme's normal paragraph size the way a
-   <p> inside .entry-content does (measured: 16px inherited here vs. 17.7px
-   for an ordinary theme paragraph), so without this the chapter title read
-   smaller than normal body text with nothing in this file visibly
-   shrinking it.
-   NOT a real <p> tag (2026-09-09: asked whether this could track the
-   site's actual paragraph size the way a real <p> does, rather than a
-   value copied from today's setting) — HTML restricts <summary> (when
-   it's the first child of its <details>, which it always is here) to
-   phrasing content only; <p> is flow content, not phrasing content, so
-   it isn't valid inside this element at all. Referencing the same
-   variable WordPress's own generated rule currently resolves through
+/* A real <h3> now (2026-09-09, guide-chapter-display.php — see that call
+   site's comment for why <summary>'s content model permits a heading
+   here but not a <p>). font-size/font-weight/margin all still explicit
+   rather than left to the browser's own h3 defaults (bold, ~1.17em,
+   block-level margin) — this should look like normal card-title text at
+   the site's regular reading size, not a big bold UA heading. A heading
+   element (h1-h6) still doesn't automatically inherit the theme's
+   paragraph typography preset the way a <p> does (measured: 16px
+   inherited/UA-default-ish here vs. 17.7px for an ordinary theme
+   paragraph) — same reasoning as before the tag changed, just now
+   overriding the browser's own h3 UA style instead of the "unstyled
+   span" default. Referencing the same variable WordPress's own
+   generated rule for paragraphs currently resolves through
    (":root :where(p){font-size: var(--wp--preset--font-size--medium)}",
-   global-styles-inline-css) is the closest available equivalent: it
-   tracks edits to what "Medium" itself is set to, just not a future
-   switch to an entirely different preset or a raw custom value. Compare
-   .guide-toc-chapter-title (guide-chapter-display.php) — a real <p>
-   there, since it sits in the ToC's plain link list, not inside a
-   <summary> — gets that tracking perfectly. */
+   global-styles-inline-css) is the closest available equivalent to
+   "match normal reading size": tracks edits to what "Medium" itself is
+   set to, just not a future switch to an entirely different preset or a
+   raw custom value. Compare .guide-toc-chapter-title
+   (guide-chapter-display.php) — a real <p> there, since it sits in the
+   ToC's plain link list rather than a <summary> — gets that tracking
+   perfectly, no override needed at all. */
 .guide-chapter-title {
   font-size: var(--wp--preset--font-size--medium);
   font-weight: 500;
