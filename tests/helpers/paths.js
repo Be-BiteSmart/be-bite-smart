@@ -10,6 +10,39 @@ export const LEARNING_HUB_PATH = "/learning/";
 /** Downloadable Educational Resources page — download-card / PDF / episode-download content. */
 export const DOWNLOADS_PATH = "/learning/downloads";
 
+/** Books and Links page (book recommendation cards). */
+export const BOOKS_PATH = "/learning/books";
+
+/** After a Bite Resources — a Stage-style Q&A search/browse page outside the Stage taxonomy hierarchy. */
+export const AFTER_BITE_PATH = "/learning/bite";
+
+/** A Parents' Guide to Preventing Dog Bites in Young Children (guide_chapter CPT, headless). */
+export const GUIDE_PATH = "/learning/guide";
+
+/** The Guide's citations/sources subpage. */
+export const GUIDE_REFERENCES_PATH = "/learning/guide/references";
+
+/** Stage taxonomy index hub — currently empty (2026-09-09), not yet populated. */
+export const STAGES_HUB_PATH = "/learning/stages";
+
+/** Second, empty "Contact" page under /learning/ — distinct from the real /contact/. Flagged as likely a stray stub. */
+export const LEARNING_CONTACT_PATH = "/learning/contact";
+
+/**
+ * Q&A entry search/browse pages: custom/learning-search + custom/learning-browse,
+ * rendering article.wp-block-custom-qa-entry cards — After a Bite plus each
+ * live Stage taxonomy page. Shared list so CRITICAL_PAGES and
+ * BLOCK_PRESENCE_PAGES stay in sync; update here if a Stage page is added/removed.
+ */
+export const QA_SEARCH_PAGES = [
+  { path: AFTER_BITE_PATH, label: "After a Bite" },
+  { path: "/learning/stages/pregnancy", label: "Stage: Pregnancy" },
+  { path: "/learning/stages/baby", label: "Stage: Baby" },
+  { path: "/learning/stages/toddler", label: "Stage: Toddler" },
+  { path: "/learning/stages/preschool", label: "Stage: Preschool" },
+  { path: "/learning/stages/all-resources", label: "Stage: All Resources" },
+];
+
 /** Research articles page (formerly `/library`). */
 export const EVIDENCE_PATH = "/evidence/";
 
@@ -32,6 +65,14 @@ export const CRITICAL_PAGES = [
   { path: LEARNING_HUB_PATH, label: "Learning hub" },
   { path: EDUCATION_PATH, label: "Learn" },
   { path: DOWNLOADS_PATH, label: "Downloads" },
+  { path: BOOKS_PATH, label: "Books" },
+  { path: GUIDE_PATH, label: "Guide" },
+  { path: GUIDE_REFERENCES_PATH, label: "Guide references" },
+  ...QA_SEARCH_PAGES,
+  // Empty pages (2026-09-09) — still checked for basic structure/a11y even
+  // with no body content yet; see STAGES_HUB_PATH/LEARNING_CONTACT_PATH docs.
+  { path: STAGES_HUB_PATH, label: "Stages hub" },
+  { path: LEARNING_CONTACT_PATH, label: "Learning contact" },
   { path: EVIDENCE_PATH, label: "Evidence" },
   { path: "/news-media/", label: "News & media" },
   { path: "/partnerships/", label: "Partnerships" },
@@ -142,6 +183,52 @@ export const BLOCK_PRESENCE_PAGES = [
       },
     ],
   },
+  {
+    path: BOOKS_PATH,
+    label: "Books",
+    checks: [
+      {
+        name: "book cards",
+        selector: "article.wp-block-custom-book",
+        minCount: 1,
+      },
+    ],
+  },
+  {
+    path: GUIDE_PATH,
+    label: "Guide",
+    checks: [
+      {
+        name: "guide chapters",
+        selector: ".guide-chapter-container",
+        minCount: 1,
+      },
+    ],
+  },
+  {
+    path: GUIDE_REFERENCES_PATH,
+    label: "Guide references",
+    checks: [
+      {
+        name: "reference citations",
+        selector: ".guide-reference",
+        minCount: 1,
+      },
+    ],
+  },
+  // After a Bite + each live Stage page — same custom/learning-search +
+  // custom/learning-browse block pair, same card markup. See QA_SEARCH_PAGES.
+  ...QA_SEARCH_PAGES.map(({ path, label }) => ({
+    path,
+    label,
+    checks: [
+      {
+        name: "Q&A entry cards",
+        selector: "article.wp-block-custom-qa-entry",
+        minCount: 1,
+      },
+    ],
+  })),
   {
     path: EVIDENCE_PATH,
     label: "Evidence",
