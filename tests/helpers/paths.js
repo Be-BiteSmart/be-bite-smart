@@ -2,31 +2,31 @@
 export const HOME_PATH = "/";
 
 /** WordPress page slug for the Learn / education content page. */
-export const EDUCATION_PATH = "/learning/kids";
+export const EDUCATION_PATH = "/learning/kids/";
 
 /** The Learning hub landing page (content-hub-plan's "/learning/"). */
 export const LEARNING_HUB_PATH = "/learning/";
 
 /** Downloadable Educational Resources page — download-card / PDF / episode-download content. */
-export const DOWNLOADS_PATH = "/learning/downloads";
+export const DOWNLOADS_PATH = "/learning/downloads/";
 
 /** Books and Links page (book recommendation cards). */
-export const BOOKS_PATH = "/learning/books";
+export const BOOKS_PATH = "/learning/books/";
 
 /** After a Bite Resources — a Stage-style Q&A search/browse page outside the Stage taxonomy hierarchy. */
-export const AFTER_BITE_PATH = "/learning/bite";
+export const AFTER_BITE_PATH = "/learning/bite/";
 
 /** A Parents' Guide to Preventing Dog Bites in Young Children (guide_chapter CPT, headless). */
-export const GUIDE_PATH = "/learning/guide";
+export const GUIDE_PATH = "/learning/guide/";
 
 /** The Guide's citations/sources subpage. */
-export const GUIDE_REFERENCES_PATH = "/learning/guide/references";
+export const GUIDE_REFERENCES_PATH = "/learning/guide/references/";
 
 /** Stage taxonomy index hub — currently empty (2026-09-09), not yet populated. */
-export const STAGES_HUB_PATH = "/learning/stages";
+export const STAGES_HUB_PATH = "/learning/stages/";
 
 /** Second, empty "Contact" page under /learning/ — distinct from the real /contact/. Flagged as likely a stray stub. */
-export const LEARNING_CONTACT_PATH = "/learning/contact";
+export const LEARNING_CONTACT_PATH = "/learning/contact/";
 
 /**
  * Q&A entry search/browse pages: custom/learning-search + custom/learning-browse,
@@ -36,11 +36,11 @@ export const LEARNING_CONTACT_PATH = "/learning/contact";
  */
 export const QA_SEARCH_PAGES = [
   { path: AFTER_BITE_PATH, label: "After a Bite" },
-  { path: "/learning/stages/pregnancy", label: "Stage: Pregnancy" },
-  { path: "/learning/stages/baby", label: "Stage: Baby" },
-  { path: "/learning/stages/toddler", label: "Stage: Toddler" },
-  { path: "/learning/stages/preschool", label: "Stage: Preschool" },
-  { path: "/learning/stages/all-resources", label: "Stage: All Resources" },
+  { path: "/learning/stages/pregnancy/", label: "Stage: Pregnancy" },
+  { path: "/learning/stages/baby/", label: "Stage: Baby" },
+  { path: "/learning/stages/toddler/", label: "Stage: Toddler" },
+  { path: "/learning/stages/preschool/", label: "Stage: Preschool" },
+  { path: "/learning/stages/all-resources/", label: "Stage: All Resources" },
 ];
 
 /** Research articles page (formerly `/library`). */
