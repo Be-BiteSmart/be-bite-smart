@@ -153,7 +153,7 @@ function render_coloring_books_list_block( $attributes ) {
     ?>
     <div id="download-coloring-books" class="wp-block-custom-coloring-books-list wp-block-group has-border-color" style="border-color:#e1e8f1;border-width:2px;border-top-left-radius:2rem;border-top-right-radius:2rem;border-bottom-left-radius:2rem;border-bottom-right-radius:2rem;padding-right:0;padding-left:0">
         <div class="wp-block-group has-accent-2-background-color has-background" style="border-top-left-radius:27px;border-top-right-radius:27px;margin-top:0;margin-bottom:0;padding-top:var(--wp--preset--spacing--40);padding-right:var(--wp--preset--spacing--60);padding-bottom:var(--wp--preset--spacing--40);padding-left:var(--wp--preset--spacing--60)">
-            <h3 class="wp-block-heading has-base-color has-text-color has-link-color"><strong><?php esc_html_e( 'Downloadable Coloring Books', 'custom-blocks' ); ?></strong></h3>
+            <h2 class="wp-block-heading has-base-color has-text-color has-link-color"><strong><?php esc_html_e( 'Downloadable Coloring Books', 'custom-blocks' ); ?></strong></h2>
             <p class="has-base-color has-text-color has-link-color" style="padding-right:0;padding-left:0"><?php esc_html_e( 'For each episode — English & Spanish', 'custom-blocks' ); ?></p>
         </div>
 

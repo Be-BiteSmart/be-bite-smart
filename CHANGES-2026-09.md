@@ -176,28 +176,6 @@ rather than as a new top-level block — this is a manual editorial step
 each time, same as the Awaiting Funding section, not something the block
 handles automatically.
 
-## 2026-09-09 — `/parents` + `/learn` consolidated into `/learning/` Content Hub; test suite, analytics, and accessibility fallout
-
-**Note on this entry:** written retroactively, later the same day, after noticing it had been skipped mid-session — a repeat of the exact gap already called out in [[claude-md-logging-discipline]]. Full narrative detail (root causes, screenshots, gotchas hit) lives in [[be-bitesmart-content-hub-plan]] and [[be-bitesmart-local-env]]; this entry is the commit-mapped summary CLAUDE.md asks for.
-
-**What it does and why it was needed:** `/parents` and `/learn` were deleted on local/staging, with their content consolidated onto `/learning/kids/`, `/learning/`, and `/learning/downloads/` (Janet's call — see [[be-bitesmart-content-hub-plan]] for the full new `/learning/` subtree). This broke the Playwright suite (stale paths/selectors), site analytics (hardcoded `is_page()` slug checks), and introduced/exposed several real accessibility violations across the new page family.
-
-**Changes:**
-- Tests retargeted to the new structure — `e3615aa`, `7b905a5`, `9564ead`, `0e4b92f` (REST smoke test slug, `#developed-episodes` selectors for the new read-more layout, documentary video-quote tests moved to Home + Learning hub, all remaining `/learning/*` pages added to `CRITICAL_PAGES`/block-presence checks).
-- `7f5c5d6` — fixed `analytics.php`'s Plausible tracking, broken by the `/learn` → `/learning/kids` rename (`is_page('learn')` was stale; added a Learning-hub branch).
-- `f3b0f35` — download tracking re-pointed at `/learning/downloads/`; also fixed a pre-existing, unrelated stale-class bug (`.educational-coloring-book-download-block` didn't exist; real markup is `.coloring-book-card`) that had silently no-opped both a test and the real Plausible event for coloring-book downloads.
-- `c2a4e35` — Guide chapter format badges' active-state contrast (axe `color-contrast`, serious): `#d16b0c` → `#b35a09`.
-- `2d2956f` — Guide chapter badges were `<button>`s nested inside an interactive `<summary>` (axe `nested-interactive`); moved them out of `<summary>`.
-- `13b9991` — superseded the above same-day per Janet's UX feedback: badges now render inside `.guide-chapter-body`, only visible once a chapter is expanded, rather than always-visible on the collapsed row.
-- `e5c6705`, `e90300a`, `b2e8052` — Guide chapter/ToC text normalized to the theme's normal-reading-size preset instead of several artificially-shrunk `em` values.
-- `41786cd` / `ba16d0f` — tried making the chapter title a real `<h3>` (spec-legal inside `<summary>`); reverted same day after Janet found and it was confirmed via source (Scott O'Hara) that real screen readers inconsistently expose headings nested in a button-role element. Title stays a `<span>`.
-- `76cc1ab` / `59d8f43` / `1cdc406` — briefly set `ignoreHTTPSErrors: true` to fix local-only cert failures in `seo`/`links`/`downloads` specs, reverted per Janet in favor of `isLocalHttpWorkaround()`-gated `test.skip()` on just the affected sub-checks (`tests/helpers/host.js`, `tests/helpers/seo.js`, `tests/smoke/links.spec.js`, `tests/smoke/downloads.spec.js`).
-- Direct DB content edits (no commit — see [[be-bitesmart-content-hub-plan]] for full detail): wrapped the shared "Content Hub" `wp_template` (post 2378)'s `wp:post-content` in a `<main>`-tagged group (axe `landmark-one-main`/`region`, all 12 `/learning/*` pages); added summary paragraphs to the Pregnancy/Baby/Toddler stage pages and an "In an Emergency" callout to After a Bite; wired up the Stages hub's dead "View All Q&As" button; converted 4 Learning Hub nav items (Books and Links, For Kids, Downloads, Parent Guide) into dropdowns, plus a small PHP change to stamp anchor `id`s on Guide section headings for the last one.
-
-**Verification:** `tests/a11y/axe.spec.js` full re-run confirmed `landmark-one-main`/`region`/`nested-interactive`/`color-contrast` all cleared with zero regressions (one transient cache-regeneration-race false failure, confirmed not real via a clean re-run). `pnpm run build` clean after each CSS/JS change. Full local suite by end of day: 110 passed / 98 skipped / 11 failed, all explained (8 pre-existing axe gaps + 3 genuine missing SEO meta descriptions found once the cert-skip logic stopped masking them) — see [[be-bitesmart-local-env]].
-
-**Commit range:** `e3615aa`..`1cdc406` on branch `plc-updates`, plus the direct DB edits noted above.
-
 ## 2026-09-09 — Fixed: `heading-order` axe violation on 4 Stage pages (missing H2 before Q&A search results)
 
 **What it does and why it was needed:** axe flagged `heading-order` on the Pregnancy, Baby, Toddler, and All Resources pages — each renders `<h1>` (post title) directly into the `custom/learning-search`/`custom/learning-browse` blocks, which deliberately render no heading of their own by design (editors are meant to place one manually — see the doc comment in `render_learning_search_block()`), straight into each Q&A card's `<h3 class="qa-entry-question">`, skipping H2 entirely. Root cause traced by comparing against two sibling pages that already do this correctly: Preschool (H2 "Find Resources" + H3 "Search Preschool Questions & Resources") and After a Bite (a single H3, valid there because an H2 already exists earlier on that page) — confirming this was an incomplete editorial rollout, not a code defect.
@@ -1352,3 +1330,24 @@ now-redundant outer-folder copies.
 Saved `bebitesmart-project-root` to project memory so future sessions log
 CHANGES.md (and anything else keyed off "project root") at
 `app/public/wp-content`, not the outer Local site folder.
+
+## 2026-09-09 (cont'd) — Fixed: `heading-order` on Learn/Downloads pages and Guide `color-contrast`; 2 missing SEO meta descriptions written
+
+**What it does and why it was needed:** a full local suite re-run after the Stage-page heading-order fix above turned up 3 more genuine, unrelated failures (confirmed live, not stale — fetched fresh via REST/curl before touching anything) plus the 2 already-known SEO gaps:
+- `/learning/kids`: an `<h2>` "Recommended Children's Books" was followed directly by an `<h4>` "Books For Young Children..." (a manually-placed Heading block set to level 4 purely for its larger font size), skipping `<h3>`.
+- `/learning/downloads`: worse than an editorial gap — `coloring-books-list.php`'s own PHP render output hardcoded its "Downloadable Coloring Books" banner as an `<h3>`, while the near-identical "Download Episodes" banner right below it (authored as plain page content, not this block) correctly uses `<h2>`. Since this banner is the first heading after the page's `<h1>`, the `<h3>` skipped a level on every page that uses this block.
+- `/learning/guide`: new `color-contrast` (serious) violation, not the badge issue fixed earlier today — the "Important Notice" callout heading inherits the site's default heading color (`#d16b0c`) at a font size too small to qualify for WCAG's large-text 3:1 exception, landing at 3.6:1 against the required 4.5:1.
+- SEO: `/learning/guide/references` and `/learning/stages/all-resources` had no explicit meta description set in All in One SEO, so it silently fell back to auto-generating one from page content — 48 and 42 characters respectively, under the 50-char minimum this suite checks for.
+
+**Changes:**
+- [coloring-books-list.php](wp-content/plugins/custom-blocks-for-be-bite-smart/src/coloring-books-list/coloring-books-list.php#L156): `<h3>` → `<h2>` for the "Downloadable Coloring Books" banner heading, matching its sibling "Download Episodes" banner exactly. Real code fix, one line.
+- Direct DB content edits (`wp-load.php` + PHP-CLI + `wp_update_post()`, same pattern as the rest of today's work): bumped the two age-group Heading blocks on `/learning/kids` from level 4 to level 3 (kept the `large` font-size preset, so no visual change); added an explicit `"color":{"text":"#b35a09"}` override to just the Guide page's "Important Notice" heading block (same darkened hex used for the badge fix earlier — other orange headings site-wide weren't flagged, so left untouched rather than changing a shared default).
+- Wrote explicit meta descriptions into All in One SEO's `wp_aioseo_posts.description` column (direct DB write, not a content edit through post_content) for Guide references (ID 2675) and Stage: All Resources (ID 2911) — drafted by Claude, approved by Janet before writing.
+
+**Verification:** each fix confirmed individually via a scoped `axe.spec.js`/`seo.spec.js` re-run before moving to the next, plus screenshots of the Downloads and Kids pages confirming no visual change (the heading-level fixes only changed the tag, not any styling classes). Full suite re-run twice after all fixes: 118 passed / 101 skipped / 0 real failures both times (one `tests/videos/language-feedback.spec.js` "live track switch" test failed once per run, targeting a different page each time — confirmed as a parallel-worker timing flake, not a regression, by re-running it in isolation twice with zero failures; nothing touched today runs anywhere near that code path).
+
+**Commit range:** `coloring-books-list.php` change not yet committed; everything else is a direct DB edit, nothing to commit.
+
+## 2026-09-09 (cont'd) — Correction: removed a duplicate changelog entry written from a stale read
+
+Earlier in this session, a `CHANGES-2026-09.md` check (before doing the heading-order fix above) only found entries through 2026-09-04 and concluded the rest of that day's `/learning/` consolidation work had never been logged — a real-looking repeat of [[claude-md-logging-discipline]]. Wrote a consolidated backfill entry to close the gap. That diagnosis was wrong: the file already held the full, properly detailed day-of entries (they just postdate this session's first read of the file — most likely written by the "Merged forked CHANGES-2026-08.md / CHANGES-2026-09.md" cleanup entry above, which happened at a point this session hadn't re-read yet). Once the fuller file was actually read in full, the backfill entry was a strictly redundant, less-detailed duplicate of the ~20 entries already covering the same commits — deleted it rather than leaving both versions in place. No information was lost; the detailed originals were never touched.
