@@ -38,7 +38,7 @@ body:not(.block-editor-page) .guide-chapter-container.custom-block-card {
 
 .guide-chapter-index {
   font-family: var(--wp--preset--font-family--monospace, monospace);
-  font-size: 0.85em;
+  font-size: var(--wp--preset--font-size--medium);
   color: var(--wp--preset--color--contrast-2, #6b6b6b);
   flex-shrink: 0;
   padding-top: 0.2em;
@@ -107,7 +107,7 @@ body:not(.block-editor-page) .guide-chapter-container.custom-block-card {
   display: inline-flex;
   align-items: center;
   font: inherit;
-  font-size: 0.75em;
+  font-size: var(--wp--preset--font-size--medium);
   padding: 2px 9px;
   border-radius: 20px;
   border: 1px solid transparent;
