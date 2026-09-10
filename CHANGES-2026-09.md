@@ -1623,4 +1623,4 @@ Build size dropped noticeably (video-toggle.js: ~58KB → ~28.5KB compiled), con
 
 Flagged to Janet directly: this also means a silently-failed reload now shows "Switched to Spanish" with no indication anything's wrong (the verification/honesty layer built earlier today was deleted along with the rest of the live-switch machinery). Asked whether to accept this as a known limitation or add a lightweight post-reload verification check back. **Decision: accept as a known limitation** — no verification code added. The reload approach is still simpler and more maintainable even without it, and per everything found today, this is a genuine Vimeo-side issue no client code can fully solve.
 
-**Commit:** pending, this entry.
+**Commit:** `7a28fb2`.
