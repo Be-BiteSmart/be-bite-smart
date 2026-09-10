@@ -62,9 +62,21 @@ body:not(.block-editor-page) .guide-chapter-container.custom-block-card {
    <p> inside .entry-content does (measured: 16px inherited here vs. 17.7px
    for an ordinary theme paragraph), so without this the chapter title read
    smaller than normal body text with nothing in this file visibly
-   "shrinking" it. Same preset token this codebase already uses elsewhere
-   for exactly this ("normal reading size," not the small/muted metadata
-   look) — see .capitalized-and-colored, .bright-chip (shared-block-styles.css). */
+   shrinking it.
+   NOT a real <p> tag (2026-09-09: asked whether this could track the
+   site's actual paragraph size the way a real <p> does, rather than a
+   value copied from today's setting) — HTML restricts <summary> (when
+   it's the first child of its <details>, which it always is here) to
+   phrasing content only; <p> is flow content, not phrasing content, so
+   it isn't valid inside this element at all. Referencing the same
+   variable WordPress's own generated rule currently resolves through
+   (":root :where(p){font-size: var(--wp--preset--font-size--medium)}",
+   global-styles-inline-css) is the closest available equivalent: it
+   tracks edits to what "Medium" itself is set to, just not a future
+   switch to an entirely different preset or a raw custom value. Compare
+   .guide-toc-chapter-title (guide-chapter-display.php) — a real <p>
+   there, since it sits in the ToC's plain link list, not inside a
+   <summary> — gets that tracking perfectly. */
 .guide-chapter-title {
   font-size: var(--wp--preset--font-size--medium);
   font-weight: 500;
@@ -183,11 +195,13 @@ body:not(.block-editor-page) .guide-chapter-container.custom-block-card {
 }
 
 /* font-size was 0.9em (per Janet, 2026-09-09: read too small compared to
-   the rest of the site) — now the same "normal reading size" preset token
-   .guide-chapter-title uses above, not a muted/small-metadata look. This
-   is chapter preview text a visitor scans before deciding to open a
-   chapter, not secondary metadata like the byline-style text elsewhere in
-   this file that's deliberately small (e.g. .guide-chapter-video-duration). */
+   the rest of the site) — now the same preset token .guide-chapter-title
+   uses above, not a muted/small-metadata look. This is chapter preview
+   text a visitor scans before deciding to open a chapter, not secondary
+   metadata like the byline-style text elsewhere in this file that's
+   deliberately small (e.g. .guide-chapter-video-duration). Not a real <p>
+   either, same reason as .guide-chapter-title above (inside <summary>,
+   HTML restricts it to phrasing content) — see that rule's comment. */
 .guide-chapter-summary-text {
   display: block;
   font-size: var(--wp--preset--font-size--medium);
@@ -586,11 +600,16 @@ body:not(.block-editor-page) .guide-chapter-download-buttons .block-toggle-btn {
   flex-shrink: 0;
 }
 
-/* Was 0.95em (per Janet, 2026-09-09: too small) — same "normal reading
-   size" preset as .guide-chapter-title above, so a chapter's title reads
-   the same size whether scanned via the ToC or the full accordion list. */
+/* Was a <span> at a fixed 0.95em (per Janet, 2026-09-09: too small) — now
+   a real <p> (guide-chapter-display.php) instead, so it matches
+   WordPress's own generated ":root :where(p){font-size: ...}" rule and
+   tracks the site's actual paragraph text size going forward, however
+   that setting is later expressed — not just today's value. No font-size
+   override needed here at all anymore; margin reset is the only thing
+   this component still needs to add, since a <p>'s UA-default margin
+   would otherwise misalign it in .guide-toc-chapter-link's flex row. */
 .guide-toc-chapter-title {
-  font-size: var(--wp--preset--font-size--medium);
+  margin: 0;
 }
 
 /* Chapter-page-only breadcrumb (bitesmart_render_guide_chapter_single()),

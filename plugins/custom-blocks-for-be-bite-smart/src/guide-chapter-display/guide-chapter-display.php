@@ -535,7 +535,30 @@ function bitesmart_render_guide_toc_item( $chapter ) {
             <?php if ( $number ) : ?>
                 <span class="guide-toc-chapter-index"><?php echo esc_html( $number ); ?></span>
             <?php endif; ?>
-            <span class="guide-toc-chapter-title"><?php echo esc_html( get_the_title( $chapter ) ); ?></span>
+            <?php
+            /*
+             * <p>, not <span> (2026-09-09, per Janet — wants this to track
+             * whatever the site's real paragraph text size is set to, not a
+             * fixed value copied from today's setting). WordPress's own
+             * generated global-styles rule is ":root :where(p){font-size:
+             * ...}" — a bare TAG selector, so any real <p> automatically
+             * matches it and tracks Editor changes to paragraph typography
+             * forever, however that setting is later expressed (a different
+             * preset, or a raw custom size). Valid here because this <a> is
+             * NOT inside a <summary> (it's a plain ToC link) — a <p> IS flow
+             * content, which <a> permits as a "transparent" element inside
+             * this <li>. Contrast with .guide-chapter-title /
+             * .guide-chapter-summary-text below (guide-chapter-display.php),
+             * which live inside a <summary> that's the first child of its
+             * <details> — HTML restricts THAT context to phrasing content
+             * only, so a real <p> isn't valid there and those two instead
+             * reference var(--wp--preset--font-size--medium) directly (the
+             * same variable the generated rule above currently resolves
+             * through — tracks edits to what "Medium" itself is set to, just
+             * not a switch to an entirely different preset or a raw value).
+             */
+            ?>
+            <p class="guide-toc-chapter-title"><?php echo esc_html( get_the_title( $chapter ) ); ?></p>
         </a>
     </li>
     <?php
