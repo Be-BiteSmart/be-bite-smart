@@ -42,6 +42,7 @@ function render_video_quote_block( $attributes ) {
     if ( $has_picker ) {
         bitesmart_needs_play_button_label_template();
         bitesmart_needs_lang_change_status_template();
+        bitesmart_needs_track_switch_status_template();
     }
 
     ob_start(); ?>
@@ -77,6 +78,11 @@ function render_video_quote_block( $attributes ) {
                                 </div>
                             </div>
                             <div class="video-player"></div>
+                            <?php if ( $has_picker ) : ?>
+                                <div class="video-quote-loading-overlay" aria-hidden="true">
+                                    <span class="video-quote-loading-spinner"></span>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>

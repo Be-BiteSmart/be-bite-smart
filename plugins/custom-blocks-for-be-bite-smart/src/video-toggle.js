@@ -67,8 +67,15 @@ const vimeoWarmUpObserver = new IntersectionObserver(
    enableTextTrack() wasn't observed doing this, but it's timed the same way
    defensively, since a hung caller here previously produced the visible bug:
    a language toggle that appears to do nothing at all (no status, no
-   track-note) because the caller's own .then() never ran. */
-const TRACK_SWITCH_TIMEOUT_MS = 4000;
+   track-note) because the caller's own .then() never ran.
+
+   This is also now the effective upper bound on how long the language
+   picker stays disabled and the video-quote loading overlay stays visible
+   (see trackSwitchBusy/setLangPickerBusy below) — raised from an original
+   4000ms specifically so a genuinely slow-but-real Vimeo response has more
+   room to succeed instead of falling back, now that a longer wait reads as
+   "loading" rather than "broken". */
+const TRACK_SWITCH_TIMEOUT_MS = 8000;
 
 function withTrackSwitchTimeout(promise) {
   return new Promise((resolve) => {
@@ -178,6 +185,33 @@ function showTrackNote(
   el.classList.add("is-visible");
 }
 
+/* ── Live track-switch busy state (video-quote blocks only) ──
+   Gates BOTH switchLiveTrack() call sites (loadVideo()'s automatic
+   post-player-creation re-verify, and handleLangSegmentClick()'s live
+   click-driven switch) behind the same picker-disabled lock — see
+   trackSwitchBusy in the per-block closure below. This is what actually
+   closes the race between those two call sites (one could hang while the
+   other fired concurrently, which is how the original "toggle switches
+   captions but not audio" bug happened): a disabled <button> can't dispatch
+   a click at all, so only one switchLiveTrack() call is ever in flight per
+   block. */
+function setLangPickerBusy(block, isBusy) {
+  getLangSegments(block).forEach((segment) => {
+    segment.disabled = isBusy;
+  });
+}
+
+function getVideoLoadingOverlayEl(block) {
+  return block.querySelector(".video-quote-loading-overlay");
+}
+
+function setVideoLoadingOverlayVisible(block, visible) {
+  const el = getVideoLoadingOverlayEl(block);
+  if (el) {
+    el.classList.toggle("is-visible", visible);
+  }
+}
+
 /* ── Play-button label ──
    Always names the currently-selected language next to the verb, e.g.
    "Play (Spanish)" — kept in sync with the picker (called from
@@ -243,6 +277,47 @@ function showLangChangeStatus(block, code) {
       el.classList.remove("is-visible");
     }, LANG_CHANGE_STATUS_VISIBLE_MS),
   );
+}
+
+/* In-flight "Switching to {language}…" status (video-quote live switch
+   only) — reuses the SAME .lang-change-status element/template idiom as
+   showLangChangeStatus() above rather than a separate element, since it's
+   an earlier phase of that same "genuine language change" concept, not a
+   different one. Cancels any pending fade-out timer instead of scheduling
+   its own — this message stays up for the whole in-flight switch, however
+   long that takes, not a fixed duration. showLangChangeStatus() (called on
+   full success) naturally overwrites the text and restarts the fade timer
+   afterward; clearLangChangeStatus() is used on the failure/partial
+   branches so a stale "Switching…" message doesn't linger next to the
+   track-note. */
+function getTrackSwitchStatusTemplate() {
+  return (
+    document.querySelector(".track-switch-status-template")?.textContent ??
+    null
+  );
+}
+
+function showTrackSwitchStatus(block, targetLang) {
+  const el = block.querySelector(".lang-change-status");
+  if (!el) return;
+
+  const name = langName(targetLang);
+  const template = getTrackSwitchStatusTemplate();
+  el.textContent = template
+    ? applyLanguagePlaceholder(template, name)
+    : `Switching to ${name}…`;
+  el.classList.add("is-visible");
+
+  clearTimeout(langChangeStatusTimeouts.get(block));
+}
+
+function clearLangChangeStatus(block) {
+  const el = block.querySelector(".lang-change-status");
+  if (!el) return;
+
+  clearTimeout(langChangeStatusTimeouts.get(block));
+  el.textContent = "";
+  el.classList.remove("is-visible");
 }
 
 function buildVimeoPlayerSrc(vimeoId, lang, { forceCaptions = false } = {}) {
@@ -350,6 +425,7 @@ document.addEventListener("DOMContentLoaded", function () {
     let playingLang = null;
     let isPlaying = false;
     let player = null; // Vimeo.Player instance, quote blocks only
+    let trackSwitchBusy = false; // true while a live switchLiveTrack() is in flight (quote blocks only)
 
     // Warm up Vimeo's connection once this thumbnail is close to view —
     // one shared observer/flag handles every block on the page.
@@ -418,6 +494,18 @@ document.addEventListener("DOMContentLoaded", function () {
             // that isn't actually available" and correct the UI to match
             // what's really playing.
             const attemptedLang = currentLang;
+
+            // Silent lock only (no pause/overlay/status) — this call isn't
+            // user-initiated, fires right as autoplay starts, and is
+            // normally near-instant. But it still needs the same busy lock
+            // as the click-driven switch below, or a click landing while
+            // this is in flight races it — that race is what caused the
+            // original bug (see the module doc comment above
+            // TRACK_SWITCH_TIMEOUT_MS). The disabled-picker CSS still dims
+            // the toggle during this window, so it's not zero feedback.
+            trackSwitchBusy = true;
+            setLangPickerBusy(block, true);
+
             switchLiveTrack(player, attemptedLang).then(
               ({ audioOk, captionsOk }) => {
                 if (!audioOk && !captionsOk) {
@@ -434,6 +522,9 @@ document.addEventListener("DOMContentLoaded", function () {
                     totalFailure: false,
                   });
                 }
+
+                trackSwitchBusy = false;
+                setLangPickerBusy(block, false);
               },
             );
           })
@@ -452,10 +543,24 @@ document.addEventListener("DOMContentLoaded", function () {
         clearTrackNote(block); // clear any stale note on every new attempt
 
         if (isPlaying && player) {
+          if (trackSwitchBusy) {
+            // Defensive only — the picker's real `disabled` attribute
+            // should already prevent a click from reaching here while a
+            // switch (this one or the automatic re-verify) is in flight.
+            return;
+          }
+
+          trackSwitchBusy = true;
+          setLangPickerBusy(block, true);
+          setVideoLoadingOverlayVisible(block, true);
+          showTrackSwitchStatus(block, target);
+          player.pause().catch(() => {});
+
           switchLiveTrack(player, target).then(({ audioOk, captionsOk }) => {
             if (!audioOk && !captionsOk) {
               // Total failure: roll back the UI to what's actually still playing.
               setEpisodeLanguage(previousLang);
+              clearLangChangeStatus(block);
               showTrackNote(block, target, {
                 audioOk,
                 captionsOk,
@@ -464,6 +569,7 @@ document.addEventListener("DOMContentLoaded", function () {
             } else if (!audioOk || !captionsOk) {
               // Partial success: a real switch happened, so stay on the new
               // language, but let the visitor know what's missing.
+              clearLangChangeStatus(block);
               showTrackNote(block, target, {
                 audioOk,
                 captionsOk,
@@ -473,6 +579,16 @@ document.addEventListener("DOMContentLoaded", function () {
               // Full success: both tracks switched cleanly.
               showLangChangeStatus(block, target);
             }
+
+            // Resume regardless of outcome — a visitor shouldn't be left
+            // staring at a paused video just because their picked language
+            // wasn't fully available; it resumes in whichever language
+            // actually ended up active (the rollback above, if any, already
+            // ran by this point).
+            player.play().catch(() => {});
+            trackSwitchBusy = false;
+            setLangPickerBusy(block, false);
+            setVideoLoadingOverlayVisible(block, false);
           });
         } else {
           // Not playing yet, OR playing but the player instance hasn't

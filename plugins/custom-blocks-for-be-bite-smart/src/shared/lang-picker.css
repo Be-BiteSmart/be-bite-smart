@@ -70,6 +70,16 @@
   color: var(--wp--preset--color--accent-2);
 }
 
+/* Live track-switch in progress (video-quote only — see trackSwitchBusy in
+   video-toggle.js). A real `disabled` attribute, not just a visual style —
+   WCAG's contrast minimums don't apply to genuinely disabled controls, so
+   opacity dimming is fine here (unlike guide-chapter-display's .is-off
+   state, which stays clickable and needed a full-contrast color instead). */
+.lang-segment:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 /* ── Transient "language changed" status ──
    Always present in the DOM (aria-live="polite"); only text/opacity
    change, same shape as video-quote's own .video-quote-track-note, but a
@@ -157,4 +167,10 @@
 
 .toggle-label.active {
   color: var(--wp--preset--color--accent-2);
+}
+
+/* See .lang-segment:disabled above — same busy state, legacy markup. */
+.toggle-label:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }

@@ -437,6 +437,38 @@ function bitesmart_render_lang_change_status_templates() {
 }
 
 /**
+ * Registers a wp_footer hook to print the in-flight "switching language"
+ * status template, exactly once, on any page that renders a multi-language
+ * video-quote block. Shown transiently in the SAME .lang-change-status
+ * element showLangChangeStatus() above already uses (see
+ * showTrackSwitchStatus() in video-toggle.js) — this is an earlier phase of
+ * that same "genuine language change" status, not a separate concept, so it
+ * deliberately doesn't get its own paragraph or template family.
+ */
+function bitesmart_needs_track_switch_status_template() {
+    static $needed = false;
+    if ( $needed ) {
+        return;
+    }
+    $needed = true;
+    bitesmart_needs_video_lang_name_templates();
+    add_action( 'wp_footer', 'bitesmart_render_track_switch_status_templates' );
+}
+
+/**
+ * Visually hidden, TranslatePress-translatable source of truth for the
+ * in-flight "switching language" status line (see showTrackSwitchStatus()
+ * in video-toggle.js).
+ */
+function bitesmart_render_track_switch_status_templates() {
+    ?>
+    <div class="track-switch-status-templates" aria-hidden="true" style="display:none;">
+        <span class="track-switch-status-template"><?php esc_html_e( 'Switching to {language}…', 'custom-blocks' ); ?></span>
+    </div>
+    <?php
+}
+
+/**
  * Registers a wp_footer hook to print the episode-card language-restart
  * confirmation dialog's wording, exactly once, only on pages that render a
  * multi-language episode-card block.

@@ -80,6 +80,57 @@
   background: rgba(0, 0, 0, 0.3);
 }
 
+/* ── Live track-switch loading overlay ──
+   Sits alongside .video-thumbnail and .video-player inside
+   .video-thumbnail-wrapper (position: relative, shared-block-styles.css) —
+   a sibling, not nested in .video-player, so it never touches the iframe
+   itself. z-index above .video-player's 5 (shared-block-styles.css) so it
+   visually covers the paused video during a live switchLiveTrack() call
+   (see trackSwitchBusy/setVideoLoadingOverlayVisible() in video-toggle.js).
+   Same always-in-DOM, opacity-fade idiom as .lang-change-status/
+   .video-quote-track-note above (shared/lang-picker.css). */
+.video-quote-loading-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.video-quote-loading-overlay.is-visible {
+  opacity: 1;
+  /* Also blocks clicks reaching Vimeo's own player chrome underneath
+     (e.g. its native play/pause button) while a switch is in flight,
+     complementing player.pause()/setLangPickerBusy() in video-toggle.js. */
+  pointer-events: auto;
+}
+
+.video-quote-loading-spinner {
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 3px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: video-quote-spin 0.8s linear infinite;
+}
+
+@keyframes video-quote-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .video-quote-loading-spinner {
+    animation: none;
+  }
+}
+
 /* ── Play button size override ──
    Global .play-button uses 0.75rem/1.25rem padding; this block uses a
    slightly larger button so we override padding only here. The icon

@@ -146,6 +146,64 @@ for (const { path, label } of VIDEO_QUOTE_PAGES) {
       await expect(status).toHaveText(await expectedLangChangeStatus(page, otherLang));
       await expect(trackNote).not.toHaveClass(/is-visible/);
     });
+
+    test(`the live track-switch loading overlay markup and translatable status template are present`, async ({
+      page,
+    }, testInfo) => {
+      // Real switch timing turned out to be too fast/variable to reliably
+      // assert against directly: once the Vimeo player has been playing a
+      // while, a live switch can settle in single-digit milliseconds —
+      // confirmed by direct instrumentation, fast enough that even a 3s
+      // Playwright poll never caught the picker mid-disable. Rather than a
+      // flaky timing assertion, this checks the wiring the loading/disable
+      // behavior depends on is actually present (would catch e.g. the PHP
+      // template registrar or the overlay markup going missing) — see
+      // be-bitesmart-video-toggle-audio-hang.md for the full finding.
+      await gotoExpectOk(page, path);
+
+      const block = page.locator(".video-quote-block").first();
+      await expect(block, `No video-quote block on ${path}`).toBeVisible();
+
+      if ((await episodeLangSegments(block).count()) < 2) {
+        testInfo.skip();
+        return;
+      }
+
+      await expect(block.locator(".video-quote-loading-overlay")).toBeAttached();
+      await expect(page.locator(".track-switch-status-template")).toBeAttached();
+    });
+
+    test(`a disabled language segment does not register a click`, async ({
+      page,
+    }, testInfo) => {
+      // Validates the mechanism setLangPickerBusy() relies on to close the
+      // original race (see video-toggle.js): a real `disabled` attribute
+      // structurally prevents the click event from ever reaching
+      // handleLangSegmentClick(), not just a visual style a visitor could
+      // still activate. Sets the state directly rather than trying to
+      // catch a real in-flight switch (see the timing note in the previous
+      // test) — this is deterministic regardless of how fast a real switch
+      // resolves.
+      await gotoExpectOk(page, path);
+
+      const block = page.locator(".video-quote-block").first();
+      await expect(block, `No video-quote block on ${path}`).toBeVisible();
+
+      if ((await episodeLangSegments(block).count()) < 2) {
+        testInfo.skip();
+        return;
+      }
+
+      const activeLang = await activeLangOf(block);
+      const segment = otherLangSegment(block, activeLang);
+
+      await segment.evaluate((el) => {
+        el.disabled = true;
+      });
+
+      await segment.click({ force: true });
+      await expect(segment).not.toHaveClass(/active/);
+    });
   });
 }
 
