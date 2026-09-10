@@ -93,6 +93,24 @@ function withTrackSwitchTimeout(promise) {
   });
 }
 
+/* selectAudioTrack()/selectDefaultAudioTrack() resolving is NOT a reliable
+   signal that the audio track actually changed — confirmed 2026-09-10 by
+   direct testing: it can resolve successfully ({"language":"es"}, no error)
+   while getAudioTracks() shows the previous language still the one actually
+   enabled. Unlike enableTextTrack(), whose own resolved value includes a
+   real showing flag, the audio methods' resolved value carries no
+   self-reported confirmation at all — it just echoes back the request
+   regardless of outcome. Also confirmed: when it fails this way, it fails
+   identically on every immediate retry within the same page load (not a
+   per-call coin flip) — retrying the same call doesn't help, so the fix is
+   to verify the real result instead of trusting the promise, not to retry. */
+function verifyAudioTrackActive(player, langCode) {
+  return player.getAudioTracks().then(
+    (tracks) => tracks.some((t) => t.language === langCode && t.enabled),
+    () => false,
+  );
+}
+
 function switchLiveTrack(player, langCode) {
   const captionsPromise = withTrackSwitchTimeout(
     player.enableTextTrack(langCode).then(
@@ -109,7 +127,7 @@ function switchLiveTrack(player, langCode) {
       ? player.selectDefaultAudioTrack()
       : player.selectAudioTrack(langCode)
     ).then(
-      () => true,
+      () => verifyAudioTrackActive(player, langCode),
       (err) => {
         console.warn(`No ${langCode} audio track on this video`, err);
         return false;
@@ -175,7 +193,7 @@ function showTrackNote(
   // has run for this page.
   const fallback = {
     total: `${name} isn't available for this video yet.`,
-    "audio-missing": `${name} captions are on, but dubbed audio isn't available yet for this video.`,
+    "audio-missing": `${name} captions are on, but the audio isn't available yet for this video.`,
     "captions-missing": `${name} audio is on, but captions aren't available yet for this video.`,
   }[kind];
 
