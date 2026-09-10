@@ -56,32 +56,59 @@ const vimeoWarmUpObserver = new IntersectionObserver(
    caller can tell whether the switch fully succeeded, partially succeeded
    (e.g. captions changed but the audio track doesn't exist on this video),
    or completely failed — and react accordingly (see handleLangSegmentClick
-   and the pendingLangSwitch path in loadVideo()). */
+   and the pendingLangSwitch path in loadVideo()).
+
+   Both selectAudioTrack()/selectDefaultAudioTrack() calls are raced against
+   a timeout (audioOk/captionsOk false if it fires) rather than awaited
+   directly. Confirmed by direct reproduction: called too soon after `new
+   Vimeo.Player(iframe)` — before the SDK's postMessage bridge is actually
+   ready, which takes longer on a heavier page — the audio-track call can
+   silently hang forever (never resolve OR reject), not just fail fast.
+   enableTextTrack() wasn't observed doing this, but it's timed the same way
+   defensively, since a hung caller here previously produced the visible bug:
+   a language toggle that appears to do nothing at all (no status, no
+   track-note) because the caller's own .then() never ran. */
+const TRACK_SWITCH_TIMEOUT_MS = 4000;
+
+function withTrackSwitchTimeout(promise) {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(false), TRACK_SWITCH_TIMEOUT_MS);
+    promise.then(
+      (ok) => {
+        clearTimeout(timer);
+        resolve(ok);
+      },
+      () => {
+        clearTimeout(timer);
+        resolve(false);
+      },
+    );
+  });
+}
+
 function switchLiveTrack(player, langCode) {
-  const captionsPromise = player.enableTextTrack(langCode).then(
-    () => true,
-    (err) => {
-      console.warn(`No ${langCode} subtitle track on this video`, err);
-      return false;
-    },
+  const captionsPromise = withTrackSwitchTimeout(
+    player.enableTextTrack(langCode).then(
+      () => true,
+      (err) => {
+        console.warn(`No ${langCode} subtitle track on this video`, err);
+        return false;
+      },
+    ),
   );
 
-  const audioPromise =
-    langCode === "en"
-      ? player.selectDefaultAudioTrack().then(
-          () => true,
-          (err) => {
-            console.warn("Could not reset to default audio track", err);
-            return false;
-          },
-        )
-      : player.selectAudioTrack(langCode).then(
-          () => true,
-          (err) => {
-            console.warn(`No ${langCode} audio track on this video`, err);
-            return false;
-          },
-        );
+  const audioPromise = withTrackSwitchTimeout(
+    (langCode === "en"
+      ? player.selectDefaultAudioTrack()
+      : player.selectAudioTrack(langCode)
+    ).then(
+      () => true,
+      (err) => {
+        console.warn(`No ${langCode} audio track on this video`, err);
+        return false;
+      },
+    ),
+  );
 
   return Promise.all([audioPromise, captionsPromise]).then(
     ([audioOk, captionsOk]) => ({ audioOk, captionsOk }),
