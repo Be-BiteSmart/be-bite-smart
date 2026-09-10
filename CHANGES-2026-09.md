@@ -1605,4 +1605,4 @@ Deliberately unchanged: `player.pause()`/`.play()` stay bare fire-and-forget cal
 
 **Verified:** full `tests/videos` suite, 24/24, no regressions. Also specifically re-ran the EN-revert scenario (the newest, most timing-sensitive fix, and the one most exercising the new `Promise.race`-based helper) 3 times — identical behavior to before the refactor (`selectDefaultAudioTrack()` still never settles, grace period still catches it, still reports full success every time).
 
-**Commit:** pending, this entry.
+**Commit:** `103bf1e`.
