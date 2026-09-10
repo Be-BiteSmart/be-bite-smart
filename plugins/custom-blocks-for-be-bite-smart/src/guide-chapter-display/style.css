@@ -7,6 +7,7 @@
    ───────────────────────────────────────────────────────────────────────────── */
 
 .guide-chapter-row {
+  position: relative; /* containing block for .guide-chapter-badges — see style.css comment there */
   margin-bottom: 8px;
 }
 
@@ -60,6 +61,57 @@ body:not(.block-editor-page) .guide-chapter-container.custom-block-card {
 .guide-chapter-title {
   font-weight: 500;
   margin: 0;
+}
+
+/* Moved outside <summary> — AND outside <details> entirely, up to being a
+   sibling of .guide-chapter-container inside .guide-chapter-row
+   (guide-chapter-display.php, 2026-09-09, axe: nested-interactive) —
+   <summary> is natively interactive, and these are real, independently-
+   clickable buttons, so nesting them there was a WCAG 4.1.2 violation.
+   Tried keeping it as a plain sibling of <summary> still inside <details>
+   first: position:absolute there computed the right top/right values but
+   rendered far outside the card (near the closed <details>'s bottom edge,
+   not its top) — Chromium's newer internal wrapping of a <details>'s
+   non-summary content interferes with absolutely-positioned children
+   placed directly inside it. Positioning against .guide-chapter-row
+   instead (a plain <article>, no special browser behavior) sidesteps that
+   entirely. .guide-chapter-row has no padding of its own, so the same
+   offsets used against .guide-chapter-container's padding would have
+   produced land in the same visual spot here too — values below match
+   .custom-block-card's own padding + the chevron's 20px width +
+   .guide-chapter-summary's 12px gap at each of that shared rule's 3
+   breakpoints (shared-block-styles.css) — update both together if either
+   changes. */
+.guide-chapter-row > .guide-chapter-badges {
+  position: absolute;
+  top: 2.5rem;
+  right: calc(2.5rem + 20px + 12px);
+}
+
+@media (max-width: 600px) {
+  .guide-chapter-row > .guide-chapter-badges {
+    top: 1.5rem;
+    right: calc(1rem + 20px + 12px);
+  }
+
+  /* The badges no longer take up flex space next to the title (they're
+     absolutely positioned now), so without this the title happily wraps
+     underneath them at narrow widths. Reserves roughly the badges' own
+     rendered width (measured ~135px at 400px viewport) plus margin, so
+     the title wraps before reaching that zone instead. Scoped to just the
+     title row, not all of .guide-chapter-main — summary-text sits below
+     where the badges are vertically, so it doesn't need the same
+     reserved space and shouldn't be squeezed by it. */
+  .guide-chapter-title-row {
+    padding-right: 170px;
+  }
+}
+
+@media (min-width: 601px) and (max-width: 768px) {
+  .guide-chapter-row > .guide-chapter-badges {
+    top: 1.5rem;
+    right: calc(1.5rem + 20px + 12px);
+  }
 }
 
 .guide-chapter-badges {

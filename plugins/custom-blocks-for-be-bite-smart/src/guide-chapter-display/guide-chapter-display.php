@@ -651,7 +651,6 @@ function bitesmart_render_guide_chapter_row( $chapter_id, array $args = array() 
                 <span class="guide-chapter-main">
                     <span class="guide-chapter-title-row">
                         <span class="guide-chapter-title"><?php echo esc_html( get_the_title( $post ) ); ?></span>
-                        <?php echo bitesmart_render_guide_format_badges( $has_video, $has_text ); // phpcs:ignore ?>
                     </span>
                     <?php if ( $summary ) : ?>
                         <span class="guide-chapter-summary-text"><?php echo esc_html( $summary ); ?></span>
@@ -856,6 +855,28 @@ function bitesmart_render_guide_chapter_row( $chapter_id, array $args = array() 
 
             </div>
         </details>
+
+        <?php /*
+         * NOT inside <summary> (moved 2026-09-09, axe: nested-interactive) —
+         * these are real, independently-clickable <button>s (toggle this
+         * one chapter's video/text visibility), and <summary> is itself
+         * natively interactive, so nesting them there was a WCAG 4.1.2
+         * violation. Also NOT a child of <details> above, even outside
+         * <summary> — Chromium's newer internal wrapping of a <details>'s
+         * non-summary content interferes with position:absolute children
+         * placed directly inside it (confirmed empirically: a sibling of
+         * <summary> still inside <details> computed the right top/right
+         * values but rendered far outside the card, near the very bottom
+         * of the closed <details> box, not at the top). Placing it here —
+         * a sibling of <details> itself, inside .guide-chapter-row — sidesteps
+         * that <details>-internal quirk entirely; .guide-chapter-row is a
+         * plain <article> with no special browser behavior. Positioned via
+         * CSS (.guide-chapter-row > .guide-chapter-badges in style.css)
+         * against .guide-chapter-row, which has no padding of its own, so
+         * the same offsets land in the same visual spot as they would have
+         * against .guide-chapter-container.
+         */ ?>
+        <?php echo bitesmart_render_guide_format_badges( $has_video, $has_text ); // phpcs:ignore ?>
     </article>
     <?php
     return ob_get_clean();
