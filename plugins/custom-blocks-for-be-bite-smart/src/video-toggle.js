@@ -102,6 +102,24 @@ const vimeoWarmUpObserver = new IntersectionObserver(
    wait reads as "loading" rather than "broken"). */
 const TRACK_SWITCH_TIMEOUT_MS = 8000;
 
+/* selectAudioTrack()/selectDefaultAudioTrack() can hang and never settle at
+   all — confirmed 2026-09-10, not just on a freshly-constructed player (the
+   original hang bug this file already works around via PLAYER_WARMUP_MS),
+   but on an already-established, already-playing one too: Janet clicked
+   back to English mid-playback, selectDefaultAudioTrack() never resolved
+   or rejected within the full TRACK_SWITCH_TIMEOUT_MS, and the switch was
+   reported as a failure — even though she was already correctly hearing
+   and reading English. The switch had genuinely already succeeded; our own
+   code just never got to check, because verifying real state
+   (getAudioTracks(), which has never been observed to hang in any testing
+   this session) was gated behind that one unreliable promise settling
+   first. This is the grace period switchLiveTrack() gives the select call
+   before checking real state anyway, regardless of whether the call itself
+   ever settles — generous relative to how fast a real resolution always
+   is (single-/low-double-digit milliseconds in every run logged today),
+   far shorter than the full give-up ceiling above. */
+const AUDIO_SELECT_GRACE_MS = 2000;
+
 /* A live audio-track switch's real success rate turned out to depend on how
    long the underlying video has been loading before the Vimeo.Player is
    ever CONSTRUCTED — not on retrying, not on pause() timing, not on
@@ -301,15 +319,43 @@ function switchLiveTrack(player, langCode) {
       "-- starting audio sub-call now",
     );
 
+    // Verifying real state (below) is deliberately NOT chained directly
+    // onto selectAudioTrackForLanguage()'s own promise — that promise can
+    // hang and never settle at all, even on an already-established player
+    // (see AUDIO_SELECT_GRACE_MS above), and gating the real check behind
+    // it meant a hang was reported as a failure even on switches that had
+    // genuinely already succeeded. Whichever happens first — the select
+    // call settling, or the grace period elapsing — triggers the real
+    // getAudioTracks() check; only one of the two ever runs it.
     const audioPromise = withTrackSwitchTimeout(
-      selectAudioTrackForLanguage(player, langCode).then(
-        () => verifyAudioTrackActive(player, langCode),
-        (err) => {
-          console.warn(`No ${langCode} audio track on this video`, err);
-          logLangSwitch("switchLiveTrack: selectAudioTrackForLanguage() REJECTED", err);
-          return false;
-        },
-      ),
+      new Promise((resolve) => {
+        let checked = false;
+        const checkRealState = (reason) => {
+          if (checked) return;
+          checked = true;
+          logLangSwitch(
+            "switchLiveTrack: verifying real audio state now (",
+            reason,
+            ") for langCode =",
+            langCode,
+          );
+          resolve(verifyAudioTrackActive(player, langCode));
+        };
+
+        selectAudioTrackForLanguage(player, langCode).then(
+          () => checkRealState("select call settled normally"),
+          (err) => {
+            console.warn(`No ${langCode} audio track on this video`, err);
+            logLangSwitch("switchLiveTrack: selectAudioTrackForLanguage() REJECTED", err);
+            checkRealState("select call rejected");
+          },
+        );
+
+        setTimeout(
+          () => checkRealState("grace period elapsed, select call still pending"),
+          AUDIO_SELECT_GRACE_MS,
+        );
+      }),
       "audio",
     );
 
