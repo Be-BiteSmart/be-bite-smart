@@ -1541,7 +1541,7 @@ Re-tested the "time before first attempt" finding from the entry above more prec
 
 **A second false alarm followed even after that redesign**: the corrected version passed 12/12 in a full batch, but suspiciously fast (2.4-3.1s vs the expected several seconds) — flagged as suspicious before running it past Janet. Confirmed via real click timing + an 11-second wait + ground truth: those passes were for the wrong reason. With construction now deliberately delayed, a click landing before it finishes takes the pre-existing "player not ready yet" fallback path (shows an optimistic status immediately, defers the real check to the automatic re-verify) rather than actually exercising the fix — ground truth showed only 1/5 real success underneath, unchanged.
 
-**Commit:** none yet — both fixes are real and are being kept, but see the next two entries for what was still missing before they could be verified end to end.
+**Commit:** `aca0158` (bundled with the two entries below).
 
 ## 2026-09-10 (cont'd) — The other half of the fix: captions and audio calls were racing each other
 
@@ -1553,7 +1553,7 @@ Changed `switchLiveTrack()` in `video-toggle.js` to call the two sub-promises se
 
 While re-reading `switchLiveTrack()`'s two callers side by side to make this change, found a real, independent bug: `showTrackNote()` only ever touches `.video-quote-track-note` — it never clears `.lang-change-status`. The click-driven call site already calls `clearLangChangeStatus()` before every `showTrackNote()`; the automatic post-construction re-verify call site never did. That gap predates today, but the construction-timing delay above widens the window where it can actually be seen (the "player not ready" optimistic-status fallback now fires far more often and for far longer before the automatic re-verify's correction arrives), so a stale "Switched to Spanish." and the real failure track-note could show at once. Fixed to match the click-driven call site's existing pattern.
 
-**Commit:** none yet — queued together with the two entries above, pending the end-to-end verification in progress.
+**Commit:** `aca0158` (bundled with the entries above and below).
 
 ## 2026-09-10 (cont'd) — Added verbose `[lang-switch]` console logging throughout, at Janet's request
 
@@ -1561,7 +1561,7 @@ Janet asked for heavy `console.log` coverage of everything touching the document
 
 Marked as temporary/deliberately verbose in a comment at its declaration — intended to be stripped once this investigation is done, not a permanent addition.
 
-**Commit:** none yet — bundled with the pending combined-fix verification above.
+**Commit:** `aca0158` (bundled with the entries above).
 
 ## 2026-09-10 (cont'd) — End-to-end verification of the combined fix: real improvement, but the remaining cause is now pinned down exactly
 
@@ -1573,4 +1573,14 @@ Used the new `[lang-switch]` logging to verify the kind-parameter, construction-
 
 **Conclusion, not yet acted on:** this looks like close to the ceiling of what client-side code can fix here — every lever found today (timeout, kind parameter, construction timing, call ordering, honest verification instead of trusting the promise) is now in place and confirmed working as designed, and the failure still traces to one exact line in Vimeo's own (very new, shipped December 2025) SDK. This substantially strengthens the reload-fallback recommendation made earlier today (fall back to a full iframe reload on language change for quote blocks, matching episode-card's already-proven-reliable pattern) rather than continuing to chase further variations of live in-place switching. Left for Janet to decide, not acted on unilaterally.
 
-**Commit:** pending — code changes across this and the prior several entries (kind parameter, construction timing, sequential calls, `clearLangChangeStatus` fix, `[lang-switch]` logging) are verified working as intended and ready to commit together; the temporary verification scripts (`tests/videos/tmp-verify-sequential*.spec.js`) are being deleted, not committed.
+**Commit:** `aca0158` — kind parameter, construction timing, sequential calls, `clearLangChangeStatus` fix, and `[lang-switch]` logging, all bundled together; temporary verification scripts (`tests/videos/tmp-verify-sequential*.spec.js`) deleted, not committed. Full `tests/videos` suite: 24/24, no regressions (note: the pre-existing "fully successful live track switch" test doesn't reliably exercise the real construction-delayed switch path any more — it clicks too soon after `assertVimeoPlayerLoads()` returns, which only waits for the iframe `src` attribute, not real player construction, so it's usually landing in the "player not ready yet" fallback branch instead. Pre-existing test-coverage gap surfaced by today's construction-timing change, not fixed — flagging, not touching, since it wasn't asked for).
+
+## 2026-09-10 (cont'd) — Tested and ruled out: pausing the video before switching is not why the audio select fails
+
+Janet asked directly why `getAudioTracks()` shows `enabled: false` for the requested language after `selectAudioTrack()` already resolved, and what would make it `true`. One real, previously-untested candidate: the click-driven switch calls `player.pause()` right before every attempt — plausible that an adaptive player can only actually swap an audio rendition while actively fetching segments, not while paused.
+
+Tested directly: same sequential enableTextTrack-then-selectAudioTrack sequence, on an equally warmed-up player, via a second independent read-only `Vimeo.Player` on the same iframe, but never pausing anything. Result: **1/6 (17%)** — no better than (arguably slightly worse than, though the sample is small either way) the 3/10 (30%) baseline that does pause. Ruled out.
+
+One real clue surfaced along the way, not yet explained: in the one run that succeeded, `getPaused()` read `true` afterward even though nothing in the test ever called `.pause()` — the player briefly paused itself internally. Consistent with (not proof of) a real internal stream reload being what actually applies a track change, happening inconsistently on Vimeo's side. Not pursued further given how much today's session has already spent chasing this exact SDK call; noting it here in case it's useful if this gets picked up again.
+
+**Commit:** none — diagnostic only, temp script (`tests/videos/tmp-verify-no-pause.spec.js`) deleted after use.
