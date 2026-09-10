@@ -10,6 +10,7 @@ import {
   episodeLangSegments,
   getEpisodeVideoIds,
   expandAllDevelopedEpisodes,
+  expectedVimeoPlayerSrc,
 } from "./helpers/videos.js";
 
 test.describe("Documentary video (video-quote block)", () => {
@@ -105,7 +106,7 @@ test.describe("Documentary video (video-quote block)", () => {
     // never translates the whole button into that language's script). See
     // CHANGES.md, "Make video language toggle visibly change something".
 
-    test(`${path} switching language while playing keeps the same video loaded`, async ({
+    test(`${path} switching language while playing reloads the iframe with the new language's params`, async ({
       page,
     }, testInfo) => {
       await gotoExpectOk(page, path);
@@ -142,16 +143,25 @@ test.describe("Documentary video (video-quote block)", () => {
           `.lang-segment[data-lang]:not([data-lang="${activeLang}"]), .toggle-label[data-lang]:not([data-lang="${activeLang}"])`,
         )
         .first();
+      const otherLang = await otherSegment.getAttribute("data-lang");
 
+      // video-quote used to switch subtitle/audio tracks live via the Vimeo
+      // Player SDK without reloading; that approach turned out to be
+      // unreliable (see be-bitesmart-video-toggle-audio-hang.md) and was
+      // replaced 2026-09-10 with the same confirm-dialog-then-reload
+      // approach episode-card already used. Switching while playing now
+      // goes through that dialog, same as an episode.
       await otherSegment.click();
+      await page.locator(".video-lang-restart-modal__btn--confirm").click();
       await expect(otherSegment).toHaveClass(/active/);
 
-      // video-quote switches subtitle/audio tracks live via the Vimeo Player
-      // SDK — unlike episode-card, it never loads a different video. The
-      // iframe's src attribute (and the iframe element itself) must stay
-      // exactly as it was; the SDK calls don't touch it at all.
-      await expect(iframe).toHaveAttribute("src", srcBeforeSwitch);
-      await expect(block.locator(".video-player iframe")).toHaveCount(1);
+      const newIframe = block.locator(".video-player iframe");
+      await expect(newIframe).toHaveCount(1);
+      await expect(newIframe).toHaveAttribute(
+        "src",
+        expectedVimeoPlayerSrc(vimeoId, otherLang, { forceCaptions: true }),
+      );
+      expect(await newIframe.getAttribute("src")).not.toBe(srcBeforeSwitch);
     });
   }
 });

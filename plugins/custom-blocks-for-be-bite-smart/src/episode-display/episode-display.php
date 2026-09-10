@@ -91,7 +91,7 @@ function render_episode_block( $attributes ) {
     $lang_codes  = array_keys( $video_ids );
     $has_picker  = count( $lang_codes ) > 1;
     if ( $has_picker ) {
-        bitesmart_episode_needs_lang_restart_templates();
+        bitesmart_needs_lang_restart_templates();
         bitesmart_needs_play_button_label_template();
         bitesmart_needs_lang_change_status_template();
     }

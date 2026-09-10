@@ -42,7 +42,7 @@ function render_video_quote_block( $attributes ) {
     if ( $has_picker ) {
         bitesmart_needs_play_button_label_template();
         bitesmart_needs_lang_change_status_template();
-        bitesmart_needs_track_switch_status_template();
+        bitesmart_needs_lang_restart_templates();
     }
 
     ob_start(); ?>
@@ -78,11 +78,6 @@ function render_video_quote_block( $attributes ) {
                                 </div>
                             </div>
                             <div class="video-player"></div>
-                            <?php if ( $has_picker ) : ?>
-                                <div class="video-quote-loading-overlay" aria-hidden="true">
-                                    <span class="video-quote-loading-spinner"></span>
-                                </div>
-                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -91,10 +86,8 @@ function render_video_quote_block( $attributes ) {
             <div class="video-quote-text-side">
 
                 <?php if ( count( $available_languages ) > 1 ) : ?>
-                    <?php bitesmart_video_quote_needs_track_note_templates(); ?>
                     <div class="video-quote-controls">
                         <?php echo bitesmart_render_lang_picker_html( $available_languages, $active_lang ); ?>
-                        <p class="video-quote-track-note" role="status" aria-live="polite"></p>
                         <p class="lang-change-status" role="status" aria-live="polite"></p>
                     </div>
                 <?php endif; ?>

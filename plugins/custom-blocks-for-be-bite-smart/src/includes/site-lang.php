@@ -300,9 +300,9 @@ function bitesmart_normalize_available_languages( $raw ) {
 /**
  * Registers a wp_footer hook to print the shared, TranslatePress-
  * translatable language-name templates (.video-quote-lang-name[data-lang])
- * exactly once per page. Shared by video-quote's track-note messages and
- * episode-card's language-restart dialog — both need "what is language X
- * called" without hardcoding a per-language name dictionary.
+ * exactly once per page. Shared by every language-aware status/dialog
+ * message across both block types — all need "what is language X called"
+ * without hardcoding a per-language name dictionary.
  */
 function bitesmart_needs_video_lang_name_templates() {
     static $needed = false;
@@ -325,40 +325,6 @@ function bitesmart_render_video_lang_name_templates() {
         <?php foreach ( bitesmart_site_languages() as $lang ) : ?>
             <span class="video-quote-lang-name" data-lang="<?php echo esc_attr( $lang['code'] ); ?>"><?php echo esc_html( $lang['name'] ); ?></span>
         <?php endforeach; ?>
-    </div>
-    <?php
-}
-
-/**
- * Registers a wp_footer hook to print the video-quote track-note templates,
- * exactly once, only on pages that actually render a multi-language
- * video-quote block. Static guard prevents double-registration when
- * multiple video-quote blocks are on the same page.
- */
-function bitesmart_video_quote_needs_track_note_templates() {
-    static $needed = false;
-    if ( $needed ) {
-        return;
-    }
-    $needed = true;
-    bitesmart_needs_video_lang_name_templates();
-    add_action( 'wp_footer', 'bitesmart_render_video_quote_track_note_templates' );
-}
-
-/**
- * Visually hidden, TranslatePress-translatable source of truth for the
- * video-quote live-track-switch note (see switchLiveTrack()/showTrackNote()
- * in video-toggle.js). Real gettext calls (esc_html_e) so TranslatePress's
- * String Translation interface picks them up the same way it already
- * handles the rest of this block's static copy — dynamic JS-built strings
- * aren't reliably translatable by TranslatePress, but static HTML is.
- */
-function bitesmart_render_video_quote_track_note_templates() {
-    ?>
-    <div class="video-quote-track-note-templates" aria-hidden="true" style="display:none;">
-        <span class="video-quote-track-note-template" data-kind="total"><?php esc_html_e( '{language} isn\'t available for this video yet.', 'custom-blocks' ); ?></span>
-        <span class="video-quote-track-note-template" data-kind="audio-missing"><?php esc_html_e( '{language} captions are on, but the audio isn\'t available yet for this video.', 'custom-blocks' ); ?></span>
-        <span class="video-quote-track-note-template" data-kind="captions-missing"><?php esc_html_e( '{language} audio is on, but captions aren\'t available yet for this video.', 'custom-blocks' ); ?></span>
     </div>
     <?php
 }
@@ -409,9 +375,7 @@ function bitesmart_render_play_button_label_templates() {
  * episode or video-quote block. Shared by both blocks' language pickers
  * (see showLangChangeStatus() in video-toggle.js) — a brief, accessible
  * confirmation next to the picker right after a genuinely successful
- * switch. Never shown alongside video-quote's existing
- * .video-quote-track-note (a failed/partial live track swap shows that
- * instead — see showLangChangeStatus()'s call sites in video-toggle.js).
+ * switch.
  */
 function bitesmart_needs_lang_change_status_template() {
     static $needed = false;
@@ -437,43 +401,13 @@ function bitesmart_render_lang_change_status_templates() {
 }
 
 /**
- * Registers a wp_footer hook to print the in-flight "switching language"
- * status template, exactly once, on any page that renders a multi-language
- * video-quote block. Shown transiently in the SAME .lang-change-status
- * element showLangChangeStatus() above already uses (see
- * showTrackSwitchStatus() in video-toggle.js) — this is an earlier phase of
- * that same "genuine language change" status, not a separate concept, so it
- * deliberately doesn't get its own paragraph or template family.
+ * Registers a wp_footer hook to print the language-restart confirmation
+ * dialog's wording, exactly once, on any page that renders a multi-language
+ * episode-card or video-quote block that reloads on language switch. Both
+ * block types share the exact same confirmLanguageRestart() flow in
+ * video-toggle.js.
  */
-function bitesmart_needs_track_switch_status_template() {
-    static $needed = false;
-    if ( $needed ) {
-        return;
-    }
-    $needed = true;
-    bitesmart_needs_video_lang_name_templates();
-    add_action( 'wp_footer', 'bitesmart_render_track_switch_status_templates' );
-}
-
-/**
- * Visually hidden, TranslatePress-translatable source of truth for the
- * in-flight "switching language" status line (see showTrackSwitchStatus()
- * in video-toggle.js).
- */
-function bitesmart_render_track_switch_status_templates() {
-    ?>
-    <div class="track-switch-status-templates" aria-hidden="true" style="display:none;">
-        <span class="track-switch-status-template"><?php esc_html_e( 'Switching to {language}…', 'custom-blocks' ); ?></span>
-    </div>
-    <?php
-}
-
-/**
- * Registers a wp_footer hook to print the episode-card language-restart
- * confirmation dialog's wording, exactly once, only on pages that render a
- * multi-language episode-card block.
- */
-function bitesmart_episode_needs_lang_restart_templates() {
+function bitesmart_needs_lang_restart_templates() {
     static $needed = false;
     if ( $needed ) {
         return;
@@ -640,7 +574,7 @@ function bitesmart_episode_card_render( $block_content, $block ) {
     $site_lang = bitesmart_site_lang_code();
 
     if ( count( $video_ids ) > 1 ) {
-        bitesmart_episode_needs_lang_restart_templates();
+        bitesmart_needs_lang_restart_templates();
     }
 
     $replacements = array(

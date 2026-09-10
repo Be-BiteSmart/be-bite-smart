@@ -107,7 +107,7 @@ for (const { path, label } of VIDEO_QUOTE_PAGES) {
       );
     });
 
-    test(`a fully successful live track switch while playing also shows the status, never alongside the track-note`, async ({
+    test(`cancelling the restart-confirm dialog rolls the play button back with no status flash`, async ({
       page,
     }, testInfo) => {
       await gotoExpectOk(page, path);
@@ -121,44 +121,37 @@ for (const { path, label } of VIDEO_QUOTE_PAGES) {
       }
 
       const vimeoId = await block.getAttribute("data-quote-vimeo-id");
-      const siteLang = (await block.getAttribute("data-site-lang")) || "en";
+      const activeLang = await activeLangOf(block);
 
       await spyOnPlausible(page);
       await assertVimeoPlayerLoads(page, block, block.locator(".play-button"), {
         vimeoId,
-        lang: siteLang,
+        lang: activeLang,
         forceCaptions: true,
       });
 
-      const activeLang = await activeLangOf(block);
       const segment = otherLangSegment(block, activeLang);
-      const otherLang = await segment.getAttribute("data-lang");
-
+      const label = block.locator(".play-button .play-button-label");
       const status = block.locator(".lang-change-status");
-      const trackNote = block.locator(".video-quote-track-note");
+      const originalLabelText = await label.textContent();
 
       await segment.click();
+      await page.locator(".video-lang-restart-modal__btn--cancel").click();
 
-      // Only ever one of the two is visible at a time — a fully successful
-      // switch shows the status, never the track-note (that's reserved for a
-      // failed/partial switch — see showTrackNote()'s call sites).
-      await expect(status).toHaveClass(/is-visible/);
-      await expect(status).toHaveText(await expectedLangChangeStatus(page, otherLang));
-      await expect(trackNote).not.toHaveClass(/is-visible/);
+      // Rolled back: the picker, label, and status all act as if the click
+      // never happened — no false "success" confirmation for a cancelled switch.
+      await expect(
+        block.locator(
+          `.lang-segment[data-lang="${activeLang}"], .toggle-label[data-lang="${activeLang}"]`,
+        ),
+      ).toHaveClass(/active/);
+      await expect(label).toHaveText(originalLabelText);
+      await expect(status).not.toHaveClass(/is-visible/);
     });
 
-    test(`the live track-switch loading overlay markup and translatable status template are present`, async ({
+    test(`confirming the restart dialog updates the play button and shows the status`, async ({
       page,
     }, testInfo) => {
-      // Real switch timing turned out to be too fast/variable to reliably
-      // assert against directly: once the Vimeo player has been playing a
-      // while, a live switch can settle in single-digit milliseconds —
-      // confirmed by direct instrumentation, fast enough that even a 3s
-      // Playwright poll never caught the picker mid-disable. Rather than a
-      // flaky timing assertion, this checks the wiring the loading/disable
-      // behavior depends on is actually present (would catch e.g. the PHP
-      // template registrar or the overlay markup going missing) — see
-      // be-bitesmart-video-toggle-audio-hang.md for the full finding.
       await gotoExpectOk(page, path);
 
       const block = page.locator(".video-quote-block").first();
@@ -169,40 +162,27 @@ for (const { path, label } of VIDEO_QUOTE_PAGES) {
         return;
       }
 
-      await expect(block.locator(".video-quote-loading-overlay")).toBeAttached();
-      await expect(page.locator(".track-switch-status-template")).toBeAttached();
-    });
-
-    test(`a disabled language segment does not register a click`, async ({
-      page,
-    }, testInfo) => {
-      // Validates the mechanism setLangPickerBusy() relies on to close the
-      // original race (see video-toggle.js): a real `disabled` attribute
-      // structurally prevents the click event from ever reaching
-      // handleLangSegmentClick(), not just a visual style a visitor could
-      // still activate. Sets the state directly rather than trying to
-      // catch a real in-flight switch (see the timing note in the previous
-      // test) — this is deterministic regardless of how fast a real switch
-      // resolves.
-      await gotoExpectOk(page, path);
-
-      const block = page.locator(".video-quote-block").first();
-      await expect(block, `No video-quote block on ${path}`).toBeVisible();
-
-      if ((await episodeLangSegments(block).count()) < 2) {
-        testInfo.skip();
-        return;
-      }
-
+      const vimeoId = await block.getAttribute("data-quote-vimeo-id");
       const activeLang = await activeLangOf(block);
-      const segment = otherLangSegment(block, activeLang);
 
-      await segment.evaluate((el) => {
-        el.disabled = true;
+      await spyOnPlausible(page);
+      await assertVimeoPlayerLoads(page, block, block.locator(".play-button"), {
+        vimeoId,
+        lang: activeLang,
+        forceCaptions: true,
       });
 
-      await segment.click({ force: true });
-      await expect(segment).not.toHaveClass(/active/);
+      const segment = otherLangSegment(block, activeLang);
+      const otherLang = await segment.getAttribute("data-lang");
+      const label = block.locator(".play-button .play-button-label");
+      const status = block.locator(".lang-change-status");
+
+      await segment.click();
+      await page.locator(".video-lang-restart-modal__btn--confirm").click();
+
+      await expect(label).toHaveText(await expectedPlayButtonLabel(page, otherLang));
+      await expect(status).toHaveClass(/is-visible/);
+      await expect(status).toHaveText(await expectedLangChangeStatus(page, otherLang));
     });
   });
 }
