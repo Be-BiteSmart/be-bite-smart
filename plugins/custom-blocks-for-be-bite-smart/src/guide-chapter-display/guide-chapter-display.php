@@ -677,24 +677,30 @@ function bitesmart_render_guide_chapter_row( $chapter_id, array $args = array() 
                     <span class="guide-chapter-title-row">
                         <?php
                         /*
-                         * <h3>, not <span> (2026-09-09 — a chapter title is
-                         * genuinely heading content, and unlike <p>, a
-                         * heading IS specifically permitted inside <summary>:
-                         * HTML's content model for <summary> as the first
-                         * child of <details> is "Phrasing content, optionally
-                         * intermixed with heading content" (WHATWG) — headings
-                         * may sit alongside other phrasing content (this
-                         * chevron SVG, the index/summary-text spans), not
-                         * restricted to being <summary>'s sole child the way
-                         * I'd first assumed. h3 to match the document outline
-                         * this page already establishes (h1 page title > h2
-                         * .guide-section-heading Section grouping > h3 here),
-                         * and matches the same choice this codebase already
-                         * makes for the identical <details>/<summary> pattern
-                         * in qa-entry-display.php/episode-display.php.
+                         * <span>, NOT <h3> — reverted 2026-09-09, same day it
+                         * was tried. HTML's content model technically permits
+                         * a heading inside <summary> ("Phrasing content,
+                         * optionally intermixed with heading content," WHATWG)
+                         * — valid, and even matches what qa-entry-display.php/
+                         * episode-display.php already do — but valid HTML
+                         * isn't the same as a good screen-reader experience:
+                         * <summary> maps to a button role for assistive tech,
+                         * and per real-world testing (see Scott O'Hara's
+                         * writeup, scottohara.me/blog/2022/09/12/details-
+                         * summary.html — a primary reference on this element's
+                         * accessibility), nested heading semantics are NOT
+                         * consistently exposed once that mapping applies —
+                         * confirmed VoiceOver specifically drops a heading
+                         * nested in a role="button" context entirely, removing
+                         * it from the page's heading-navigation outline. Given
+                         * that inconsistency, plain phrasing content (this
+                         * span) is the safer choice here, even though the
+                         * qa-entry/episode precedent uses h3 — worth revisiting
+                         * across all three if this ever gets a real screen
+                         * reader audit, not just an HTML validator pass.
                          */
                         ?>
-                        <h3 class="guide-chapter-title"><?php echo esc_html( get_the_title( $post ) ); ?></h3>
+                        <span class="guide-chapter-title"><?php echo esc_html( get_the_title( $post ) ); ?></span>
                     </span>
                     <?php if ( $summary ) : ?>
                         <span class="guide-chapter-summary-text"><?php echo esc_html( $summary ); ?></span>
