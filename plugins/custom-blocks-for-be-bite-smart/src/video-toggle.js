@@ -169,8 +169,37 @@ function waitForPlayerWarmup(sinceTimestamp) {
 
 function withTrackSwitchTimeout(promise, label) {
   const startedAt = Date.now();
-  return new Promise((resolve) => {
-    const timer = setTimeout(() => {
+  let timer;
+
+  // Named as two independent racers (rather than one manual resolve-first-
+  // wins callback) so each side logs itself, with no shared "which one won"
+  // bookkeeping needed -- Promise.race below just takes whichever settles
+  // first.
+  const settled = promise.then(
+    (ok) => {
+      clearTimeout(timer);
+      logLangSwitch(
+        `withTrackSwitchTimeout(${label}): settled normally after`,
+        Date.now() - startedAt,
+        "ms, ok =",
+        ok,
+      );
+      return ok;
+    },
+    (err) => {
+      clearTimeout(timer);
+      logLangSwitch(
+        `withTrackSwitchTimeout(${label}): the wrapped promise REJECTED after`,
+        Date.now() - startedAt,
+        "ms (unexpected -- callers should already be catching their own errors)",
+        err,
+      );
+      return false;
+    },
+  );
+
+  const timedOut = new Promise((resolve) => {
+    timer = setTimeout(() => {
       logLangSwitch(
         `withTrackSwitchTimeout(${label}): TIMED OUT after`,
         Date.now() - startedAt,
@@ -180,29 +209,9 @@ function withTrackSwitchTimeout(promise, label) {
       );
       resolve(false);
     }, TRACK_SWITCH_TIMEOUT_MS);
-    promise.then(
-      (ok) => {
-        clearTimeout(timer);
-        logLangSwitch(
-          `withTrackSwitchTimeout(${label}): settled normally after`,
-          Date.now() - startedAt,
-          "ms, ok =",
-          ok,
-        );
-        resolve(ok);
-      },
-      (err) => {
-        clearTimeout(timer);
-        logLangSwitch(
-          `withTrackSwitchTimeout(${label}): the wrapped promise REJECTED after`,
-          Date.now() - startedAt,
-          "ms (unexpected -- callers should already be catching their own errors)",
-          err,
-        );
-        resolve(false);
-      },
-    );
   });
+
+  return Promise.race([settled, timedOut]);
 }
 
 /* selectAudioTrack()/selectDefaultAudioTrack() resolving is NOT a reliable
@@ -216,33 +225,31 @@ function withTrackSwitchTimeout(promise, label) {
    identically on every immediate retry within the same page load (not a
    per-call coin flip) — retrying the same call doesn't help, so the fix is
    to verify the real result instead of trusting the promise, not to retry. */
-function verifyAudioTrackActive(player, langCode) {
+async function verifyAudioTrackActive(player, langCode) {
   logLangSwitch("verifyAudioTrackActive: calling getAudioTracks() to check for langCode =", langCode);
-  return player.getAudioTracks().then(
-    (tracks) => {
-      logLangSwitch("verifyAudioTrackActive: getAudioTracks() resolved with", tracks);
-      const result = tracks.some((t) => {
-        const isMatch = t.language === langCode && t.enabled;
-        logLangSwitch(
-          "verifyAudioTrackActive: checking track",
-          { language: t.language, kind: t.kind, enabled: t.enabled },
-          "-- t.language === langCode?",
-          t.language === langCode,
-          ", t.enabled?",
-          t.enabled,
-          "=> isMatch =",
-          isMatch,
-        );
-        return isMatch;
-      });
-      logLangSwitch("verifyAudioTrackActive: final result for langCode =", langCode, "is", result);
-      return result;
-    },
-    (err) => {
-      logLangSwitch("verifyAudioTrackActive: getAudioTracks() REJECTED", err);
-      return false;
-    },
-  );
+  try {
+    const tracks = await player.getAudioTracks();
+    logLangSwitch("verifyAudioTrackActive: getAudioTracks() resolved with", tracks);
+    const result = tracks.some((t) => {
+      const isMatch = t.language === langCode && t.enabled;
+      logLangSwitch(
+        "verifyAudioTrackActive: checking track",
+        { language: t.language, kind: t.kind, enabled: t.enabled },
+        "-- t.language === langCode?",
+        t.language === langCode,
+        ", t.enabled?",
+        t.enabled,
+        "=> isMatch =",
+        isMatch,
+      );
+      return isMatch;
+    });
+    logLangSwitch("verifyAudioTrackActive: final result for langCode =", langCode, "is", result);
+    return result;
+  } catch (err) {
+    logLangSwitch("verifyAudioTrackActive: getAudioTracks() REJECTED", err);
+    return false;
+  }
 }
 
 /* selectAudioTrack(language, kind) takes an optional second `kind` argument
@@ -259,7 +266,7 @@ function verifyAudioTrackActive(player, langCode) {
    some residual flakiness in this very new API appears to be real, not
    something fixable from the calling side (see verifyAudioTrackActive()
    above, still needed as the safety net for whatever's left). */
-function selectAudioTrackForLanguage(player, langCode) {
+async function selectAudioTrackForLanguage(player, langCode) {
   logLangSwitch("selectAudioTrackForLanguage: langCode =", langCode);
   if (langCode === "en") {
     logLangSwitch("selectAudioTrackForLanguage: english -- calling selectDefaultAudioTrack()");
@@ -270,33 +277,63 @@ function selectAudioTrackForLanguage(player, langCode) {
     );
     return promise;
   }
-  return player.getAudioTracks().then((tracks) => {
-    logLangSwitch("selectAudioTrackForLanguage: getAudioTracks() before select:", tracks);
-    const kind = tracks.find((t) => t.language === langCode)?.kind;
-    logLangSwitch(
-      "selectAudioTrackForLanguage: resolved kind =",
-      kind,
-      "for langCode =",
-      langCode,
-      "-- calling selectAudioTrack(",
-      langCode,
-      ",",
-      kind,
-      ")",
-    );
-    const promise = player.selectAudioTrack(langCode, kind);
-    promise.then(
-      (result) => logLangSwitch("selectAudioTrackForLanguage: selectAudioTrack() resolved", result),
-      (err) => logLangSwitch("selectAudioTrackForLanguage: selectAudioTrack() REJECTED", err),
-    );
-    return promise;
-  });
+
+  const tracks = await player.getAudioTracks();
+  logLangSwitch("selectAudioTrackForLanguage: getAudioTracks() before select:", tracks);
+  const kind = tracks.find((t) => t.language === langCode)?.kind;
+  logLangSwitch(
+    "selectAudioTrackForLanguage: resolved kind =",
+    kind,
+    "for langCode =",
+    langCode,
+    "-- calling selectAudioTrack(",
+    langCode,
+    ",",
+    kind,
+    ")",
+  );
+  // Not awaited here on purpose -- this call itself can hang and never
+  // settle (see verifyAudioAfterSelect below), so the raw, still-pending
+  // promise is returned for the caller to race against a grace period,
+  // same as the selectDefaultAudioTrack() branch above.
+  const promise = player.selectAudioTrack(langCode, kind);
+  promise.then(
+    (result) => logLangSwitch("selectAudioTrackForLanguage: selectAudioTrack() resolved", result),
+    (err) => logLangSwitch("selectAudioTrackForLanguage: selectAudioTrack() REJECTED", err),
+  );
+  return promise;
 }
 
-function switchLiveTrack(player, langCode) {
+/* Checks the real post-select audio state as soon as either the select call
+   settles, or AUDIO_SELECT_GRACE_MS elapses — whichever comes first —
+   rather than chaining directly onto selectAudioTrackForLanguage()'s own
+   promise, which can hang and never settle at all, even on an already-
+   established player (see AUDIO_SELECT_GRACE_MS above). getAudioTracks()
+   has never been observed to hang in any testing this session, so it's
+   safe to trust as the tiebreaker regardless of which promise "wins" —
+   Promise.race takes care of only ever running it once. */
+async function verifyAudioAfterSelect(player, langCode) {
+  const selectSettled = selectAudioTrackForLanguage(player, langCode).then(
+    () => "select call settled normally",
+    (err) => {
+      console.warn(`No ${langCode} audio track on this video`, err);
+      logLangSwitch("verifyAudioAfterSelect: selectAudioTrackForLanguage() REJECTED", err);
+      return "select call rejected";
+    },
+  );
+  const grace = new Promise((resolve) =>
+    setTimeout(() => resolve("grace period elapsed, select call still pending"), AUDIO_SELECT_GRACE_MS),
+  );
+
+  const reason = await Promise.race([selectSettled, grace]);
+  logLangSwitch("verifyAudioAfterSelect: verifying real audio state now (", reason, ") for langCode =", langCode);
+  return verifyAudioTrackActive(player, langCode);
+}
+
+async function switchLiveTrack(player, langCode) {
   logLangSwitch("switchLiveTrack: STARTING for langCode =", langCode, "player =", player);
 
-  const captionsPromise = withTrackSwitchTimeout(
+  const captionsOk = await withTrackSwitchTimeout(
     player.enableTextTrack(langCode).then(
       (result) => {
         logLangSwitch("switchLiveTrack: enableTextTrack() resolved", result);
@@ -310,68 +347,25 @@ function switchLiveTrack(player, langCode) {
     ),
     "captions",
   );
+  logLangSwitch(
+    "switchLiveTrack: captions sub-call settled, captionsOk =",
+    captionsOk,
+    "-- starting audio sub-call now",
+  );
 
   // Sequential on purpose — see the "run ONE AFTER ANOTHER" note above.
-  return captionsPromise.then((captionsOk) => {
-    logLangSwitch(
-      "switchLiveTrack: captions sub-call settled, captionsOk =",
-      captionsOk,
-      "-- starting audio sub-call now",
-    );
+  const audioOk = await withTrackSwitchTimeout(verifyAudioAfterSelect(player, langCode), "audio");
 
-    // Verifying real state (below) is deliberately NOT chained directly
-    // onto selectAudioTrackForLanguage()'s own promise — that promise can
-    // hang and never settle at all, even on an already-established player
-    // (see AUDIO_SELECT_GRACE_MS above), and gating the real check behind
-    // it meant a hang was reported as a failure even on switches that had
-    // genuinely already succeeded. Whichever happens first — the select
-    // call settling, or the grace period elapsing — triggers the real
-    // getAudioTracks() check; only one of the two ever runs it.
-    const audioPromise = withTrackSwitchTimeout(
-      new Promise((resolve) => {
-        let checked = false;
-        const checkRealState = (reason) => {
-          if (checked) return;
-          checked = true;
-          logLangSwitch(
-            "switchLiveTrack: verifying real audio state now (",
-            reason,
-            ") for langCode =",
-            langCode,
-          );
-          resolve(verifyAudioTrackActive(player, langCode));
-        };
-
-        selectAudioTrackForLanguage(player, langCode).then(
-          () => checkRealState("select call settled normally"),
-          (err) => {
-            console.warn(`No ${langCode} audio track on this video`, err);
-            logLangSwitch("switchLiveTrack: selectAudioTrackForLanguage() REJECTED", err);
-            checkRealState("select call rejected");
-          },
-        );
-
-        setTimeout(
-          () => checkRealState("grace period elapsed, select call still pending"),
-          AUDIO_SELECT_GRACE_MS,
-        );
-      }),
-      "audio",
-    );
-
-    return audioPromise.then((audioOk) => {
-      logLangSwitch(
-        "switchLiveTrack: DONE for langCode =",
-        langCode,
-        "-> { audioOk:",
-        audioOk,
-        ", captionsOk:",
-        captionsOk,
-        "}",
-      );
-      return { audioOk, captionsOk };
-    });
-  });
+  logLangSwitch(
+    "switchLiveTrack: DONE for langCode =",
+    langCode,
+    "-> { audioOk:",
+    audioOk,
+    ", captionsOk:",
+    captionsOk,
+    "}",
+  );
+  return { audioOk, captionsOk };
 }
 
 /* ── Track-unavailable note (quote blocks only) ──
@@ -746,12 +740,13 @@ document.addEventListener("DOMContentLoaded", function () {
         // real-world improvement despite testing well in isolation).
         const videoLoadStartedAt = Date.now();
         logLangSwitch("loadVideo: quote block, videoLoadStartedAt =", videoLoadStartedAt, "currentLang =", currentLang);
-        ensureVimeoSdk()
-          .then((Vimeo) => {
+
+        (async () => {
+          try {
+            const Vimeo = await ensureVimeoSdk();
             logLangSwitch("loadVideo: Vimeo SDK ready, entering warmup wait");
-            return waitForPlayerWarmup(videoLoadStartedAt).then(() => Vimeo);
-          })
-          .then((Vimeo) => {
+            await waitForPlayerWarmup(videoLoadStartedAt);
+
             player = new Vimeo.Player(iframe);
             logLangSwitch(
               "loadVideo: player CONSTRUCTED after",
@@ -790,75 +785,73 @@ document.addEventListener("DOMContentLoaded", function () {
             // playing the site in its own default language. Skipping the
             // check entirely for "en" removes the false-positive path
             // without weakening the real verification es/hi still get.
-            if (attemptedLang !== "en") {
-              // Silent lock only (no pause/overlay/status) — this call isn't
-              // user-initiated. It still needs the same busy lock as the
-              // click-driven switch below, or a click landing while this is
-              // in flight races it — that race is what caused the original
-              // bug (see the module doc comment above TRACK_SWITCH_TIMEOUT_MS).
-              // The disabled-picker CSS still dims the toggle during this
-              // window, so it's not zero feedback. By the time execution
-              // reaches here, `player` was already constructed AFTER the
-              // warm-up wait above, so this call itself needs no further
-              // delay of its own.
-              trackSwitchBusy = true;
-              setLangPickerBusy(block, true);
-              logLangSwitch(
-                "loadVideo: attemptedLang !== 'en', calling switchLiveTrack() for the automatic re-verify",
-              );
-
-              switchLiveTrack(player, attemptedLang).then(
-                ({ audioOk, captionsOk }) => {
-                  logLangSwitch(
-                    "loadVideo: automatic re-verify settled -- audioOk =",
-                    audioOk,
-                    "captionsOk =",
-                    captionsOk,
-                  );
-                  if (!audioOk && !captionsOk) {
-                    logLangSwitch("loadVideo: TOTAL FAILURE -- rolling back to 'en' and showing track-note");
-                    setEpisodeLanguage("en");
-                    // Also required here, not just at the click-driven call
-                    // site: the "player not yet constructed" fallback branch
-                    // in handleLangSegmentClick() may have already shown an
-                    // optimistic "Switched to X." with its own independent
-                    // fade timer before this correction arrives — without
-                    // clearing it, that stale success text and this
-                    // track-note could both be visible at once.
-                    clearLangChangeStatus(block);
-                    showTrackNote(block, attemptedLang, {
-                      audioOk,
-                      captionsOk,
-                      totalFailure: true,
-                    });
-                  } else if (!audioOk || !captionsOk) {
-                    logLangSwitch("loadVideo: PARTIAL FAILURE -- showing track-note, staying on", attemptedLang);
-                    clearLangChangeStatus(block);
-                    showTrackNote(block, attemptedLang, {
-                      audioOk,
-                      captionsOk,
-                      totalFailure: false,
-                    });
-                  } else {
-                    logLangSwitch("loadVideo: automatic re-verify fully succeeded, no note needed");
-                  }
-
-                  trackSwitchBusy = false;
-                  setLangPickerBusy(block, false);
-                },
-              );
-            } else {
+            if (attemptedLang === "en") {
               logLangSwitch("loadVideo: attemptedLang === 'en', skipping the automatic re-verify entirely");
+              return;
             }
-          })
-          .catch((err) => {
+
+            // Silent lock only (no pause/overlay/status) — this call isn't
+            // user-initiated. It still needs the same busy lock as the
+            // click-driven switch below, or a click landing while this is
+            // in flight races it — that race is what caused the original
+            // bug (see the module doc comment above TRACK_SWITCH_TIMEOUT_MS).
+            // The disabled-picker CSS still dims the toggle during this
+            // window, so it's not zero feedback. By the time execution
+            // reaches here, `player` was already constructed AFTER the
+            // warm-up wait above, so this call itself needs no further
+            // delay of its own.
+            trackSwitchBusy = true;
+            setLangPickerBusy(block, true);
+            logLangSwitch(
+              "loadVideo: attemptedLang !== 'en', calling switchLiveTrack() for the automatic re-verify",
+            );
+
+            const { audioOk, captionsOk } = await switchLiveTrack(player, attemptedLang);
+            logLangSwitch(
+              "loadVideo: automatic re-verify settled -- audioOk =",
+              audioOk,
+              "captionsOk =",
+              captionsOk,
+            );
+            if (!audioOk && !captionsOk) {
+              logLangSwitch("loadVideo: TOTAL FAILURE -- rolling back to 'en' and showing track-note");
+              setEpisodeLanguage("en");
+              // Also required here, not just at the click-driven call site:
+              // the "player not yet constructed" fallback branch in
+              // handleLangSegmentClick() may have already shown an
+              // optimistic "Switched to X." with its own independent fade
+              // timer before this correction arrives — without clearing it,
+              // that stale success text and this track-note could both be
+              // visible at once.
+              clearLangChangeStatus(block);
+              showTrackNote(block, attemptedLang, {
+                audioOk,
+                captionsOk,
+                totalFailure: true,
+              });
+            } else if (!audioOk || !captionsOk) {
+              logLangSwitch("loadVideo: PARTIAL FAILURE -- showing track-note, staying on", attemptedLang);
+              clearLangChangeStatus(block);
+              showTrackNote(block, attemptedLang, {
+                audioOk,
+                captionsOk,
+                totalFailure: false,
+              });
+            } else {
+              logLangSwitch("loadVideo: automatic re-verify fully succeeded, no note needed");
+            }
+
+            trackSwitchBusy = false;
+            setLangPickerBusy(block, false);
+          } catch (err) {
             console.warn("Could not load the Vimeo Player SDK", err);
             logLangSwitch("loadVideo: ensureVimeoSdk() REJECTED", err);
-          });
+          }
+        })();
       }
     }
 
-    function handleLangSegmentClick(lang, triggerEl) {
+    async function handleLangSegmentClick(lang, triggerEl) {
       const target = normalizeLangCode(lang);
       logLangSwitch(
         "handleLangSegmentClick: clicked target =",
@@ -878,68 +871,7 @@ document.addEventListener("DOMContentLoaded", function () {
         setEpisodeLanguage(target); // optimistic: active-class only, no reload
         clearTrackNote(block); // clear any stale note on every new attempt
 
-        if (isPlaying && player) {
-          if (trackSwitchBusy) {
-            // Defensive only — the picker's real `disabled` attribute
-            // should already prevent a click from reaching here while a
-            // switch (this one or the automatic re-verify) is in flight.
-            logLangSwitch("handleLangSegmentClick: trackSwitchBusy already true, ignoring this click (defensive)");
-            return;
-          }
-
-          logLangSwitch("handleLangSegmentClick: player exists and playing -- doing a LIVE switch to", target);
-          trackSwitchBusy = true;
-          setLangPickerBusy(block, true);
-          setVideoLoadingOverlayVisible(block, true);
-          showTrackSwitchStatus(block, target);
-          player.pause().catch((err) => logLangSwitch("handleLangSegmentClick: player.pause() rejected", err));
-
-          switchLiveTrack(player, target).then(({ audioOk, captionsOk }) => {
-            logLangSwitch(
-              "handleLangSegmentClick: live switch to",
-              target,
-              "settled -- audioOk =",
-              audioOk,
-              "captionsOk =",
-              captionsOk,
-            );
-            if (!audioOk && !captionsOk) {
-              // Total failure: roll back the UI to what's actually still playing.
-              logLangSwitch("handleLangSegmentClick: TOTAL FAILURE -- rolling back to", previousLang);
-              setEpisodeLanguage(previousLang);
-              clearLangChangeStatus(block);
-              showTrackNote(block, target, {
-                audioOk,
-                captionsOk,
-                totalFailure: true,
-              });
-            } else if (!audioOk || !captionsOk) {
-              // Partial success: a real switch happened, so stay on the new
-              // language, but let the visitor know what's missing.
-              logLangSwitch("handleLangSegmentClick: PARTIAL FAILURE -- staying on", target);
-              clearLangChangeStatus(block);
-              showTrackNote(block, target, {
-                audioOk,
-                captionsOk,
-                totalFailure: false,
-              });
-            } else {
-              // Full success: both tracks switched cleanly.
-              logLangSwitch("handleLangSegmentClick: FULL SUCCESS for", target);
-              showLangChangeStatus(block, target);
-            }
-
-            // Resume regardless of outcome — a visitor shouldn't be left
-            // staring at a paused video just because their picked language
-            // wasn't fully available; it resumes in whichever language
-            // actually ended up active (the rollback above, if any, already
-            // ran by this point).
-            player.play().catch((err) => logLangSwitch("handleLangSegmentClick: player.play() rejected", err));
-            trackSwitchBusy = false;
-            setLangPickerBusy(block, false);
-            setVideoLoadingOverlayVisible(block, false);
-          });
-        } else {
+        if (!isPlaying || !player) {
           // Not playing yet, OR playing but the player instance hasn't
           // finished initializing yet (raced loadVideo()'s SDK load): either
           // way, currentLang is already updated, and loadVideo()'s
@@ -955,7 +887,67 @@ document.addEventListener("DOMContentLoaded", function () {
             "and deferring to loadVideo()'s automatic re-verify",
           );
           showLangChangeStatus(block, target);
+          return;
         }
+
+        if (trackSwitchBusy) {
+          // Defensive only — the picker's real `disabled` attribute should
+          // already prevent a click from reaching here while a switch
+          // (this one or the automatic re-verify) is in flight.
+          logLangSwitch("handleLangSegmentClick: trackSwitchBusy already true, ignoring this click (defensive)");
+          return;
+        }
+
+        logLangSwitch("handleLangSegmentClick: player exists and playing -- doing a LIVE switch to", target);
+        trackSwitchBusy = true;
+        setLangPickerBusy(block, true);
+        setVideoLoadingOverlayVisible(block, true);
+        showTrackSwitchStatus(block, target);
+        player.pause().catch((err) => logLangSwitch("handleLangSegmentClick: player.pause() rejected", err));
+
+        const { audioOk, captionsOk } = await switchLiveTrack(player, target);
+        logLangSwitch(
+          "handleLangSegmentClick: live switch to",
+          target,
+          "settled -- audioOk =",
+          audioOk,
+          "captionsOk =",
+          captionsOk,
+        );
+        if (!audioOk && !captionsOk) {
+          // Total failure: roll back the UI to what's actually still playing.
+          logLangSwitch("handleLangSegmentClick: TOTAL FAILURE -- rolling back to", previousLang);
+          setEpisodeLanguage(previousLang);
+          clearLangChangeStatus(block);
+          showTrackNote(block, target, {
+            audioOk,
+            captionsOk,
+            totalFailure: true,
+          });
+        } else if (!audioOk || !captionsOk) {
+          // Partial success: a real switch happened, so stay on the new
+          // language, but let the visitor know what's missing.
+          logLangSwitch("handleLangSegmentClick: PARTIAL FAILURE -- staying on", target);
+          clearLangChangeStatus(block);
+          showTrackNote(block, target, {
+            audioOk,
+            captionsOk,
+            totalFailure: false,
+          });
+        } else {
+          // Full success: both tracks switched cleanly.
+          logLangSwitch("handleLangSegmentClick: FULL SUCCESS for", target);
+          showLangChangeStatus(block, target);
+        }
+
+        // Resume regardless of outcome — a visitor shouldn't be left staring
+        // at a paused video just because their picked language wasn't fully
+        // available; it resumes in whichever language actually ended up
+        // active (the rollback above, if any, already ran by this point).
+        player.play().catch((err) => logLangSwitch("handleLangSegmentClick: player.play() rejected", err));
+        trackSwitchBusy = false;
+        setLangPickerBusy(block, false);
+        setVideoLoadingOverlayVisible(block, false);
         return;
       }
 
@@ -969,18 +961,15 @@ document.addEventListener("DOMContentLoaded", function () {
         return;
       }
 
-      confirmLanguageRestart(target, triggerEl).then(
-        (confirmed) => {
-          if (!confirmed) {
-            setEpisodeLanguage(playingLang);
-            return;
-          }
+      const confirmed = await confirmLanguageRestart(target, triggerEl);
+      if (!confirmed) {
+        setEpisodeLanguage(playingLang);
+        return;
+      }
 
-          setEpisodeLanguage(target);
-          showLangChangeStatus(block, target);
-          loadVideo();
-        },
-      );
+      setEpisodeLanguage(target);
+      showLangChangeStatus(block, target);
+      loadVideo();
     }
 
     if (langSegments.length) {
