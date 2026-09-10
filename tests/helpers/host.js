@@ -20,6 +20,25 @@ export function shouldRunHostChecks(baseURL) {
   }
 }
 
+/**
+ * True when testing locally via the documented http://bebitesmart.local
+ * convention (testing.md) — used specifically to dodge Local by Flywheel's
+ * self-signed cert, since the browser context tolerates it fine for
+ * page.goto() but the separate `request` API context (used for canonical/
+ * link/download checks) does not. WordPress itself always emits absolute
+ * URLs (canonical tags, nav hrefs that happen to be absolute, media library
+ * URLs) at its real configured home_url() scheme, which is https:// even
+ * when baseURL is http:// — so any check comparing against or fetching
+ * those absolute URLs hits a scheme mismatch (or a cert error, if
+ * ignoreHTTPSErrors isn't set) that has nothing to do with real content
+ * correctness. Never true for staging/production, which always use https://
+ * as their own baseURL, matching their own real scheme — only the local
+ * workaround creates this specific mismatch.
+ */
+export function isLocalHttpWorkaround(baseURL) {
+  return typeof baseURL === "string" && baseURL.startsWith("http://");
+}
+
 export function canonicalUrl(path) {
   return new URL(path, CANONICAL_ORIGIN).toString();
 }
