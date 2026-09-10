@@ -424,8 +424,9 @@ function bitesmart_render_guide_badge_icons() {
 }
 
 /**
- * The Video/Text badge pair for one chapter — shared by
- * bitesmart_render_guide_chapter_row()'s own <summary> AND (previously) the
+ * The Video/Text badge pair for one chapter — rendered by
+ * bitesmart_render_guide_chapter_row() inside .guide-chapter-body (only
+ * shown once the chapter is open, see that call site) and (previously) the
  * Table of Contents entries bitesmart_render_guide_single() builds
  * (guide-single.php) — the ToC's own badges were reverted the same day they
  * were added (2026-08-28), per Janet: she'd meant a plain link list, not a
@@ -445,11 +446,12 @@ function bitesmart_render_guide_format_badges( $has_video, $has_text ) {
     <span class="guide-chapter-badges">
         <?php
         // Real <button>s, not <span>s — they're independently clickable
-        // toggles (format-toggle.js), not just status indicators. Sits
-        // inside a <summary>, so a click has to call preventDefault() there
-        // to stop the browser's native "toggle the enclosing <details>"
-        // behavior that normally fires for ANY click landing inside a
-        // <summary> — see handleBadgeClick() in format-toggle.js.
+        // toggles (format-toggle.js), not just status indicators. Rendered
+        // inside .guide-chapter-body (2026-09-09, per Janet — only shown
+        // once a chapter is open, not on every collapsed row), a sibling of
+        // <summary>, never a descendant of it — see handleBadgeClick() in
+        // format-toggle.js for why that matters (it used to be nested
+        // inside <summary>, a WCAG violation; no longer applicable here).
         //
         // Two independent layers of visibility, both true by default:
         // bitesmart_render_guide_format_controls()'s checkboxes turn a
@@ -663,6 +665,23 @@ function bitesmart_render_guide_chapter_row( $chapter_id, array $args = array() 
 
             <div class="guide-chapter-body">
 
+                <?php
+                /*
+                 * Only shown once the chapter is open, per Janet (2026-09-09)
+                 * — with badges visible on every collapsed row, scanning the
+                 * chapter list read as too busy. A visitor now opens a
+                 * chapter first, then decides what to toggle, rather than
+                 * choosing formats before seeing anything. This also matches
+                 * this codebase's own established pattern (qa-entry-display.php,
+                 * episode-display.php): actionable controls live in the
+                 * revealed body, not the always-visible <summary> — so unlike
+                 * the brief period these badges spent living outside <details>
+                 * entirely (see git history / CHANGES-2026-09.md if curious),
+                 * no special positioning is needed here at all.
+                 */
+                echo bitesmart_render_guide_format_badges( $has_video, $has_text ); // phpcs:ignore
+                ?>
+
                 <?php if ( $has_video ) : ?>
                     <div class="guide-chapter-format guide-chapter-video" data-format="video">
                         <?php if ( count( $video_ids ) > 1 ) : ?>
@@ -855,28 +874,6 @@ function bitesmart_render_guide_chapter_row( $chapter_id, array $args = array() 
 
             </div>
         </details>
-
-        <?php /*
-         * NOT inside <summary> (moved 2026-09-09, axe: nested-interactive) —
-         * these are real, independently-clickable <button>s (toggle this
-         * one chapter's video/text visibility), and <summary> is itself
-         * natively interactive, so nesting them there was a WCAG 4.1.2
-         * violation. Also NOT a child of <details> above, even outside
-         * <summary> — Chromium's newer internal wrapping of a <details>'s
-         * non-summary content interferes with position:absolute children
-         * placed directly inside it (confirmed empirically: a sibling of
-         * <summary> still inside <details> computed the right top/right
-         * values but rendered far outside the card, near the very bottom
-         * of the closed <details> box, not at the top). Placing it here —
-         * a sibling of <details> itself, inside .guide-chapter-row — sidesteps
-         * that <details>-internal quirk entirely; .guide-chapter-row is a
-         * plain <article> with no special browser behavior. Positioned via
-         * CSS (.guide-chapter-row > .guide-chapter-badges in style.css)
-         * against .guide-chapter-row, which has no padding of its own, so
-         * the same offsets land in the same visual spot as they would have
-         * against .guide-chapter-container.
-         */ ?>
-        <?php echo bitesmart_render_guide_format_badges( $has_video, $has_text ); // phpcs:ignore ?>
     </article>
     <?php
     return ob_get_clean();
