@@ -8,7 +8,7 @@ import {
 import {
   assertVimeoPlayerLoads,
   episodeLangSegments,
-  getEpisodeVideoIds,
+  getBlockVideoIds,
   expandAllDevelopedEpisodes,
   expectedVimeoPlayerSrc,
 } from "./helpers/videos.js";
@@ -24,7 +24,7 @@ test.describe("Documentary video (video-quote block)", () => {
         `No video-quote block on ${path}`,
       ).toBeVisible();
 
-      const vimeoId = await block.getAttribute("data-quote-vimeo-id");
+      const videoIds = await getBlockVideoIds(block);
       const siteLang = (await block.getAttribute("data-site-lang")) || "en";
       const trigger = block.locator(".play-button");
 
@@ -32,7 +32,7 @@ test.describe("Documentary video (video-quote block)", () => {
       await spyOnPlausible(page);
 
       await assertVimeoPlayerLoads(page, block, trigger, {
-        vimeoId,
+        vimeoId: videoIds[siteLang] || videoIds.en,
         lang: siteLang,
         forceCaptions: true,
       });
@@ -47,7 +47,7 @@ test.describe("Documentary video (video-quote block)", () => {
       await gotoExpectOk(page, path);
 
       const block = page.locator(".video-quote-block").first();
-      const vimeoId = await block.getAttribute("data-quote-vimeo-id");
+      const videoIds = await getBlockVideoIds(block);
       const siteLang = (await block.getAttribute("data-site-lang")) || "en";
       const trigger = block.locator(".video-thumbnail");
 
@@ -55,7 +55,7 @@ test.describe("Documentary video (video-quote block)", () => {
       await spyOnPlausible(page);
 
       await assertVimeoPlayerLoads(page, block, trigger, {
-        vimeoId,
+        vimeoId: videoIds[siteLang] || videoIds.en,
         lang: siteLang,
         forceCaptions: true,
       });
@@ -79,7 +79,7 @@ test.describe("Documentary video (video-quote block)", () => {
         return;
       }
 
-      const vimeoId = await block.getAttribute("data-quote-vimeo-id");
+      const videoIds = await getBlockVideoIds(block);
 
       // Click Spanish BEFORE playing — this is the exact scenario that used to
       // silently play English with no feedback when Spanish wasn't actually on
@@ -91,7 +91,7 @@ test.describe("Documentary video (video-quote block)", () => {
       await spyOnPlausible(page);
 
       await assertVimeoPlayerLoads(page, block, block.locator(".play-button"), {
-        vimeoId,
+        vimeoId: videoIds.es,
         lang: "es",
         forceCaptions: true,
       });
@@ -121,7 +121,7 @@ test.describe("Documentary video (video-quote block)", () => {
         return;
       }
 
-      const vimeoId = await block.getAttribute("data-quote-vimeo-id");
+      const videoIds = await getBlockVideoIds(block);
       const siteLang = (await block.getAttribute("data-site-lang")) || "en";
 
       await spyOnPlausible(page);
@@ -130,7 +130,7 @@ test.describe("Documentary video (video-quote block)", () => {
         page,
         block,
         block.locator(".play-button"),
-        { vimeoId, lang: siteLang, forceCaptions: true },
+        { vimeoId: videoIds[siteLang] || videoIds.en, lang: siteLang, forceCaptions: true },
       );
       const srcBeforeSwitch = await iframe.getAttribute("src");
 
@@ -155,11 +155,14 @@ test.describe("Documentary video (video-quote block)", () => {
       await page.locator(".video-lang-restart-modal__btn--confirm").click();
       await expect(otherSegment).toHaveClass(/active/);
 
+      // Each language is now a genuinely separate uploaded Vimeo video, not
+      // one video with an audiotrack param, so the reload's expected src
+      // uses that language's own video ID, not the one played originally.
       const newIframe = block.locator(".video-player iframe");
       await expect(newIframe).toHaveCount(1);
       await expect(newIframe).toHaveAttribute(
         "src",
-        expectedVimeoPlayerSrc(vimeoId, otherLang, { forceCaptions: true }),
+        expectedVimeoPlayerSrc(videoIds[otherLang], otherLang, { forceCaptions: true }),
       );
       expect(await newIframe.getAttribute("src")).not.toBe(srcBeforeSwitch);
     });
@@ -187,7 +190,7 @@ test.describe("Episode videos (education page)", () => {
       const episodeLabel =
         (await episode.locator(".episode-number").textContent())?.trim() ||
         `Episode ${i + 1}`;
-      const videoIds = await getEpisodeVideoIds(episode);
+      const videoIds = await getBlockVideoIds(episode);
       const segments = episodeLangSegments(episode);
       const langCount = await segments.count();
       expect(langCount, `${episodeLabel} has no language segments`).toBeGreaterThan(
@@ -257,7 +260,7 @@ test.describe("Episode videos (education page)", () => {
     await gotoExpectOk(page, EDUCATION_PATH);
 
     const episode = page.locator("#developed-episodes .wp-block-custom-episode").first();
-    const videoIds = await getEpisodeVideoIds(episode);
+    const videoIds = await getBlockVideoIds(episode);
     const defaultLang =
       (await episode
         .locator(".lang-segment.active, .toggle-label.active")

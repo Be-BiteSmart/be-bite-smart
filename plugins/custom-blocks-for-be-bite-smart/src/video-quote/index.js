@@ -11,11 +11,18 @@ import {
 import {
   PanelBody,
   TextControl,
-  CheckboxControl,
   Button,
 } from "@wordpress/components";
 import { __ } from "@wordpress/i18n";
-import { ensureDefaultLanguage, getSiteLanguages } from "../shared/languages";
+import { getSiteLanguages } from "../shared/languages";
+
+// Language code => attribute name storing that language's Vimeo URL. "en"
+// deliberately stays "vimeoUrl" (not renamed to "vimeoUrlEn") so every
+// already-published quote block keeps working unchanged -- see
+// bitesmart_video_quote_vimeo_ids_from_attrs() in includes/site-lang.php,
+// which reads this exact pair. Add an entry (plus a matching attribute
+// below and a PHP-side entry) to support another language.
+const VIMEO_URL_ATTR_BY_LANG = { en: "vimeoUrl", es: "vimeoUrlEs" };
 
 registerBlockType("custom/video-quote", {
   title: __("Documentary Video", "custom-blocks"),
@@ -30,26 +37,25 @@ registerBlockType("custom/video-quote", {
   attributes: {
     title: { type: "string", default: "" },
     vimeoUrl: { type: "string", default: "" },
+    vimeoUrlEs: { type: "string", default: "" },
     thumbnailUrl: { type: "string", default: "" },
     thumbnailId: { type: "number" },
     quote: { type: "string", default: "" },
     quoteSource: { type: "string", default: "" },
     note: { type: "string", default: "" },
-    availableLanguages: { type: "array", default: ["en"] },
   },
 
   edit: ({ attributes, setAttributes }) => {
     const blockProps = useBlockProps();
-    const languages = getSiteLanguages();
-    const availableLanguages = attributes.availableLanguages || ["en"];
 
-    const toggleLanguage = (code, checked) => {
-      if (code === "en") return; // English is always available, locked on
-      const next = checked
-        ? [...availableLanguages, code]
-        : availableLanguages.filter((c) => c !== code);
-      setAttributes({ availableLanguages: ensureDefaultLanguage(next) });
-    };
+    // Available languages are no longer a separate checkbox list -- a
+    // language is available exactly when its URL field below is filled in
+    // (see bitesmart_video_quote_vimeo_ids_from_attrs() in
+    // includes/site-lang.php, same derivation episode-card already uses).
+    // Only languages with a wired-up attribute above get a field here.
+    const languages = getSiteLanguages().filter(
+      (lang) => VIMEO_URL_ATTR_BY_LANG[lang.code],
+    );
 
     return wp.element.createElement(
       "div",
@@ -63,13 +69,20 @@ registerBlockType("custom/video-quote", {
           PanelBody,
           { title: __("Video Settings", "custom-blocks") },
 
-          wp.element.createElement(TextControl, {
-            label: __("Vimeo URL", "custom-blocks"),
-            value: attributes.vimeoUrl,
-            onChange: (val) => setAttributes({ vimeoUrl: val }),
-            placeholder: "https://vimeo.com/123456789",
-            help: __("Paste the full Vimeo URL", "custom-blocks"),
-          }),
+          languages.map((lang) =>
+            wp.element.createElement(TextControl, {
+              key: lang.code,
+              label: __("Vimeo URL", "custom-blocks") + ` (${lang.name})`,
+              value: attributes[VIMEO_URL_ATTR_BY_LANG[lang.code]] || "",
+              onChange: (val) =>
+                setAttributes({ [VIMEO_URL_ATTR_BY_LANG[lang.code]]: val }),
+              placeholder: "https://vimeo.com/123456789",
+              help: __(
+                "Paste the full Vimeo URL for this language. Leave blank if this video isn't available in this language.",
+                "custom-blocks",
+              ),
+            }),
+          ),
 
           wp.element.createElement("hr", { style: { margin: "20px 0" } }),
 
@@ -131,33 +144,6 @@ registerBlockType("custom/video-quote", {
                         __("Upload Thumbnail", "custom-blocks"),
                       ),
                 ),
-            }),
-          ),
-        ),
-      ),
-
-      // Available Languages
-      wp.element.createElement(
-        InspectorControls,
-        null,
-        wp.element.createElement(
-          PanelBody,
-          { title: __("Available Languages", "custom-blocks") },
-          __(
-            "Check off which languages this video has subtitles and dubbed audio for on Vimeo.",
-            "custom-blocks",
-          ),
-          languages.map((lang) =>
-            wp.element.createElement(CheckboxControl, {
-              key: lang.code,
-              label: lang.name,
-              checked: availableLanguages.includes(lang.code),
-              disabled: lang.code === "en",
-              help:
-                lang.code === "en"
-                  ? __("English is always available.", "custom-blocks")
-                  : undefined,
-              onChange: (checked) => toggleLanguage(lang.code, checked),
             }),
           ),
         ),

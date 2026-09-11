@@ -8,7 +8,7 @@ import {
 import {
   assertVimeoPlayerLoads,
   episodeLangSegments,
-  getEpisodeVideoIds,
+  getBlockVideoIds,
   expectedPlayButtonLabel,
   expectedLangChangeStatus,
 } from "./helpers/videos.js";
@@ -120,12 +120,12 @@ for (const { path, label } of VIDEO_QUOTE_PAGES) {
         return;
       }
 
-      const vimeoId = await block.getAttribute("data-quote-vimeo-id");
+      const videoIds = await getBlockVideoIds(block);
       const activeLang = await activeLangOf(block);
 
       await spyOnPlausible(page);
       await assertVimeoPlayerLoads(page, block, block.locator(".play-button"), {
-        vimeoId,
+        vimeoId: videoIds[activeLang],
         lang: activeLang,
         forceCaptions: true,
       });
@@ -162,12 +162,12 @@ for (const { path, label } of VIDEO_QUOTE_PAGES) {
         return;
       }
 
-      const vimeoId = await block.getAttribute("data-quote-vimeo-id");
+      const videoIds = await getBlockVideoIds(block);
       const activeLang = await activeLangOf(block);
 
       await spyOnPlausible(page);
       await assertVimeoPlayerLoads(page, block, block.locator(".play-button"), {
-        vimeoId,
+        vimeoId: videoIds[activeLang],
         lang: activeLang,
         forceCaptions: true,
       });
@@ -249,7 +249,7 @@ test.describe("Episode videos (education page)", () => {
     const episode = await firstUpToDateEpisode(page, testInfo);
     if (!episode) return;
 
-    const videoIds = await getEpisodeVideoIds(episode);
+    const videoIds = await getBlockVideoIds(episode);
     const activeLang = await activeLangOf(episode);
 
     await spyOnPlausible(page);
@@ -283,7 +283,7 @@ test.describe("Episode videos (education page)", () => {
     const episode = await firstUpToDateEpisode(page, testInfo);
     if (!episode) return;
 
-    const videoIds = await getEpisodeVideoIds(episode);
+    const videoIds = await getBlockVideoIds(episode);
     const activeLang = await activeLangOf(episode);
 
     await spyOnPlausible(page);

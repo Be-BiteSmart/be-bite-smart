@@ -144,7 +144,7 @@ function getLangPicker(block) {
   return block.querySelector(".episode-lang-picker, .language-toggle");
 }
 
-function defaultEpisodeLang(block, videos, siteLang) {
+function defaultVideoLang(block, videos, siteLang) {
   const codes = Object.keys(videos);
   if (!codes.length) {
     return "en";
@@ -160,19 +160,6 @@ function defaultEpisodeLang(block, videos, siteLang) {
   }
 
   return codes[0];
-}
-
-/* Quote blocks don't have a videos map — the picker's own rendered
-   segments (built server-side from data-supported-langs) are the source
-   of truth for which languages this particular video actually supports. */
-function defaultQuoteLang(langSegments, siteLang) {
-  const codes = Array.from(langSegments).map((el) => el.dataset.lang);
-  if (!codes.length) {
-    return "en"; // no picker rendered => only English is supported
-  }
-
-  const normalizedSite = normalizeLangCode(siteLang);
-  return codes.includes(normalizedSite) ? normalizedSite : "en";
 }
 
 function updatePickerIndex(picker, segments, activeLang) {
@@ -209,9 +196,7 @@ document.addEventListener("DOMContentLoaded", function () {
     );
     const videos = resolveVideosForBlock(block);
 
-    let currentLang = isQuoteBlock
-      ? defaultQuoteLang(langSegments, siteLang)
-      : defaultEpisodeLang(block, videos, siteLang);
+    let currentLang = defaultVideoLang(block, videos, siteLang);
     let playingLang = null;
     let isPlaying = false;
 
@@ -251,9 +236,7 @@ document.addEventListener("DOMContentLoaded", function () {
        successfully, via handleLangSegmentClick()'s confirmLanguageRestart()
        call below. */
     function loadVideo() {
-      const vimeoId = isQuoteBlock
-        ? block.dataset.quoteVimeoId
-        : videos[currentLang];
+      const vimeoId = videos[currentLang];
 
       if (!vimeoId) {
         console.error("No Vimeo ID found for", currentLang);

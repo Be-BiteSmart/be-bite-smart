@@ -85,10 +85,14 @@ export function episodeLangSegments(episode) {
   );
 }
 
-export async function getEpisodeVideoIds(episode) {
+// Reads the lang => Vimeo ID map from a block's own data-videos attribute
+// (falling back to a .video-episode-block descendant if the container
+// itself doesn't carry it) -- shared by episode and video-quote blocks
+// alike, both of which emit this same attribute/shape.
+export async function getBlockVideoIds(block) {
   const raw =
-    (await episode.getAttribute("data-videos")) ||
-    (await episode.locator(".video-episode-block").first().getAttribute("data-videos"));
+    (await block.getAttribute("data-videos")) ||
+    (await block.locator(".video-episode-block").first().getAttribute("data-videos"));
   return parseVideosDataset(raw);
 }
 

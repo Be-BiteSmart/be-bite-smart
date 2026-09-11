@@ -272,15 +272,34 @@ function bitesmart_episode_vimeo_ids_from_attrs( $attrs ) {
 }
 
 /**
- * Normalize a video-quote block's availableLanguages attribute: keep only
- * known site-language codes, force 'en' present (it's always available),
- * and order the result to match bitesmart_site_languages().
+ * Build lang code => Vimeo ID map from video-quote block attributes.
+ * Deliberately separate from bitesmart_episode_vimeo_ids_from_attrs() above
+ * rather than sharing it: video-quote's legacy English attribute is
+ * "vimeoUrl" (no "En" suffix), kept exactly as-is so every already-
+ * published quote block keeps working without a content migration -- see
+ * VIMEO_URL_ATTR_BY_LANG in video-quote/index.js.
  *
- * @param mixed $raw Raw availableLanguages attribute value.
+ * @param array<string, mixed> $attrs Block attributes.
+ * @return array<string, string>
+ */
+function bitesmart_video_quote_vimeo_ids_from_attrs( $attrs ) {
+    $legacy = array(
+        'en' => $attrs['vimeoUrl']   ?? '',
+        'es' => $attrs['vimeoUrlEs'] ?? '',
+    );
+
+    return bitesmart_vimeo_ids_by_lang_map( $legacy );
+}
+
+/**
+ * Order a set of available language codes (e.g. keys of a lang => Vimeo ID
+ * map) to match bitesmart_site_languages()'s configured order, with 'en'
+ * always first if present.
+ *
+ * @param array<int, string> $codes Language codes to order.
  * @return array<int, string>
  */
-function bitesmart_normalize_available_languages( $raw ) {
-    $raw   = is_array( $raw ) ? $raw : array();
+function bitesmart_order_language_codes( array $codes ) {
     $known = array_map(
         function ( $lang ) {
             return $lang['code'];
@@ -288,12 +307,6 @@ function bitesmart_normalize_available_languages( $raw ) {
         bitesmart_site_languages()
     );
 
-    $codes = array_values( array_intersect( $known, $raw ) );
-    if ( ! in_array( 'en', $codes, true ) ) {
-        array_unshift( $codes, 'en' );
-    }
-
-    // Reorder to match bitesmart_site_languages() order.
     return array_values( array_intersect( $known, $codes ) );
 }
 

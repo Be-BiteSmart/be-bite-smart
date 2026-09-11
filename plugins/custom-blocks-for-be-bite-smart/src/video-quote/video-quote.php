@@ -4,14 +4,18 @@ require_once dirname( __DIR__ ) . '/includes/site-lang.php';
 
 function render_video_quote_block( $attributes ) {
     $title        = wp_kses_post( $attributes['title']       ?? '' );
-    $vimeo_url    = esc_url(      $attributes['vimeoUrl']    ?? '' );
     $quote        = wp_kses_post( $attributes['quote']       ?? '' );
     $quote_source = wp_kses_post( $attributes['quoteSource'] ?? '' );
     $note         = wp_kses_post( $attributes['note']        ?? '' );
     $thumbnail_id = $attributes['thumbnailId'] ?? null;
 
-    // ── Vimeo ID ──────────────────────────────────────────────────────────
-    $vimeo_id = bitesmart_vimeo_id_from_url( $vimeo_url ) ?? '';
+    // ── Per-language Vimeo videos ────────────────────────────────────────
+    // One separate uploaded video per language (e.g. a Spanish-dubbed cut),
+    // not one video with multiple embedded audio/caption tracks — the
+    // latter turned out to be unreliable on Vimeo's own end regardless of
+    // whether it's requested live (selectAudioTrack()) or via URL params
+    // (audiotrack=) at embed time; see be-bitesmart-video-toggle-audio-hang.md.
+    $videos_by_lang = bitesmart_video_quote_vimeo_ids_from_attrs( $attributes );
 
     // ── Thumbnail ─────────────────────────────────────────────────────────
     $thumbnail = '';
@@ -34,7 +38,7 @@ function render_video_quote_block( $attributes ) {
     }
 
     $site_lang            = bitesmart_site_lang_code();
-    $available_languages  = bitesmart_normalize_available_languages( $attributes['availableLanguages'] ?? array( 'en' ) );
+    $available_languages  = bitesmart_order_language_codes( array_keys( $videos_by_lang ) );
     $active_lang          = in_array( $site_lang, $available_languages, true ) ? $site_lang : 'en';
     $has_picker           = count( $available_languages ) > 1;
     $play_button_label    = bitesmart_play_button_label( $active_lang, $has_picker );
@@ -48,14 +52,16 @@ function render_video_quote_block( $attributes ) {
     ob_start(); ?>
     <article
         class="wp-block-custom-video-quote video-quote-block"
-        <?php // "data-quote-vimeo-id", not "data-vimeo-id" — the latter is a
-        // reserved attribute Vimeo's player.js SDK auto-scans the whole DOM
-        // for and auto-embeds an extra iframe into, independent of our own
-        // new Vimeo.Player() calls. Caused a duplicate player to appear once
-        // the SDK loaded (video-toggle.js's ensureVimeoSdk() path). ?>
-        data-quote-vimeo-id="<?php echo esc_attr( $vimeo_id ); ?>"
+        <?php // "data-videos", not "data-vimeo-id"/"data-video-id" — the
+        // latter is a reserved attribute Vimeo's player.js SDK auto-scans
+        // the whole DOM for and auto-embeds an extra iframe into,
+        // independent of our own iframe. Caused a duplicate player to
+        // appear once the SDK loaded, back when this block used a single
+        // multi-track video. Same attribute name/shape episode-card
+        // already emits — resolveVideosForBlock() in shared/languages.js
+        // reads both identically. ?>
+        data-videos="<?php echo esc_attr( wp_json_encode( $videos_by_lang ) ); ?>"
         data-site-lang="<?php echo esc_attr( $site_lang ); ?>"
-        data-supported-langs="<?php echo esc_attr( wp_json_encode( $available_languages ) ); ?>"
     >
 
         <?php if ( $title ) : ?>
