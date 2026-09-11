@@ -1,22 +1,43 @@
 (function () {
+  // Finds the .read-more-toggle / .expandable-content that BELONGS to
+  // `article` — i.e. the nearest .expandable-article-block ancestor of the
+  // match is `article` itself, not some other (nested or ancestor) one.
+  //
+  // Started as a bare descendant `article.querySelector(selector)` — broke
+  // 2026-08-31 once custom/books-list nested an Excerpt's own
+  // .expandable-article-block (Book Excerpt's Read More) INSIDE a group's
+  // .expandable-content for the first time anywhere in this codebase: the
+  // first matching element in document order was the nested inner book's
+  // button (it sits earlier in the DOM, inside .expandable-content), not the
+  // outer group's own visible Show More button, so the real button silently
+  // never got a click listener at all. Switched to `:scope > selector`,
+  // which fixed that — every usage at the time had both elements as direct
+  // children of the article.
+  //
+  // That broke again once custom/article-or-commentary's and
+  // custom/press-release's "text" mode started wrapping .expandable-content
+  // and the button in an extra <div> (so they're grandchildren of the
+  // article, not direct children) — `:scope >` no longer found them, so
+  // their Read More buttons did nothing. closest() tolerates any wrapper
+  // depth while still excluding a nested article's own toggle/content (its
+  // closest .expandable-article-block is the nested article, not this one).
+  function findOwn(article, selector) {
+    var found = null;
+    article.querySelectorAll(selector).forEach(function (el) {
+      if (!found && el.closest(".expandable-article-block") === article) {
+        found = el;
+      }
+    });
+    return found;
+  }
+
   // Opens one .expandable-article-block programmatically — the exact same
   // end state the click handler below reaches, just triggered without a
   // click (used by expandForHash() so a deep link always lands with
   // everything visible, not collapsed behind the button).
   function expand(article) {
-    // :scope > , not a bare descendant selector — added 2026-08-31, real bug
-    // found once custom/books-list nested an Excerpt's own
-    // .expandable-article-block (Book Excerpt's Read More) INSIDE a group's
-    // .expandable-content for the first time anywhere in this codebase. A
-    // bare ".read-more-toggle" search matches the FIRST one anywhere in
-    // article's subtree in document order — which is the nested inner
-    // book's button (it sits earlier in the DOM, inside .expandable-content)
-    // — not the outer group's own visible Show More button, so the real
-    // button silently never got a click listener at all. :scope > only ever
-    // matches article's own direct children, which every existing usage
-    // (this one included) already has both elements as.
-    var toggle = article.querySelector(":scope > .read-more-toggle");
-    var content = article.querySelector(":scope > .expandable-content");
+    var toggle = findOwn(article, ".read-more-toggle");
+    var content = findOwn(article, ".expandable-content");
     if (!toggle || !content) return;
 
     // Hydrate any lazy cover images (custom/books-list's hidden cards —
@@ -66,9 +87,8 @@
     document
       .querySelectorAll(".expandable-article-block")
       .forEach(function (article) {
-        // :scope > — see the matching comment in expand() above for why.
-        var toggle = article.querySelector(":scope > .read-more-toggle");
-        var content = article.querySelector(":scope > .expandable-content");
+        var toggle = findOwn(article, ".read-more-toggle");
+        var content = findOwn(article, ".expandable-content");
         if (!toggle || !content) return;
         // Per-block overrides (custom/read-more's `buttonLabel` /
         // `expandedButtonLabel` attributes, read-more/index.js). Blank —
