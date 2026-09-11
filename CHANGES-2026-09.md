@@ -1642,3 +1642,17 @@ This also finished the `.video-quote-block`/`.video-episode-block` unification s
 **Status: code complete and verified, content pending.** No further code changes needed once the properly-muxed video is ready — same `vimeoUrlEs` field, same content-update mechanism (editor or a follow-up one-off script), same tests already passing. `be-bitesmart-video-toggle-audio-hang.md` updated with this as the tentative real resolution, pending Janet actually confirming the new upload sounds right.
 
 **Commit:** `17ee7ad` (code only — the content/DB update above isn't a git-tracked change).
+
+## 2026-09-11 (cont'd) — CONFIRMED: the re-upload fixed it
+
+Janet re-did the Spanish upload with audio properly muxed in (`1226025675`, replacing `1226008280`). Same one-off script pattern to update both posts' `vimeoUrlEs`, verified by reading both back before/after.
+
+**Ground truth on the new video came back exactly right:** `getAudioTracks()` returned an *empty array* — correct and expected for a genuinely single-track video (nothing to select, so nothing to report), unlike the previous upload's two conflicting `es`-tagged tracks. `getPaused()` read `false` (autoplay actually worked this time too, unlike the brief pause seen on the first upload). `getDuration()` read `~614s` (a real, full-length video, not a broken/truncated one).
+
+One unrelated thing surfaced while checking, flagged not fixed: captions on the new video are Vimeo's auto-generated `"Español (autogenerados)"`, not a manually uploaded/reviewed Spanish caption track. Worth Janet's attention on Vimeo's end if she has a real caption file for it, but out of scope for this change.
+
+Full `tests/videos` suite re-run against this final content: 22/22.
+
+**This is the real resolution the whole 2026-09-10/11 investigation was building toward.** `be-bitesmart-video-toggle-audio-hang.md` updated to drop "tentative."
+
+**Commit:** none — content-only DB update, not git-tracked.
