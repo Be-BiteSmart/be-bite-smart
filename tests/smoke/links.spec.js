@@ -6,6 +6,7 @@ import {
   collectInternalLinks,
   isBrokenLinkStatus,
 } from "../helpers/links.js";
+import { isLocalHttpWorkaround } from "../helpers/host.js";
 
 test.describe("Internal links", () => {
   for (const { path, label, maxLinks } of LINK_CHECK_PAGES) {
@@ -25,6 +26,22 @@ test.describe("Internal links", () => {
         body: JSON.stringify({ count: links.length, links }, null, 2),
         contentType: "application/json",
       });
+
+      // Skipped before fetching anything, not just when zero links are
+      // found: WordPress force-redirects http:// to https:// site-wide, so
+      // even a same-origin http:// link hits the self-signed cert the
+      // moment checkLinkStatus() actually fetches it (a page whose nav is
+      // entirely absolute https:// hrefs, e.g. Home's header logo, hits
+      // the zero-links case instead — same root cause either way). Not a
+      // real broken-link signal under the documented local http://
+      // convention (testing.md); still fails as normal against staging/
+      // production, which have real certs and no scheme mismatch.
+      if (isLocalHttpWorkaround(baseURL)) {
+        test.skip(
+          true,
+          `${label}: link checks skipped — WordPress force-redirects http:// to https:// site-wide, so fetching even a same-origin link hits a self-signed-cert wall while testing locally via http:// (not a real broken link)`,
+        );
+      }
 
       expect(
         links.length,

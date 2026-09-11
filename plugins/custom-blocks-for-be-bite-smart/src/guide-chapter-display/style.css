@@ -38,7 +38,7 @@ body:not(.block-editor-page) .guide-chapter-container.custom-block-card {
 
 .guide-chapter-index {
   font-family: var(--wp--preset--font-family--monospace, monospace);
-  font-size: 0.85em;
+  font-size: var(--wp--preset--font-size--medium);
   color: var(--wp--preset--color--contrast-2, #6b6b6b);
   flex-shrink: 0;
   padding-top: 0.2em;
@@ -57,14 +57,44 @@ body:not(.block-editor-page) .guide-chapter-container.custom-block-card {
   margin-bottom: 4px;
 }
 
+/* Stayed a <span> (briefly tried <h3> this same day, 2026-09-09 — HTML
+   permits it, but reverted once real screen-reader behavior was checked,
+   not just spec validity: see the call site's comment in
+   guide-chapter-display.php for why). font-size explicit, not just left
+   to inherit — a plain <span> inside <summary> never picks up the
+   theme's normal paragraph size the way a <p> inside .entry-content
+   does (measured: 16px inherited here vs. 17.7px for an ordinary theme
+   paragraph), so without this the chapter title read smaller than
+   normal body text with nothing in this file visibly shrinking it.
+   Referencing the same variable WordPress's own generated rule
+   currently resolves through
+   (":root :where(p){font-size: var(--wp--preset--font-size--medium)}",
+   global-styles-inline-css) is the closest available equivalent: it
+   tracks edits to what "Medium" itself is set to, just not a future
+   switch to an entirely different preset or a raw custom value. Compare
+   .guide-toc-chapter-title (guide-chapter-display.php) — a real <p>
+   there, since it sits in the ToC's plain link list, not inside a
+   <summary> — gets that tracking perfectly. */
 .guide-chapter-title {
+  font-size: var(--wp--preset--font-size--medium);
   font-weight: 500;
   margin: 0;
 }
 
+/* Rendered inside .guide-chapter-body now (2026-09-09, per Janet — only
+   shown once a chapter is open, not on every collapsed row; see
+   guide-chapter-display.php's call site). Earlier this same day it briefly
+   lived outside <details> entirely to satisfy an axe nested-interactive
+   finding (was nested inside <summary>) — moving it into the body instead
+   resolves that same violation (body is a sibling of summary, never a
+   descendant) AND needs none of that attempt's position:absolute/
+   breakpoint overrides, since it's just normal-flow content now. See git
+   history / CHANGES-2026-09.md if you want the full story, including a
+   real Chromium <details> positioning gotcha hit along the way. */
 .guide-chapter-badges {
   display: flex;
   gap: 6px;
+  margin-bottom: 12px;
 }
 
 /* Real <button>s now (see guide-chapter-display.php) — this resets the
@@ -75,7 +105,7 @@ body:not(.block-editor-page) .guide-chapter-container.custom-block-card {
   display: inline-flex;
   align-items: center;
   font: inherit;
-  font-size: 0.75em;
+  font-size: var(--wp--preset--font-size--medium);
   padding: 2px 9px;
   border-radius: 20px;
   border: 1px solid transparent;
@@ -93,8 +123,19 @@ body:not(.block-editor-page) .guide-chapter-container.custom-block-card {
   outline-offset: 2px;
 }
 
+/* NOT var(--wp--preset--color--accent-1) directly — that's #d16b0c, which
+   only reaches 3.6:1 contrast with the white text here (axe: color-contrast,
+   serious, needs 4.5:1 for 12px text). accent-1 is a shared, sitewide brand
+   token used well beyond this one badge, so darkening it globally in
+   theme.json was out of scope — this is a component-local override instead,
+   same approach already used for .is-off below (hardcoded colors, not the
+   preset var, chosen specifically to pass contrast). #b35a09 is the same
+   orange hue ~15% darker, giving white text 4.8:1 (verified via the WCAG
+   relative-luminance formula) — enough margin to stay AA-compliant across
+   rendering/anti-aliasing variance, while still reading as "the same brand
+   orange" rather than an unrelated color. */
 .guide-chapter-badge.is-active {
-  background: var(--wp--preset--color--accent-1, #d16b0c);
+  background: #b35a09;
   color: #fff;
 }
 
@@ -151,9 +192,17 @@ body:not(.block-editor-page) .guide-chapter-container.custom-block-card {
   display: none;
 }
 
+/* font-size was 0.9em (per Janet, 2026-09-09: read too small compared to
+   the rest of the site) — now the same preset token .guide-chapter-title
+   uses above, not a muted/small-metadata look. This is chapter preview
+   text a visitor scans before deciding to open a chapter, not secondary
+   metadata like the byline-style text elsewhere in this file that's
+   deliberately small (e.g. .guide-chapter-video-duration). Not a real <p>
+   either, same reason as .guide-chapter-title above (inside <summary>,
+   HTML restricts it to phrasing content) — see that rule's comment. */
 .guide-chapter-summary-text {
   display: block;
-  font-size: 0.9em;
+  font-size: var(--wp--preset--font-size--medium);
   color: var(--wp--preset--color--contrast-2, #6b6b6b);
 }
 
@@ -482,6 +531,7 @@ body:not(.block-editor-page) .guide-chapter-download-buttons .block-toggle-btn {
   gap: 12px;
   cursor: pointer;
   font-weight: 600;
+  font-size: var(--wp--preset--font-size--large);
   list-style: none; /* removes Firefox's default marker */
 }
 
@@ -506,10 +556,14 @@ body:not(.block-editor-page) .guide-chapter-download-buttons .block-toggle-btn {
 
 /* Section grouping inside the ToC — plain label, not a link (mirrors the
    real list's own .guide-section-heading, which likewise isn't
-   interactive). */
+   interactive). font-size: same "normal reading size" preset used
+   throughout this fix (was 0.85em, per Janet, 2026-09-09: too small) —
+   matches this codebase's OWN convention for an uppercase/letter-spaced
+   kicker-style label (.capitalized-and-colored, shared-block-styles.css),
+   which is likewise sized at the medium preset, not shrunk further. */
 .guide-toc-section-heading {
   margin-top: 14px;
-  font-size: 0.85em;
+  font-size: var(--wp--preset--font-size--medium);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.03em;
@@ -545,8 +599,16 @@ body:not(.block-editor-page) .guide-chapter-download-buttons .block-toggle-btn {
   flex-shrink: 0;
 }
 
+/* Was a <span> at a fixed 0.95em (per Janet, 2026-09-09: too small) — now
+   a real <p> (guide-chapter-display.php) instead, so it matches
+   WordPress's own generated ":root :where(p){font-size: ...}" rule and
+   tracks the site's actual paragraph text size going forward, however
+   that setting is later expressed — not just today's value. No font-size
+   override needed here at all anymore; margin reset is the only thing
+   this component still needs to add, since a <p>'s UA-default margin
+   would otherwise misalign it in .guide-toc-chapter-link's flex row. */
 .guide-toc-chapter-title {
-  font-size: 0.95em;
+  margin: 0;
 }
 
 /* Chapter-page-only breadcrumb (bitesmart_render_guide_chapter_single()),

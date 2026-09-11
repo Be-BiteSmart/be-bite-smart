@@ -8,6 +8,8 @@ import {
   firstPdfToggleViewButton,
   gotoExpectOk,
   EDUCATION_PATH,
+  LEARNING_HUB_PATH,
+  DOWNLOADS_PATH,
   EVIDENCE_PATH,
   langCodeToAnalytics,
   langToEventSuffix,
@@ -19,6 +21,7 @@ import {
   languageDownloadButtons,
   pdfSlugEvents,
 } from "./helpers/plausible";
+import { expandAllDevelopedEpisodes } from "../videos/helpers/videos.js";
 
 // ── Education page ─────────────────────────────────────────────
 
@@ -30,7 +33,7 @@ test("Watch Now fires episodes-watched for all episodes in both languages", asyn
   test.setTimeout(180_000);
   await gotoExpectOk(page, EDUCATION_PATH);
 
-  const episodes = page.locator("#developed-episodes article");
+  const episodes = page.locator("#developed-episodes .wp-block-custom-episode");
   const episodeCount = await episodes.count();
   const episodePlans = [];
 
@@ -57,7 +60,10 @@ test("Watch Now fires episodes-watched for all episodes in both languages", asyn
       const analyticsLang = langCodeToAnalytics(code);
 
       await gotoExpectOk(page, EDUCATION_PATH);
-      const episode = page.locator("#developed-episodes article").nth(plan.index);
+      // Every reload starts collapsed again — episodes past the first are
+      // hidden behind Show More until this runs.
+      await expandAllDevelopedEpisodes(page);
+      const episode = page.locator("#developed-episodes .wp-block-custom-episode").nth(plan.index);
       const segment = episode.locator(
         `.lang-segment[data-lang='${code}'], .toggle-label[data-lang='${code}']`,
       );
@@ -83,7 +89,7 @@ test("Download video fires category-downloaded for all episodes in both language
   page,
 }, testInfo) => {
   test.setTimeout(60000);
-  await gotoExpectOk(page, EDUCATION_PATH);
+  await gotoExpectOk(page, DOWNLOADS_PATH);
 
   const { section, block, downloadEvent } = downloadCardBlocks.video;
   const sections = downloadCardSections(page, { section, block });
@@ -131,7 +137,7 @@ test("Download video fires category-downloaded for all episodes in both language
 test("Coloring Book PDF toggle fires coloring-books-viewed for all available episodes", async ({
   page,
 }, testInfo) => {
-  await gotoExpectOk(page, EDUCATION_PATH);
+  await gotoExpectOk(page, DOWNLOADS_PATH);
 
   const { section, block } = downloadCardBlocks.coloring;
   const sections = downloadCardSections(page, { section, block });
@@ -193,7 +199,7 @@ test("Coloring Book PDF toggle fires coloring-books-viewed for all available epi
 test("Coloring Book Download fires coloring-books-downloaded for available PDFs", async ({
   page,
 }, testInfo) => {
-  await gotoExpectOk(page, EDUCATION_PATH);
+  await gotoExpectOk(page, DOWNLOADS_PATH);
 
   const { section, block, downloadSelector, downloadEvent } =
     downloadCardBlocks.coloring;
@@ -245,10 +251,10 @@ test("Coloring Book Download fires coloring-books-downloaded for available PDFs"
 
 // *************** PDF NOT FIRING AGAIN ON CLOSE **************
 
-test("Education page PDF toggle does not fire again when closing", async ({
+test("Downloads page PDF toggle does not fire again when closing", async ({
   page,
 }, testInfo) => {
-  await gotoExpectOk(page, EDUCATION_PATH);
+  await gotoExpectOk(page, DOWNLOADS_PATH);
 
   const btn = await firstColoringViewPdfButton(page);
   await btn.click();
@@ -267,12 +273,14 @@ test("Education page PDF toggle does not fire again when closing", async ({
   expect(calls).toHaveLength(0);
 });
 
-// *********** DOCUMENTARY ON EDUCATION PAGE WORKS ************
+// *********** DOCUMENTARY ON LEARNING HUB WORKS ************
+// Moved off EDUCATION_PATH (2026-09-09) — the video-quote block now lives
+// on Home (see "Home Page Documentary play..." below) and the Learning hub.
 
-test("Documentary on Education page play fires documentary-watched", async ({
+test("Documentary on Learning hub play fires documentary-watched", async ({
   page,
 }, testInfo) => {
-  await testMiniDocPlay(page, testInfo, EDUCATION_PATH);
+  await testMiniDocPlay(page, testInfo, LEARNING_HUB_PATH);
 });
 
 // ── News / Legal pages ─────────────────────────────────────────

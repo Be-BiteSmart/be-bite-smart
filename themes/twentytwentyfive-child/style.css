@@ -561,7 +561,7 @@ html
 }
 
 /* force the footer menu to center when it wraps to the next line on tablet screens*/
-@media (max-width: 1126px) {
+@media (max-width: 1140px) {
   .footer-top-row .footer-nav-group {
     flex-basis: 100% !important;
     width: 100% !important;
@@ -577,7 +577,7 @@ html
 }
 
 /* tablet only styling */
-@media (min-width: 447px) and (max-width: 1126px) {
+@media (min-width: 447px) and (max-width: 1140px) {
   .footer-top-row .footer-nav-group {
     gap: 200px;
     /* add more space (gap) between the 2 menu lists, so it looks cleaner on tablet and mobile. Otherwise it looks weirdly bunched together on tablet view. Do not use on mobile or it adds a giant space between the two menus */

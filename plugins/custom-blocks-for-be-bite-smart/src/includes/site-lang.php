@@ -272,15 +272,34 @@ function bitesmart_episode_vimeo_ids_from_attrs( $attrs ) {
 }
 
 /**
- * Normalize a video-quote block's availableLanguages attribute: keep only
- * known site-language codes, force 'en' present (it's always available),
- * and order the result to match bitesmart_site_languages().
+ * Build lang code => Vimeo ID map from video-quote block attributes.
+ * Deliberately separate from bitesmart_episode_vimeo_ids_from_attrs() above
+ * rather than sharing it: video-quote's legacy English attribute is
+ * "vimeoUrl" (no "En" suffix), kept exactly as-is so every already-
+ * published quote block keeps working without a content migration -- see
+ * VIMEO_URL_ATTR_BY_LANG in video-quote/index.js.
  *
- * @param mixed $raw Raw availableLanguages attribute value.
+ * @param array<string, mixed> $attrs Block attributes.
+ * @return array<string, string>
+ */
+function bitesmart_video_quote_vimeo_ids_from_attrs( $attrs ) {
+    $legacy = array(
+        'en' => $attrs['vimeoUrl']   ?? '',
+        'es' => $attrs['vimeoUrlEs'] ?? '',
+    );
+
+    return bitesmart_vimeo_ids_by_lang_map( $legacy );
+}
+
+/**
+ * Order a set of available language codes (e.g. keys of a lang => Vimeo ID
+ * map) to match bitesmart_site_languages()'s configured order, with 'en'
+ * always first if present.
+ *
+ * @param array<int, string> $codes Language codes to order.
  * @return array<int, string>
  */
-function bitesmart_normalize_available_languages( $raw ) {
-    $raw   = is_array( $raw ) ? $raw : array();
+function bitesmart_order_language_codes( array $codes ) {
     $known = array_map(
         function ( $lang ) {
             return $lang['code'];
@@ -288,21 +307,15 @@ function bitesmart_normalize_available_languages( $raw ) {
         bitesmart_site_languages()
     );
 
-    $codes = array_values( array_intersect( $known, $raw ) );
-    if ( ! in_array( 'en', $codes, true ) ) {
-        array_unshift( $codes, 'en' );
-    }
-
-    // Reorder to match bitesmart_site_languages() order.
     return array_values( array_intersect( $known, $codes ) );
 }
 
 /**
  * Registers a wp_footer hook to print the shared, TranslatePress-
  * translatable language-name templates (.video-quote-lang-name[data-lang])
- * exactly once per page. Shared by video-quote's track-note messages and
- * episode-card's language-restart dialog — both need "what is language X
- * called" without hardcoding a per-language name dictionary.
+ * exactly once per page. Shared by every language-aware status/dialog
+ * message across both block types — all need "what is language X called"
+ * without hardcoding a per-language name dictionary.
  */
 function bitesmart_needs_video_lang_name_templates() {
     static $needed = false;
@@ -325,40 +338,6 @@ function bitesmart_render_video_lang_name_templates() {
         <?php foreach ( bitesmart_site_languages() as $lang ) : ?>
             <span class="video-quote-lang-name" data-lang="<?php echo esc_attr( $lang['code'] ); ?>"><?php echo esc_html( $lang['name'] ); ?></span>
         <?php endforeach; ?>
-    </div>
-    <?php
-}
-
-/**
- * Registers a wp_footer hook to print the video-quote track-note templates,
- * exactly once, only on pages that actually render a multi-language
- * video-quote block. Static guard prevents double-registration when
- * multiple video-quote blocks are on the same page.
- */
-function bitesmart_video_quote_needs_track_note_templates() {
-    static $needed = false;
-    if ( $needed ) {
-        return;
-    }
-    $needed = true;
-    bitesmart_needs_video_lang_name_templates();
-    add_action( 'wp_footer', 'bitesmart_render_video_quote_track_note_templates' );
-}
-
-/**
- * Visually hidden, TranslatePress-translatable source of truth for the
- * video-quote live-track-switch note (see switchLiveTrack()/showTrackNote()
- * in video-toggle.js). Real gettext calls (esc_html_e) so TranslatePress's
- * String Translation interface picks them up the same way it already
- * handles the rest of this block's static copy — dynamic JS-built strings
- * aren't reliably translatable by TranslatePress, but static HTML is.
- */
-function bitesmart_render_video_quote_track_note_templates() {
-    ?>
-    <div class="video-quote-track-note-templates" aria-hidden="true" style="display:none;">
-        <span class="video-quote-track-note-template" data-kind="total"><?php esc_html_e( '{language} isn\'t available for this video yet.', 'custom-blocks' ); ?></span>
-        <span class="video-quote-track-note-template" data-kind="audio-missing"><?php esc_html_e( '{language} captions are on, but dubbed audio isn\'t available yet for this video.', 'custom-blocks' ); ?></span>
-        <span class="video-quote-track-note-template" data-kind="captions-missing"><?php esc_html_e( '{language} audio is on, but captions aren\'t available yet for this video.', 'custom-blocks' ); ?></span>
     </div>
     <?php
 }
@@ -409,9 +388,7 @@ function bitesmart_render_play_button_label_templates() {
  * episode or video-quote block. Shared by both blocks' language pickers
  * (see showLangChangeStatus() in video-toggle.js) — a brief, accessible
  * confirmation next to the picker right after a genuinely successful
- * switch. Never shown alongside video-quote's existing
- * .video-quote-track-note (a failed/partial live track swap shows that
- * instead — see showLangChangeStatus()'s call sites in video-toggle.js).
+ * switch.
  */
 function bitesmart_needs_lang_change_status_template() {
     static $needed = false;
@@ -437,11 +414,13 @@ function bitesmart_render_lang_change_status_templates() {
 }
 
 /**
- * Registers a wp_footer hook to print the episode-card language-restart
- * confirmation dialog's wording, exactly once, only on pages that render a
- * multi-language episode-card block.
+ * Registers a wp_footer hook to print the language-restart confirmation
+ * dialog's wording, exactly once, on any page that renders a multi-language
+ * episode-card or video-quote block that reloads on language switch. Both
+ * block types share the exact same confirmLanguageRestart() flow in
+ * video-toggle.js.
  */
-function bitesmart_episode_needs_lang_restart_templates() {
+function bitesmart_needs_lang_restart_templates() {
     static $needed = false;
     if ( $needed ) {
         return;
@@ -608,7 +587,7 @@ function bitesmart_episode_card_render( $block_content, $block ) {
     $site_lang = bitesmart_site_lang_code();
 
     if ( count( $video_ids ) > 1 ) {
-        bitesmart_episode_needs_lang_restart_templates();
+        bitesmart_needs_lang_restart_templates();
     }
 
     $replacements = array(

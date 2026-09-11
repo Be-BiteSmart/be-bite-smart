@@ -108,18 +108,18 @@ function applyFormatState() {
 window.bitesmartApplyGuideFormatState = applyFormatState;
 
 // Per-chapter badge click — toggles that ONE chapter's format on/off,
-// independent of every other chapter and of the global checkboxes. Has to
-// call preventDefault(): a badge sits inside the chapter's <summary>, and
-// the browser's native behavior for ANY click landing inside a <summary>
-// (buttons included) is to toggle the enclosing <details> open/closed —
-// without preventDefault() here, clicking a badge would just collapse or
-// expand the whole chapter instead of toggling the badge.
+// independent of every other chapter and of the global checkboxes. Used to
+// need preventDefault()/stopPropagation() here because the badge sat inside
+// the chapter's <summary>, and the browser's native behavior for ANY click
+// landing inside a <summary> (buttons included) is to toggle the enclosing
+// <details> open/closed. The badges moved out to be siblings of <summary>
+// instead (guide-chapter-display.php, 2026-09-09, axe: nested-interactive —
+// <summary> is natively interactive, so nesting other interactive controls
+// in it was a WCAG violation), so a badge click can no longer reach
+// <summary> at all — neither call is needed anymore.
 function handleBadgeClick(e) {
   const badge = e.target.closest(".guide-chapter-badge");
   if (!badge || badge.disabled) return;
-
-  e.preventDefault();
-  e.stopPropagation();
 
   const turningOff = badge.getAttribute("aria-pressed") !== "false";
   badge.setAttribute("aria-pressed", turningOff ? "false" : "true");

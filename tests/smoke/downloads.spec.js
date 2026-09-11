@@ -5,6 +5,7 @@ import {
   assertDownloadResponse,
   collectDownloadLinks,
 } from "../helpers/downloads.js";
+import { isLocalHttpWorkaround } from "../helpers/host.js";
 
 test.describe("Download URLs return files", () => {
   for (const { path, label } of CRITICAL_PAGES) {
@@ -23,6 +24,20 @@ test.describe("Download URLs return files", () => {
         const links = await collectDownloadLinks(page, selector);
         if (links.length === 0) {
           continue;
+        }
+
+        // WordPress media URLs (wp_get_attachment_url() and friends) are
+        // always absolute https://, never relative — so any page with real
+        // download content hits a scheme/cert mismatch when testing
+        // locally via http:// (testing.md's documented convention), same
+        // root cause as isLocalHttpWorkaround's other call sites. Skip
+        // here, before the first fetch attempt, rather than let it fail on
+        // a self-signed-certificate error unrelated to real content.
+        if (isLocalHttpWorkaround(baseURL)) {
+          test.skip(
+            true,
+            `${label}: download link checks skipped — WordPress media URLs are always absolute https://, testing locally via http:// hits a scheme/cert mismatch unrelated to real content`,
+          );
         }
 
         for (const link of links) {

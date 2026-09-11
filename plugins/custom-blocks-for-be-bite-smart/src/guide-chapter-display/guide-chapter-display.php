@@ -424,8 +424,9 @@ function bitesmart_render_guide_badge_icons() {
 }
 
 /**
- * The Video/Text badge pair for one chapter — shared by
- * bitesmart_render_guide_chapter_row()'s own <summary> AND (previously) the
+ * The Video/Text badge pair for one chapter — rendered by
+ * bitesmart_render_guide_chapter_row() inside .guide-chapter-body (only
+ * shown once the chapter is open, see that call site) and (previously) the
  * Table of Contents entries bitesmart_render_guide_single() builds
  * (guide-single.php) — the ToC's own badges were reverted the same day they
  * were added (2026-08-28), per Janet: she'd meant a plain link list, not a
@@ -445,11 +446,12 @@ function bitesmart_render_guide_format_badges( $has_video, $has_text ) {
     <span class="guide-chapter-badges">
         <?php
         // Real <button>s, not <span>s — they're independently clickable
-        // toggles (format-toggle.js), not just status indicators. Sits
-        // inside a <summary>, so a click has to call preventDefault() there
-        // to stop the browser's native "toggle the enclosing <details>"
-        // behavior that normally fires for ANY click landing inside a
-        // <summary> — see handleBadgeClick() in format-toggle.js.
+        // toggles (format-toggle.js), not just status indicators. Rendered
+        // inside .guide-chapter-body (2026-09-09, per Janet — only shown
+        // once a chapter is open, not on every collapsed row), a sibling of
+        // <summary>, never a descendant of it — see handleBadgeClick() in
+        // format-toggle.js for why that matters (it used to be nested
+        // inside <summary>, a WCAG violation; no longer applicable here).
         //
         // Two independent layers of visibility, both true by default:
         // bitesmart_render_guide_format_controls()'s checkboxes turn a
@@ -533,7 +535,30 @@ function bitesmart_render_guide_toc_item( $chapter ) {
             <?php if ( $number ) : ?>
                 <span class="guide-toc-chapter-index"><?php echo esc_html( $number ); ?></span>
             <?php endif; ?>
-            <span class="guide-toc-chapter-title"><?php echo esc_html( get_the_title( $chapter ) ); ?></span>
+            <?php
+            /*
+             * <p>, not <span> (2026-09-09, per Janet — wants this to track
+             * whatever the site's real paragraph text size is set to, not a
+             * fixed value copied from today's setting). WordPress's own
+             * generated global-styles rule is ":root :where(p){font-size:
+             * ...}" — a bare TAG selector, so any real <p> automatically
+             * matches it and tracks Editor changes to paragraph typography
+             * forever, however that setting is later expressed (a different
+             * preset, or a raw custom size). Valid here because this <a> is
+             * NOT inside a <summary> (it's a plain ToC link) — a <p> IS flow
+             * content, which <a> permits as a "transparent" element inside
+             * this <li>. Contrast with .guide-chapter-title /
+             * .guide-chapter-summary-text below (guide-chapter-display.php),
+             * which live inside a <summary> that's the first child of its
+             * <details> — HTML restricts THAT context to phrasing content
+             * only, so a real <p> isn't valid there and those two instead
+             * reference var(--wp--preset--font-size--medium) directly (the
+             * same variable the generated rule above currently resolves
+             * through — tracks edits to what "Medium" itself is set to, just
+             * not a switch to an entirely different preset or a raw value).
+             */
+            ?>
+            <p class="guide-toc-chapter-title"><?php echo esc_html( get_the_title( $chapter ) ); ?></p>
         </a>
     </li>
     <?php
@@ -650,8 +675,32 @@ function bitesmart_render_guide_chapter_row( $chapter_id, array $args = array() 
                 <?php endif; ?>
                 <span class="guide-chapter-main">
                     <span class="guide-chapter-title-row">
+                        <?php
+                        /*
+                         * <span>, NOT <h3> — reverted 2026-09-09, same day it
+                         * was tried. HTML's content model technically permits
+                         * a heading inside <summary> ("Phrasing content,
+                         * optionally intermixed with heading content," WHATWG)
+                         * — valid, and even matches what qa-entry-display.php/
+                         * episode-display.php already do — but valid HTML
+                         * isn't the same as a good screen-reader experience:
+                         * <summary> maps to a button role for assistive tech,
+                         * and per real-world testing (see Scott O'Hara's
+                         * writeup, scottohara.me/blog/2022/09/12/details-
+                         * summary.html — a primary reference on this element's
+                         * accessibility), nested heading semantics are NOT
+                         * consistently exposed once that mapping applies —
+                         * confirmed VoiceOver specifically drops a heading
+                         * nested in a role="button" context entirely, removing
+                         * it from the page's heading-navigation outline. Given
+                         * that inconsistency, plain phrasing content (this
+                         * span) is the safer choice here, even though the
+                         * qa-entry/episode precedent uses h3 — worth revisiting
+                         * across all three if this ever gets a real screen
+                         * reader audit, not just an HTML validator pass.
+                         */
+                        ?>
                         <span class="guide-chapter-title"><?php echo esc_html( get_the_title( $post ) ); ?></span>
-                        <?php echo bitesmart_render_guide_format_badges( $has_video, $has_text ); // phpcs:ignore ?>
                     </span>
                     <?php if ( $summary ) : ?>
                         <span class="guide-chapter-summary-text"><?php echo esc_html( $summary ); ?></span>
@@ -663,6 +712,23 @@ function bitesmart_render_guide_chapter_row( $chapter_id, array $args = array() 
             </summary>
 
             <div class="guide-chapter-body">
+
+                <?php
+                /*
+                 * Only shown once the chapter is open, per Janet (2026-09-09)
+                 * — with badges visible on every collapsed row, scanning the
+                 * chapter list read as too busy. A visitor now opens a
+                 * chapter first, then decides what to toggle, rather than
+                 * choosing formats before seeing anything. This also matches
+                 * this codebase's own established pattern (qa-entry-display.php,
+                 * episode-display.php): actionable controls live in the
+                 * revealed body, not the always-visible <summary> — so unlike
+                 * the brief period these badges spent living outside <details>
+                 * entirely (see git history / CHANGES-2026-09.md if curious),
+                 * no special positioning is needed here at all.
+                 */
+                echo bitesmart_render_guide_format_badges( $has_video, $has_text ); // phpcs:ignore
+                ?>
 
                 <?php if ( $has_video ) : ?>
                     <div class="guide-chapter-format guide-chapter-video" data-format="video">

@@ -62,16 +62,37 @@ export async function assertVimeoPlayerLoads(page, container, trigger, {
   return iframe;
 }
 
+/**
+ * Reveals every developed episode collapsed behind custom/read-more's Show
+ * More toggle. #developed-episodes only renders the first episode directly;
+ * the rest sit inside .expandable-content (display:none) until the toggle
+ * is clicked — and every fresh page load/reload starts collapsed again, so
+ * any test that interacts with an episode past the first needs this first
+ * or the click just times out waiting for a hidden element to become visible.
+ */
+export async function expandAllDevelopedEpisodes(page) {
+  const toggles = page.locator(
+    '#developed-episodes .read-more-toggle[data-expanded="false"]',
+  );
+  while ((await toggles.count()) > 0) {
+    await toggles.first().click();
+  }
+}
+
 export function episodeLangSegments(episode) {
   return episode.locator(
     ".lang-segment[data-lang], .toggle-label[data-lang]",
   );
 }
 
-export async function getEpisodeVideoIds(episode) {
+// Reads the lang => Vimeo ID map from a block's own data-videos attribute
+// (falling back to a .video-episode-block descendant if the container
+// itself doesn't carry it) -- shared by episode and video-quote blocks
+// alike, both of which emit this same attribute/shape.
+export async function getBlockVideoIds(block) {
   const raw =
-    (await episode.getAttribute("data-videos")) ||
-    (await episode.locator(".video-episode-block").first().getAttribute("data-videos"));
+    (await block.getAttribute("data-videos")) ||
+    (await block.locator(".video-episode-block").first().getAttribute("data-videos"));
   return parseVideosDataset(raw);
 }
 

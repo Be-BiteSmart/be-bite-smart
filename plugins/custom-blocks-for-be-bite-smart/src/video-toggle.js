@@ -10,7 +10,6 @@ import {
   normalizeLangCode,
   resolveVideosForBlock,
 } from "./shared/languages";
-import { ensureVimeoSdk } from "./shared/vimeo-sdk";
 import { confirmLanguageRestart } from "./video-lang-restart-modal";
 
 /* ── Vimeo connection warm-up ──
@@ -45,122 +44,16 @@ const vimeoWarmUpObserver = new IntersectionObserver(
   { rootMargin: "200px" },
 );
 
-/* Live-swap the subtitle/audio track on an already-playing quote-block
-   embed, instead of reloading the video. Only the audio side is special-
-   cased for English — it has no "alternate" track of its own, so we revert
-   to the original upload audio rather than selecting one by language code.
-   Captions work the same way for every language, English included: try to
-   enable an English caption track rather than turning captions off.
-
-   Returns a Promise<{ audioOk, captionsOk }> that never rejects, so the
-   caller can tell whether the switch fully succeeded, partially succeeded
-   (e.g. captions changed but the audio track doesn't exist on this video),
-   or completely failed — and react accordingly (see handleLangSegmentClick
-   and the pendingLangSwitch path in loadVideo()). */
-function switchLiveTrack(player, langCode) {
-  const captionsPromise = player.enableTextTrack(langCode).then(
-    () => true,
-    (err) => {
-      console.warn(`No ${langCode} subtitle track on this video`, err);
-      return false;
-    },
-  );
-
-  const audioPromise =
-    langCode === "en"
-      ? player.selectDefaultAudioTrack().then(
-          () => true,
-          (err) => {
-            console.warn("Could not reset to default audio track", err);
-            return false;
-          },
-        )
-      : player.selectAudioTrack(langCode).then(
-          () => true,
-          (err) => {
-            console.warn(`No ${langCode} audio track on this video`, err);
-            return false;
-          },
-        );
-
-  return Promise.all([audioPromise, captionsPromise]).then(
-    ([audioOk, captionsOk]) => ({ audioOk, captionsOk }),
-  );
-}
-
-/* ── Track-unavailable note (quote blocks only) ──
-   video-quote.php pre-renders an empty <p class="video-quote-track-note">
-   next to the picker; we only ever mutate its text/visibility, never its
-   presence, so role="status"/aria-live="polite" on it announces reliably.
-
-   The actual wording lives in a hidden, TranslatePress-translatable block
-   printed once in the page footer (see bitesmart_render_video_quote_track_note_templates()
-   in includes/site-lang.php) — never in JS — so admins can translate it the
-   same way they translate the rest of the block's copy. JS only picks which
-   template applies and substitutes the {language} placeholder (langName()
-   itself now lives in shared/languages.js, shared with the language-restart
-   dialog). */
-function getTrackNoteTemplate(kind) {
-  return (
-    document.querySelector(
-      `.video-quote-track-note-template[data-kind="${kind}"]`,
-    )?.textContent ?? null
-  );
-}
-
-function getTrackNoteEl(block) {
-  return block.querySelector(".video-quote-track-note");
-}
-
-function clearTrackNote(block) {
-  const el = getTrackNoteEl(block);
-  if (el) {
-    el.textContent = "";
-    el.classList.remove("is-visible");
-  }
-}
-
-function showTrackNote(
-  block,
-  targetLang,
-  { audioOk, captionsOk, totalFailure },
-) {
-  const el = getTrackNoteEl(block);
-  if (!el) return;
-
-  const kind = totalFailure
-    ? "total"
-    : !audioOk
-      ? "audio-missing"
-      : "captions-missing";
-  const name = langName(targetLang);
-  const template = getTrackNoteTemplate(kind);
-
-  // Fallback wording if the footer templates are missing for some reason —
-  // should always be present once bitesmart_video_quote_needs_track_note_templates()
-  // has run for this page.
-  const fallback = {
-    total: `${name} isn't available for this video yet.`,
-    "audio-missing": `${name} captions are on, but dubbed audio isn't available yet for this video.`,
-    "captions-missing": `${name} audio is on, but captions aren't available yet for this video.`,
-  }[kind];
-
-  el.textContent = template
-    ? applyLanguagePlaceholder(template, name)
-    : fallback;
-  el.classList.add("is-visible");
-}
-
 /* ── Play-button label ──
    Always names the currently-selected language next to the verb, e.g.
    "Play (Spanish)" — kept in sync with the picker (called from
    setEpisodeLanguage() below) so it's correct from first paint and after
    every language change, including rollbacks. The wrapper phrase stays
-   TranslatePress-translatable the same way the track-note above does: a
-   static hidden template with a {language} placeholder, substituted
-   client-side with langName() — never a hardcoded per-language string, so
-   the button stays legible in the site's own language even when the
-   selected video language isn't (see bitesmart_render_play_button_label_templates()
+   TranslatePress-translatable the same way the rest of this block's copy
+   does: a static hidden template with a {language} placeholder,
+   substituted client-side with langName() — never a hardcoded per-language
+   string, so the button stays legible in the site's own language even when
+   the selected video language isn't (see bitesmart_render_play_button_label_templates()
    in includes/site-lang.php for why that distinction matters here). */
 function getPlayButtonLabelTemplate() {
   return (
@@ -181,13 +74,12 @@ function setPlayButtonLabel(block, code) {
 }
 
 /* ── Transient "language changed" status ──
-   Unlike the track-note above, this is a plain confirmation shown only when
-   a language switch actually happens, then faded back out — see this
-   function's call sites in handleLangSegmentClick() for exactly which paths
-   count as a genuine change (never the initial page-load sync, a rollback,
-   or a video-quote track failure/partial-success, which shows the
-   track-note instead of this). One timeout per block, keyed in a WeakMap so
-   rapid re-toggling restarts the fade instead of stacking timers. */
+   A plain confirmation shown only when a language switch actually happens,
+   then faded back out — see this function's call sites in
+   handleLangSegmentClick() for exactly which paths count as a genuine
+   change (never the initial page-load sync or a cancelled restart). One
+   timeout per block, keyed in a WeakMap so rapid re-toggling restarts the
+   fade instead of stacking timers. */
 const langChangeStatusTimeouts = new WeakMap();
 const LANG_CHANGE_STATUS_VISIBLE_MS = 2500;
 
@@ -252,7 +144,7 @@ function getLangPicker(block) {
   return block.querySelector(".episode-lang-picker, .language-toggle");
 }
 
-function defaultEpisodeLang(block, videos, siteLang) {
+function defaultVideoLang(block, videos, siteLang) {
   const codes = Object.keys(videos);
   if (!codes.length) {
     return "en";
@@ -268,19 +160,6 @@ function defaultEpisodeLang(block, videos, siteLang) {
   }
 
   return codes[0];
-}
-
-/* Quote blocks don't have a videos map — the picker's own rendered
-   segments (built server-side from data-supported-langs) are the source
-   of truth for which languages this particular video actually supports. */
-function defaultQuoteLang(langSegments, siteLang) {
-  const codes = Array.from(langSegments).map((el) => el.dataset.lang);
-  if (!codes.length) {
-    return "en"; // no picker rendered => only English is supported
-  }
-
-  const normalizedSite = normalizeLangCode(siteLang);
-  return codes.includes(normalizedSite) ? normalizedSite : "en";
 }
 
 function updatePickerIndex(picker, segments, activeLang) {
@@ -317,12 +196,9 @@ document.addEventListener("DOMContentLoaded", function () {
     );
     const videos = resolveVideosForBlock(block);
 
-    let currentLang = isQuoteBlock
-      ? defaultQuoteLang(langSegments, siteLang)
-      : defaultEpisodeLang(block, videos, siteLang);
+    let currentLang = defaultVideoLang(block, videos, siteLang);
     let playingLang = null;
     let isPlaying = false;
-    let player = null; // Vimeo.Player instance, quote blocks only
 
     // Warm up Vimeo's connection once this thumbnail is close to view —
     // one shared observer/flag handles every block on the page.
@@ -348,10 +224,19 @@ document.addEventListener("DOMContentLoaded", function () {
       setEpisodeLanguage(currentLang);
     }
 
+    /* Both block types load the same way: build the iframe src for
+       currentLang and drop it in, replacing anything already there.
+       video-quote and video-episode used to diverge here (video-quote
+       wrapped the iframe in a Vimeo.Player to live-switch tracks in place
+       instead of reloading) — that approach turned out to be unreliable
+       (Vimeo's selectAudioTrack()/enableTextTrack() API frequently resolves
+       without actually applying the change; see be-bitesmart-video-toggle-
+       audio-hang.md for the full investigation) and was replaced 2026-09-10
+       with this same reload-on-switch approach episode-card already used
+       successfully, via handleLangSegmentClick()'s confirmLanguageRestart()
+       call below. */
     function loadVideo() {
-      const vimeoId = isQuoteBlock
-        ? block.dataset.quoteVimeoId
-        : videos[currentLang];
+      const vimeoId = videos[currentLang];
 
       if (!vimeoId) {
         console.error("No Vimeo ID found for", currentLang);
@@ -369,98 +254,11 @@ document.addEventListener("DOMContentLoaded", function () {
       videoPlayer.appendChild(iframe);
       thumbnail.classList.add("hidden");
       isPlaying = true;
-
-      if (!isQuoteBlock) {
-        playingLang = currentLang;
-      } else if (langSegments.length) {
-        // Quote blocks with 2+ supported languages: wrap the iframe in a
-        // Vimeo.Player so later language clicks can swap tracks live
-        // instead of reloading.
-        ensureVimeoSdk()
-          .then((Vimeo) => {
-            player = new Vimeo.Player(iframe);
-
-            // Re-verify whatever language ended up selected (reading
-            // currentLang live, not a captured value, so this also covers a
-            // click that raced this SDK load — see handleLangSegmentClick).
-            // Vimeo silently falls back to its default English audio/
-            // captions when a texttrack/audiotrack code baked into the
-            // iframe src above doesn't exist on this video — there's no
-            // load-time error, so this API call is the only reliable way to
-            // catch "picked (or defaulted to) a language before playing
-            // that isn't actually available" and correct the UI to match
-            // what's really playing.
-            const attemptedLang = currentLang;
-            switchLiveTrack(player, attemptedLang).then(
-              ({ audioOk, captionsOk }) => {
-                if (!audioOk && !captionsOk) {
-                  setEpisodeLanguage("en");
-                  showTrackNote(block, attemptedLang, {
-                    audioOk,
-                    captionsOk,
-                    totalFailure: true,
-                  });
-                } else if (!audioOk || !captionsOk) {
-                  showTrackNote(block, attemptedLang, {
-                    audioOk,
-                    captionsOk,
-                    totalFailure: false,
-                  });
-                }
-              },
-            );
-          })
-          .catch((err) => {
-            console.warn("Could not load the Vimeo Player SDK", err);
-          });
-      }
+      playingLang = currentLang;
     }
 
-    function handleLangSegmentClick(lang, triggerEl) {
+    async function handleLangSegmentClick(lang, triggerEl) {
       const target = normalizeLangCode(lang);
-
-      if (isQuoteBlock) {
-        const previousLang = currentLang;
-        setEpisodeLanguage(target); // optimistic: active-class only, no reload
-        clearTrackNote(block); // clear any stale note on every new attempt
-
-        if (isPlaying && player) {
-          switchLiveTrack(player, target).then(({ audioOk, captionsOk }) => {
-            if (!audioOk && !captionsOk) {
-              // Total failure: roll back the UI to what's actually still playing.
-              setEpisodeLanguage(previousLang);
-              showTrackNote(block, target, {
-                audioOk,
-                captionsOk,
-                totalFailure: true,
-              });
-            } else if (!audioOk || !captionsOk) {
-              // Partial success: a real switch happened, so stay on the new
-              // language, but let the visitor know what's missing.
-              showTrackNote(block, target, {
-                audioOk,
-                captionsOk,
-                totalFailure: false,
-              });
-            } else {
-              // Full success: both tracks switched cleanly.
-              showLangChangeStatus(block, target);
-            }
-          });
-        } else {
-          // Not playing yet, OR playing but the player instance hasn't
-          // finished initializing yet (raced loadVideo()'s SDK load): either
-          // way, currentLang is already updated, and loadVideo()'s
-          // post-player-creation verification step (which reads currentLang
-          // live) will confirm/correct it once the player exists — covering
-          // both "picked a language before ever pressing play" and this
-          // race. Confirm the pick now regardless; if it turns out not to
-          // be available, that verification step corrects the UI and shows
-          // the track-note itself.
-          showLangChangeStatus(block, target);
-        }
-        return;
-      }
 
       if (!isPlaying) {
         setEpisodeLanguage(target);
@@ -472,18 +270,15 @@ document.addEventListener("DOMContentLoaded", function () {
         return;
       }
 
-      confirmLanguageRestart(target, triggerEl).then(
-        (confirmed) => {
-          if (!confirmed) {
-            setEpisodeLanguage(playingLang);
-            return;
-          }
+      const confirmed = await confirmLanguageRestart(target, triggerEl);
+      if (!confirmed) {
+        setEpisodeLanguage(playingLang);
+        return;
+      }
 
-          setEpisodeLanguage(target);
-          showLangChangeStatus(block, target);
-          loadVideo();
-        },
-      );
+      setEpisodeLanguage(target);
+      showLangChangeStatus(block, target);
+      loadVideo();
     }
 
     if (langSegments.length) {
