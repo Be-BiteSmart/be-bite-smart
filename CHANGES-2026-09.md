@@ -1675,3 +1675,68 @@ Full `tests/videos` suite re-run against this final content: 22/22.
 - Ran only this new spec against the local site (not the full suite, per convention): 5 of 23 `CRITICAL_PAGES` routes currently have a visible Read More button (Home, Learn, Books, News & media, Legal) and all 5 passed; the other 18 skipped (no matching buttons on those pages).
 - Proved the test actually catches this bug: temporarily restored the pre-fix `build/read-more.js` (`git checkout 39ec737~1 -- ...`), purged cache, re-ran the News & Media case — failed with a clear message ("Read More button #0 (\"Read More\") click did not expand its content"). Restored the fixed build, purged cache again, re-ran — passed.
 - Not yet committed — Janet commits manually per existing convention on this branch (`plc-updates`).
+
+## 2026-09-11 — Q&A Entry Related Links: Primary/Supporting source buttons
+
+**What it does and why it was needed:** Janet is mapping her spreadsheet of parent questions to Guide chapters (a "Priority parent question -> Primary Guide destination + Supporting chapter(s)" crosswalk) and wants each matched Q&A Entry to show a source button for its primary destination, plus separate "Supporting links" buttons underneath — usable now, before the full written answer exists for most entries.
+
+**New field, not a reuse of what shipped 2026-09-04:** [[be-bitesmart-qa-chapter-link-status]]'s existing "Chapter Link" (`_bitesmart_qa_link_chapter_id`) only ever drove search-synonym inheritance — it has never rendered a visible link. Rather than repurpose it, added a genuinely new repeater, `_bitesmart_qa_related_links` on `qa_entry`: an ordered list of `{role, type, chapter_id, resource_id, url, label}` entries, `role` is `primary`/`supporting`, `type` is `chapter`/`resource`/`url`. Same hand-rolled array-meta pattern as Book's Buy Links (`_bitesmart_book_buy_links`) — no repeater field type exists in this codebase (no ACF/Meta Box, see [[be-bitesmart-plugin-architecture]]).
+
+**Key decisions, worked out with Janet before building:**
+- Confirmed via [[be-bitesmart-qa-resource-status]]'s 2026-08-14 "no multi-link" note before starting — that decision was specifically about the single Link Destination field ("Read the full guide"); this is a separate field for a separate purpose, not a reversal of it.
+- Supporting (and primary) links can point to a Guide Chapter, a Resource post, or a plain URL — not chapter-only. Janet's own call: "these supporting sources might not just be limited to the guide... we might have outbound links too."
+- The sheet's "Guide page(s)" column (source-PDF page numbers, e.g. "10-12") is explicitly NOT stored or rendered — Janet's call, it's her own planning reference only; Guide Chapters have no per-page anchor on the live site anyway (a chapter is one continuous post).
+
+**Files touched:**
+- `plugins/custom-post-types-for-bbs/includes/qa-entry-cpt.php` — `bitesmart_sanitize_qa_related_links()` + the new `register_post_meta()` call. Sanitizer drops any entry with no real destination for its own type (mirrors `bitesmart_sanitize_book_buy_links()`); doesn't validate the chapter/resource actually exists — that's a render-time concern, same posture as the existing Link Destination field.
+- `plugins/custom-blocks-for-be-bite-smart/src/qa-entry-fields/index.js` — new "Related Links" repeater section (Role radio, Destination type select, conditional Chapter/Resource/URL picker, optional label override, add/remove rows). Also un-gated the Resource list fetch (previously only fetched when Link Destination's own type was "resource") since a Related Links row can need it independently.
+- `plugins/custom-blocks-for-be-bite-smart/src/qa-entry-display/qa-entry-display.php` — `bitesmart_resolve_qa_related_link()` (per-entry resolve, same "degrade to nothing if trashed" posture as the existing Link Destination resolver) + `bitesmart_qa_entry_related_links()` (groups into primary/supporting, drops anything that no longer resolves), wired into `render_qa_entry_block()`. Renders regardless of Answer Type/whether Long Answer's Link Destination exists — primary buttons first, then a "Supporting links" heading + its buttons, both `target="_blank" rel="noopener noreferrer"` (matches the existing convention in `bio-card.php`/`guide-references.php`).
+- `plugins/custom-blocks-for-be-bite-smart/src/qa-entry-display/style.css` — `.qa-entry-related-links` (flex-wrap button row) + `.qa-entry-related-links-heading`.
+
+**Verified:** `php -l` clean on both PHP files; `pnpm run build` clean; confirmed live against the real local site — REST `OPTIONS /wp/v2/qa_entry` shows the new field's schema correctly registered (meta takes effect without a build step, PHP-only), and `bitesmart_sanitize_qa_related_links()` exercised directly via a `wp-load.php` bootstrap script (bogus role fell back to `supporting`, an entry with no `resource_id` was dropped, as designed). Not yet checked in an actual browser (no interactive Playwright pass this session) — worth a manual pass in wp-admin before calling the editor UI fully verified.
+
+**Content applied (Janet's go-ahead):** Q&A Entry #3166 ("Should I put up baby gates or create a separate space for my dog before the baby arrives?", already `publish`) now has Guide Chapter #2706 (Chapter 7, "Environmental Management: Structuring Safety in the Home") as primary, and Guide Chapters #2536 (Chapter 3) and #2710 (Chapter 11) as supporting — set via a one-off `update_post_meta()` script (passed through `bitesmart_sanitize_qa_related_links()` first), not through wp-admin. Verified by calling `render_qa_entry_block()` directly: primary button to `/learning/guide/chapter-7/`, "Supporting links" heading with buttons to chapters 3 and 11, correct auto-derived labels, all `target="_blank" rel="noopener noreferrer"`.
+
+**Not yet committed** — Janet commits manually per existing convention on this branch (`plc-updates`).
+
+## 2026-09-11 (cont'd) — 40 more Related Links applied (Primary only) from the rest of Janet's sheet
+
+Janet sent the remaining rows of her parent-question-to-chapter spreadsheet — no Supporting chapters listed for this batch, so each of these 40 Q&A Entries got exactly one Primary link.
+
+**Matching:** 34 of 40 matched an existing `qa_entry` post's title exactly. The other 6 needed a fuzzy `WP_Query`/`get_posts(s=...)` search because the sheet's wording doesn't exactly match what's stored on the bulk-imported entry (a missing word, a British spelling, a hyphen, or light rewording — e.g. the sheet reads "dog crawls toward my baby" but the stored title is "baby crawls toward my dog," the semantically correct hazard and the only close match, so treated as the same question). All 40 matches (entry ID + chapter ID) were shown to Janet before anything was written.
+
+**Permission note:** the bulk `update_post_meta()` write (40 rows in one script) was auto-blocked once by the coding tool's own permission classifier ("Modify Shared Resources") — the single-row write for #3166 earlier the same day had gone through without that friction, but a 40-row batch triggered stricter scrutiny. Re-ran after Janet's explicit approval.
+
+**Applied via** the same one-off `update_post_meta()` + `bitesmart_sanitize_qa_related_links()` script pattern as #3166, guarded to skip any entry that already had a non-empty `_bitesmart_qa_related_links` (protects #3166's data, or anything Janet sets herself, from being clobbered by a re-run) — nothing was skipped this run, all 40 were empty beforehand. Spot-checked 5 of the 40 by reading the stored meta back directly (including two of the fuzzy-matched ones); not re-verified through `render_qa_entry_block()` the way #3166 was, and not checked in a browser.
+
+**Not yet committed** — Janet commits manually per existing convention on this branch (`plc-updates`). (This entry is content-only, no code changed — no commit needed regardless.)
+
+## 2026-09-11 (cont'd) — Placeholder answer text for Q&A Entries still awaiting a real answer
+
+Janet's ask: for any Q&A Entry with no answer written yet, show "This answer is still in development." instead of a blank answer.
+
+**Applied via a one-off `update_post_meta()` script** (content-only, same `wp-load.php` bootstrap pattern as the Related Links batches above): checked all 62 `qa_entry` posts' `_bitesmart_qa_answer_text`, wrote the placeholder (through `sanitize_textarea_field()`, matching the field's own registered sanitizer) to the 60 that were empty, left the 2 that already had a real answer (#2465, #2448) untouched. No code changed — `render_qa_entry_block()` already renders whatever's in `_bitesmart_qa_answer_text` as-is, so the placeholder shows up immediately as this entry's answer text (Short Answer entries show it as the complete answer; Long Answer entries show it as the teaser).
+
+**Not committed** — content-only, nothing to commit.
+
+## 2026-09-11 (cont'd) — Fixed: Pregnancy/Baby stage cards showing stale content (cache, not a code bug)
+
+Janet reported the answer wasn't showing when a question was clicked on the Pregnancy/Baby stage page.
+
+**Root cause:** `custom/learning-search`'s per-Stage card list is cached in a WordPress transient keyed by a generation counter (`bitesmart_stage_cards_gen`, `learning-search.php`), bumped only by `save_post_qa_entry`/`save_post_resource`/`save_post_episode`/`save_post_guide_chapter`/`delete_post`/`set_object_terms`. All three of today's content batches (Related Links on 41 entries, the 60 placeholder answers) were written via raw `update_post_meta()` in one-off `wp-load.php` scripts, which never fires `save_post` — so the cache never knew to invalidate, and Stage pages kept serving cards rendered before any of today's changes (blank answers, no Related Links buttons), even though the database itself was already correct.
+
+**Fix:** called `bitesmart_stage_cards_bump_generation()` directly (the same increment a real save would trigger) to invalidate every cached Stage/language combo at once, then `wp_cache_clear_cache()` to purge the page cache too. Verified by rebuilding the Pregnancy and Baby card lists fresh: Pregnancy now shows all 14 Q&A cards with answer text (4 with Related Links buttons), Baby shows all 18 with answer text (12 with Related Links buttons).
+
+**Process note for future direct-DB content batches**: any edit made via `update_post_meta()` outside wp-admin/REST needs this same manual cache bump afterward — added to my own checklist for scripted content edits on this project going forward.
+
+**Not committed** — no code changed, only a cached-data invalidation (an option value + transients), nothing git-tracked.
+
+## 2026-09-11 (cont'd) — Related Links: added "Recommended Reading" / "Also Helpful" headings
+
+Janet asked for a heading above the Primary buttons too (to match Supporting's existing heading), then asked for naming suggestions before committing to wording — she picked **"Recommended Reading"** for Primary and **"Also Helpful"** for Supporting (replacing the placeholder "Supporting links"), to make the priority clear to a parent: Recommended Reading is the main background reading for this answer, Also Helpful is optional/tangential extra reading.
+
+**Changed:** `qa-entry-display.php` — added the "Recommended Reading" `<h4>` above the Primary button row (previously no heading there at all) and renamed "Supporting links" to "Also Helpful". `qa-entry-fields/index.js`'s Related Links hint text updated to name both real headings instead of describing them generically. `style.css` — removed `.qa-entry-related-links-primary`'s now-redundant `margin-top` (both groups always render heading-then-buttons now, so the heading's own margin already provides the spacing).
+
+**Verified:** `php -l` clean, `pnpm run build` clean. Since this was a template-code change (not a raw meta edit), `bitesmart_stage_cards_template_version()`'s `filemtime()` check on this file automatically busted the Stage-card cache on its own — confirmed by rebuilding the Pregnancy stage's card list fresh and finding both new headings present on entry #3166 with no manual cache bump needed this time (unlike the earlier direct-DB content batches today).
+
+**Not yet committed** — Janet commits manually per existing convention on this branch (`plc-updates`).

@@ -34,6 +34,23 @@
  * the same transform/transition technique already used for the navbar
  * submenu toggle (see themes/twentytwentyfive-child/css/navbar.css),
  * keyed off <details>'s native [open] state instead of aria-expanded.
+ *
+ * Related Links buttons (added 2026-09-11, _bitesmart_qa_related_links in
+ * qa-entry-cpt.php) render below the "Read the full guide" link, regardless
+ * of Answer Type — Janet's own ask was to surface source buttons on an entry
+ * even before its full written answer exists. Primary-role links render
+ * first as buttons under a "Recommended Reading" heading; Supporting-role
+ * links (if any) render under an "Also Helpful" heading below that — wording
+ * picked 2026-09-11 to make the priority read clear to a parent: Recommended
+ * Reading is the main background reading for this answer, Also Helpful is
+ * optional/tangential extra reading, not required. Each link resolves to a Guide Chapter, a
+ * Resource post, or a plain URL (bitesmart_resolve_qa_related_link() below);
+ * a link whose chapter/resource was since trashed is silently dropped, same
+ * "degrade to nothing" posture as the single Link Destination above. All
+ * open in a new tab (target="_blank" rel="noopener noreferrer") since
+ * they're meant to be followed without losing the visitor's place in this
+ * accordion — same convention already used for bio-card's LinkedIn button
+ * and guide-references' citation links.
  */
 
 /**
@@ -58,6 +75,86 @@ function bitesmart_resolve_qa_entry_link( $link_type, $resource_id, $raw_url ) {
     return (string) $raw_url;
 }
 
+/**
+ * Resolve one Related Links entry (_bitesmart_qa_related_links, see
+ * qa-entry-cpt.php) to a renderable {role, url, label}, or null if it
+ * doesn't currently resolve to anything (e.g. its chapter/resource was
+ * trashed since this entry was linked) — same "degrade to nothing" posture
+ * as bitesmart_resolve_qa_entry_link() above, just per-row instead of for
+ * the single Link Destination field.
+ *
+ * @param array $link One sanitized entry from _bitesmart_qa_related_links.
+ * @return array{role: string, url: string, label: string}|null
+ */
+function bitesmart_resolve_qa_related_link( $link ) {
+    $role = $link['role'];
+
+    if ( 'chapter' === $link['type'] ) {
+        $chapter = $link['chapter_id'] ? get_post( $link['chapter_id'] ) : null;
+        if ( ! $chapter || 'guide_chapter' !== $chapter->post_type || 'publish' !== $chapter->post_status ) {
+            return null;
+        }
+        return array(
+            'role'  => $role,
+            'url'   => get_permalink( $chapter ),
+            'label' => $link['label'] ? $link['label'] : get_the_title( $chapter ),
+        );
+    }
+
+    if ( 'resource' === $link['type'] ) {
+        $resource = $link['resource_id'] ? get_post( $link['resource_id'] ) : null;
+        if ( ! $resource || 'resource' !== $resource->post_type || 'publish' !== $resource->post_status ) {
+            return null;
+        }
+        $url = (string) get_post_meta( $resource->ID, '_bitesmart_resource_url', true );
+        if ( ! $url ) {
+            return null;
+        }
+        return array(
+            'role'  => $role,
+            'url'   => $url,
+            'label' => $link['label'] ? $link['label'] : get_the_title( $resource ),
+        );
+    }
+
+    // 'url'
+    if ( ! $link['url'] ) {
+        return null;
+    }
+    return array(
+        'role'  => $role,
+        'url'   => $link['url'],
+        'label' => $link['label'] ? $link['label'] : __( 'Learn more', 'custom-blocks' ),
+    );
+}
+
+/**
+ * Every Related Link this entry resolves to right now, split into 'primary'
+ * and 'supporting' groups (in the order stored) — entries that no longer
+ * resolve to anything (see bitesmart_resolve_qa_related_link() above) are
+ * silently dropped, same as a dangling Link Destination.
+ *
+ * @param int $entry_id Q&A Entry post ID.
+ * @return array{primary: array, supporting: array}
+ */
+function bitesmart_qa_entry_related_links( $entry_id ) {
+    $raw     = get_post_meta( $entry_id, '_bitesmart_qa_related_links', true );
+    $grouped = array( 'primary' => array(), 'supporting' => array() );
+
+    if ( ! is_array( $raw ) ) {
+        return $grouped;
+    }
+
+    foreach ( $raw as $link ) {
+        $resolved = bitesmart_resolve_qa_related_link( $link );
+        if ( $resolved ) {
+            $grouped[ $resolved['role'] ][] = $resolved;
+        }
+    }
+
+    return $grouped;
+}
+
 function render_qa_entry_block( $attributes ) {
     $entry_id = isset( $attributes['entryId'] ) ? (int) $attributes['entryId'] : 0;
     $post     = $entry_id ? get_post( $entry_id ) : null;
@@ -75,6 +172,7 @@ function render_qa_entry_block( $attributes ) {
     $raw_url     = get_post_meta( $entry_id, '_bitesmart_qa_link_url', true );
     $is_long     = 'long' === $answer_type;
     $link_url    = $is_long ? bitesmart_resolve_qa_entry_link( $link_type, $resource_id, $raw_url ) : '';
+    $related     = bitesmart_qa_entry_related_links( $entry_id );
 
     // Both Answer Types share the same accent-card look now — Long Answer's
     // teaser text and "Read the full guide" link render inside it too,
@@ -106,6 +204,28 @@ function render_qa_entry_block( $attributes ) {
                     <a href="<?php echo esc_url( $link_url ); ?>" class="qa-entry-guide-link block-toggle-btn is-style-outline">
                         <?php esc_html_e( 'Read the full guide', 'custom-blocks' ); ?>
                     </a>
+                <?php endif; ?>
+
+                <?php if ( ! empty( $related['primary'] ) ) : ?>
+                    <h4 class="qa-entry-related-links-heading"><?php esc_html_e( 'Recommended Reading', 'custom-blocks' ); ?></h4>
+                    <div class="qa-entry-related-links qa-entry-related-links-primary">
+                        <?php foreach ( $related['primary'] as $link ) : ?>
+                            <a href="<?php echo esc_url( $link['url'] ); ?>" class="qa-entry-related-link block-toggle-btn is-style-outline" target="_blank" rel="noopener noreferrer">
+                                <?php echo esc_html( $link['label'] ); ?>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php if ( ! empty( $related['supporting'] ) ) : ?>
+                    <h4 class="qa-entry-related-links-heading"><?php esc_html_e( 'Also Helpful', 'custom-blocks' ); ?></h4>
+                    <div class="qa-entry-related-links qa-entry-related-links-supporting">
+                        <?php foreach ( $related['supporting'] as $link ) : ?>
+                            <a href="<?php echo esc_url( $link['url'] ); ?>" class="qa-entry-related-link block-toggle-btn is-style-outline" target="_blank" rel="noopener noreferrer">
+                                <?php echo esc_html( $link['label'] ); ?>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
                 <?php endif; ?>
             </div>
         </details>

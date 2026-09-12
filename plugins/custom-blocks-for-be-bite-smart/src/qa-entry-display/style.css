@@ -89,3 +89,27 @@ body:not(.block-editor-page)
   margin-left: auto;
   margin-right: auto;
 }
+
+/* Related Links (added 2026-09-11) — a "Recommended Reading" heading +
+   Primary buttons, then an optional "Also Helpful" heading + its own
+   Supporting button row. Wraps to multiple lines rather than overflowing
+   when several buttons don't fit one row (e.g. a question with two Primary
+   destinations, or several Supporting chapters). Each group's own top
+   spacing comes from its heading's margin (below) — both groups always
+   render heading-then-buttons, so the button row itself needs no extra
+   top margin of its own. */
+.wp-block-custom-qa-entry .qa-entry-related-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.wp-block-custom-qa-entry .qa-entry-related-links-heading {
+  margin: 16px 0 4px;
+  text-align: center;
+  font-size: 0.9em;
+  font-weight: 600;
+  color: #154862; /* matches .custom-block-accent-heading's text color */
+}
