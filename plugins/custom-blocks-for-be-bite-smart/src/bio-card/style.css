@@ -12,23 +12,22 @@
   gap: 0;
 }
 
-/* Section 1 - photo + details side by side */
+/* Section 1 - name/bio text; photo floats inside it so text wraps around it */
 .wp-block-custom-bio-card .bio-section-1 {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
+  width: 100%;
+}
+
+/* Details column inside section 1 - flow-root contains the floated photo
+   so this box doesn't collapse to zero height when the photo is tallest */
+.wp-block-custom-bio-card .bio-details {
+  display: flow-root;
 }
 
 @media (min-width: 768px) {
-  .wp-block-custom-bio-card .bio-section-1 {
-    flex-direction: row !important;
-    gap: 4rem;
+  .wp-block-custom-bio-card .bio-photo {
+    float: left;
+    margin: 0 4rem 0 0;
   }
-}
-
-/* Details column inside section 1 */
-.wp-block-custom-bio-card .bio-details {
-  flex-grow: 1;
 }
 
 /* Section 2 - expanded bio, full width below section 1 */
@@ -77,7 +76,9 @@ html body .wp-block-custom-bio-card .bio-affiliation {
 
 /* Contact links */
 .wp-block-custom-bio-card .bio-contact-links {
-  margin: 2rem 0;
+  /* tightened from 2rem: leaves more of the photo's height free for
+     .bio-short to wrap into (see the float rule on .bio-photo above) */
+  margin: 1.25rem 0;
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -171,9 +172,21 @@ html body .wp-block-custom-bio-card .bio-affiliation {
   margin-bottom: 1rem;
 }
 
-/* makes the expand bio toggle orange */
+/* Set by bio-toggle.js when there's less than one line's worth of room
+   left beside the photo - clears the float instead of wrapping a sliver
+   of the first line next to it. */
+.wp-block-custom-bio-card .bio-short.bio-short-below-photo {
+  clear: left;
+}
+
+/* makes the expand bio toggle orange - centered under the (now full-width) bio text/photo wrap.
+   clear: left keeps it below the floated photo always (a flex container is its own
+   formatting context, so without this it can get slotted beside a still-tall photo
+   on short bios instead of centering under the full card). */
 .wp-block-custom-bio-card .expanded-bio-toggle {
-  display: inline-flex;
+  display: flex;
+  width: fit-content;
+  clear: left;
   align-items: center;
   color: var(--wp--preset--color--accent-2);
   font-weight: 800;
@@ -184,7 +197,7 @@ html body .wp-block-custom-bio-card .bio-affiliation {
   border: none;
   padding: 0;
   cursor: pointer;
-  margin-top: 1.5rem;
+  margin: 1.5rem auto 0;
 }
 
 /* Expanded Bio Content */

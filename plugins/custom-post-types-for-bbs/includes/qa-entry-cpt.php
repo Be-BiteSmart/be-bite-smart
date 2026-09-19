@@ -26,6 +26,23 @@
  * aspect of (_bitesmart_qa_link_chapter_id, entirely separate from Link
  * Destination above), plus which of that chapter's Synonyms this entry
  * opts out of inheriting (_bitesmart_qa_chapter_synonym_excludes_by_lang).
+ *
+ * Added 2026-09-11, per Janet: Related Links (_bitesmart_qa_related_links) —
+ * a repeatable list of source buttons shown on the front end, each pointing
+ * to a Guide Chapter, a Resource post, or a plain URL, and each marked
+ * Primary or Supporting (primary buttons render first, supporting ones under
+ * a "Supporting links" heading — see render_qa_entry_block() in
+ * qa-entry-display.php, Custom Blocks plugin). Entirely separate from BOTH
+ * fields above: Link Destination is the single "Read the full guide" link
+ * for a Long Answer's teaser; the Chapter Link above only feeds search-
+ * synonym inheritance and has never rendered anything visible. Related
+ * Links is the first field on this CPT that's a genuine multi-value
+ * repeater — same hand-rolled array-meta pattern as Book's Buy Links (see
+ * book-cpt.php's _bitesmart_book_buy_links), since there's no repeater
+ * field type here (no ACF/Meta Box — see [[be-bitesmart-plugin-architecture]]).
+ * Deliberately shown regardless of Answer Type/whether the full answer text
+ * is written yet — Janet's own framing was "we haven't written the full
+ * answer yet" but still wants the source buttons visible now.
  */
 
 function bitesmart_register_qa_entry_post_type() {
@@ -207,6 +224,62 @@ function bitesmart_sanitize_qa_chapter_synonym_excludes_by_lang( $value ) {
 }
 
 /**
+ * Sanitize the Related Links repeater (_bitesmart_qa_related_links, added
+ * 2026-09-11 — see the file-level comment above). Each entry is
+ * {role, type, chapter_id, resource_id, url, label}; role and type are
+ * fixed enums (unrecognized values fall back to 'supporting'/'chapter'
+ * rather than being stored as-is, same posture as
+ * bitesmart_sanitize_qa_entry_link_type() below); an entry is dropped
+ * entirely if it has no actual destination for its own type (no chapter_id
+ * for 'chapter', no resource_id for 'resource', no url for 'url') — same
+ * "drop incomplete rows" posture as bitesmart_sanitize_book_buy_links()
+ * (book-cpt.php). Which destination fields exist on a stored entry beyond
+ * its own type is undefined and unused — render_qa_entry_block()
+ * (qa-entry-display.php) only ever reads the one matching its `type`. Order
+ * is preserved (the order entered in the editor).
+ *
+ * @param mixed $value Raw value.
+ * @return array<int, array{role: string, type: string, chapter_id: int, resource_id: int, url: string, label: string}>
+ */
+function bitesmart_sanitize_qa_related_links( $value ) {
+    if ( ! is_array( $value ) ) {
+        return array();
+    }
+
+    $links = array();
+    foreach ( $value as $entry ) {
+        if ( ! is_array( $entry ) ) {
+            continue;
+        }
+
+        $role       = 'primary' === ( $entry['role'] ?? '' ) ? 'primary' : 'supporting';
+        $type       = in_array( $entry['type'] ?? '', array( 'chapter', 'resource', 'url' ), true ) ? $entry['type'] : 'chapter';
+        $chapter_id = isset( $entry['chapter_id'] ) ? absint( $entry['chapter_id'] ) : 0;
+        $resource_id = isset( $entry['resource_id'] ) ? absint( $entry['resource_id'] ) : 0;
+        $url        = isset( $entry['url'] ) ? esc_url_raw( $entry['url'] ) : '';
+
+        $has_destination =
+            ( 'chapter' === $type && $chapter_id ) ||
+            ( 'resource' === $type && $resource_id ) ||
+            ( 'url' === $type && '' !== $url );
+        if ( ! $has_destination ) {
+            continue; // nothing to link to — drop the row.
+        }
+
+        $links[] = array(
+            'role'        => $role,
+            'type'        => $type,
+            'chapter_id'  => $chapter_id,
+            'resource_id' => $resource_id,
+            'url'         => $url,
+            'label'       => isset( $entry['label'] ) ? sanitize_text_field( $entry['label'] ) : '',
+        );
+    }
+
+    return array_values( $links );
+}
+
+/**
  * Answer Type is a fixed two-value toggle (Short Answer / Long Answer) —
  * anything else input falls back to 'short' rather than being stored as-is.
  *
@@ -336,6 +409,43 @@ function bitesmart_register_qa_entry_meta() {
                 'additionalProperties' => array(
                     'type'  => 'array',
                     'items' => array( 'type' => 'string' ),
+                ),
+            ),
+        ),
+        'auth_callback'     => 'bitesmart_qa_entry_meta_auth_callback',
+    ) );
+
+    // Related Links (see the file-level comment above for the full design):
+    // a repeatable list of source buttons, each Primary or Supporting, each
+    // pointing to a Guide Chapter, a Resource post, or a plain URL. Entirely
+    // separate from _bitesmart_qa_link_chapter_id above (that one only
+    // drives search-synonym inheritance) and from Link Destination
+    // (_bitesmart_qa_link_type et al. — that one is the single "Read the
+    // full guide" link for a Long Answer's teaser).
+    register_post_meta( 'qa_entry', '_bitesmart_qa_related_links', array(
+        'type'              => 'array',
+        'single'            => true,
+        'default'           => array(),
+        'sanitize_callback' => 'bitesmart_sanitize_qa_related_links',
+        'show_in_rest'      => array(
+            'schema' => array(
+                'type'  => 'array',
+                'items' => array(
+                    'type'       => 'object',
+                    'properties' => array(
+                        'role'        => array(
+                            'type' => 'string',
+                            'enum' => array( 'primary', 'supporting' ),
+                        ),
+                        'type'        => array(
+                            'type' => 'string',
+                            'enum' => array( 'chapter', 'resource', 'url' ),
+                        ),
+                        'chapter_id'  => array( 'type' => 'integer' ),
+                        'resource_id' => array( 'type' => 'integer' ),
+                        'url'         => array( 'type' => 'string' ),
+                        'label'       => array( 'type' => 'string' ),
+                    ),
                 ),
             ),
         ),

@@ -7,6 +7,7 @@ import {
   TextControl,
   TextareaControl,
   RadioControl,
+  SelectControl,
   ComboboxControl,
   CheckboxControl,
   Notice,
@@ -96,6 +97,32 @@ function QaEntryFieldsEdit() {
   const setChapterExcludes = (code, tokens) =>
     updateMeta("_bitesmart_qa_chapter_synonym_excludes_by_lang", { ...chapterExcludes, [code]: tokens });
 
+  // Related Links repeater (added 2026-09-11) — a list of source buttons
+  // shown on the front end, each Primary or Supporting, each pointing to a
+  // Guide Chapter, a Resource post, or a plain URL. Entirely separate from
+  // Chapter Link above (that one only feeds search-synonym inheritance) and
+  // from Link Destination above it (the single "Read the full guide" link) —
+  // see the file-level comment on this meta field in qa-entry-cpt.php for
+  // the full reasoning. Same hand-rolled add/remove-row idiom as Book's Buy
+  // Links repeater (book-panel/index.js), since this codebase has no
+  // repeater field type to reach for.
+  const relatedLinks = meta._bitesmart_qa_related_links || [];
+  const updateRelatedLink = (index, patch) => {
+    const next = [...relatedLinks];
+    next[index] = { ...next[index], ...patch };
+    updateMeta("_bitesmart_qa_related_links", next);
+  };
+  const addRelatedLink = () =>
+    updateMeta("_bitesmart_qa_related_links", [
+      ...relatedLinks,
+      { role: "primary", type: "chapter", chapter_id: 0, resource_id: 0, url: "", label: "" },
+    ]);
+  const removeRelatedLink = (index) =>
+    updateMeta(
+      "_bitesmart_qa_related_links",
+      relatedLinks.filter((_link, existingIndex) => existingIndex !== index),
+    );
+
   // The one place _bitesmart_qa_link_chapter_id and
   // _bitesmart_qa_chapter_synonym_excludes_by_lang actually change together —
   // a fresh link (or no link) always starts with a clean excludes list, since
@@ -137,17 +164,17 @@ function QaEntryFieldsEdit() {
     }
   }, [hasStage, lockPostSaving, unlockPostSaving]);
 
+  // Fetched unconditionally (not gated on linkType) — Related Links rows
+  // below can pick a Resource independently of Link Destination's own type.
   const resources = useSelect(
     (select) =>
-      linkType === "resource"
-        ? select("core").getEntityRecords("postType", "resource", {
-            per_page: -1,
-            status: "any",
-            orderby: "title",
-            order: "asc",
-          })
-        : null,
-    [linkType],
+      select("core").getEntityRecords("postType", "resource", {
+        per_page: -1,
+        status: "any",
+        orderby: "title",
+        order: "asc",
+      }),
+    [],
   );
 
   const resourceOptions = (resources || []).map((resource) => ({
@@ -476,6 +503,89 @@ function QaEntryFieldsEdit() {
             }),
           ),
         ),
+
+    el("hr", { style: { margin: "24px 0" } }),
+
+    el("h3", { className: "qa-entry-fields-subheading" }, __("Related Links", "custom-blocks")),
+    el(
+      "p",
+      { className: "qa-entry-fields-hint" },
+      __(
+        "Optional — source buttons shown to visitors on this entry, e.g. while the full written answer is still being drafted. Mark each Primary or Supporting: Primary buttons render first under a “Recommended Reading” heading (the main background reading for this answer), Supporting ones underneath an “Also Helpful” heading (optional, tangential extra reading). Separate from the Chapter Link above, which only affects search matching and isn't shown to visitors.",
+        "custom-blocks",
+      ),
+    ),
+
+    ...relatedLinks.map((link, index) =>
+      el(
+        "div",
+        { key: index, className: "qa-entry-related-link-row" },
+        el(
+          "div",
+          { style: { display: "flex", gap: "6px", alignItems: "flex-start", flexWrap: "wrap" } },
+          el(RadioControl, {
+            label: __("Role", "custom-blocks"),
+            selected: link.role || "primary",
+            options: [
+              { label: __("Primary", "custom-blocks"), value: "primary" },
+              { label: __("Supporting", "custom-blocks"), value: "supporting" },
+            ],
+            onChange: (val) => updateRelatedLink(index, { role: val }),
+          }),
+          el(SelectControl, {
+            label: __("Destination", "custom-blocks"),
+            value: link.type || "chapter",
+            options: [
+              { label: __("Guide Chapter", "custom-blocks"), value: "chapter" },
+              { label: __("Resource post", "custom-blocks"), value: "resource" },
+              { label: __("Custom URL", "custom-blocks"), value: "url" },
+            ],
+            onChange: (val) => updateRelatedLink(index, { type: val }),
+          }),
+          link.type === "resource"
+            ? el(ComboboxControl, {
+                label: __("Choose a Resource", "custom-blocks"),
+                value: link.resource_id || undefined,
+                options: resourceOptions,
+                onChange: (value) => updateRelatedLink(index, { resource_id: value ? Number(value) : 0 }),
+              })
+            : link.type === "url"
+              ? el(TextControl, {
+                  label: __("URL", "custom-blocks"),
+                  value: link.url || "",
+                  onChange: (val) => updateRelatedLink(index, { url: val }),
+                  placeholder: "https://...",
+                })
+              : el(ComboboxControl, {
+                  label: __("Guide Chapter", "custom-blocks"),
+                  value: link.chapter_id || undefined,
+                  options: chapterOptions,
+                  onChange: (value) => updateRelatedLink(index, { chapter_id: value ? Number(value) : 0 }),
+                }),
+          el(TextControl, {
+            label: __("Button label (optional)", "custom-blocks"),
+            value: link.label || "",
+            onChange: (val) => updateRelatedLink(index, { label: val }),
+            placeholder: __("Defaults to the chapter/resource title", "custom-blocks"),
+          }),
+          el(Button, {
+            icon: "no-alt",
+            label: __("Remove", "custom-blocks"),
+            onClick: () => removeRelatedLink(index),
+            style: { marginTop: "22px" },
+          }),
+        ),
+      ),
+    ),
+    el(
+      Button,
+      {
+        variant: "secondary",
+        onClick: addRelatedLink,
+        style: { marginBottom: 16 },
+      },
+      __("Add Related Link", "custom-blocks"),
+    ),
 
     // Edge case 1: linking over existing typed-in synonyms.
     pendingChapterChange?.type === "link-over-own-synonyms" &&
