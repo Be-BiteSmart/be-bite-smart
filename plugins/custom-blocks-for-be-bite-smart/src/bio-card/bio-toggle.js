@@ -1,4 +1,47 @@
+// The photo floats left (see style.css, min-width: 768px) so .bio-short can
+// wrap around it. When only a sliver of the photo's height is left over by
+// the time .bio-short starts, that produces an awkward, barely-there first
+// line instead of a real wrap - push .bio-short below the photo entirely in
+// that case rather than let it hug for a fraction of a line.
+const BIO_PHOTO_FLOAT_BREAKPOINT = "(min-width: 768px)";
+
+function adjustBioShortWrap() {
+  const isFloating = window.matchMedia(BIO_PHOTO_FLOAT_BREAKPOINT).matches;
+
+  document.querySelectorAll(".wp-block-custom-bio-card").forEach((card) => {
+    const photo = card.querySelector(".bio-photo");
+    const bioShort = card.querySelector(".bio-short");
+
+    if (!photo || !bioShort) return;
+
+    // Clear any previous verdict before re-measuring, so this always judges
+    // the browser's own current wrap attempt rather than our last override.
+    bioShort.classList.remove("bio-short-below-photo");
+
+    if (!isFloating) return;
+
+    const roomBesidePhoto =
+      photo.getBoundingClientRect().bottom - bioShort.getBoundingClientRect().top;
+    const lineHeight = parseFloat(getComputedStyle(bioShort).lineHeight) || 0;
+
+    if (roomBesidePhoto > 0 && roomBesidePhoto < lineHeight) {
+      bioShort.classList.add("bio-short-below-photo");
+    }
+  });
+}
+
 document.addEventListener("DOMContentLoaded", function () {
+  adjustBioShortWrap();
+  if (document.fonts?.ready) {
+    document.fonts.ready.then(adjustBioShortWrap);
+  }
+
+  let resizeTimer;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(adjustBioShortWrap, 150);
+  });
+
   const cards = document.querySelectorAll(".wp-block-custom-bio-card");
   cards.forEach((card, index) => {
     const showMoreBtn = card.querySelector(".show-more-btn");
