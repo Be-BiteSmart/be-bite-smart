@@ -20,13 +20,9 @@ import {
  * same regardless of language. See CHANGES.md, "Make video language toggle
  * visibly change something", for why and what was considered.
  *
- * The label always names the currently-selected language in the site's own
- * displayed language (e.g. "Play (Spanish)" on an English-language site) —
- * never translated into the target language's own script. That distinction
- * matters: an earlier, different per-language button-text feature was
- * removed for doing the latter (see CHANGES.md, "Watch button text
- * simplified"); these tests exist partly to make sure this feature doesn't
- * regress into that same mistake.
+ * The label always shows the currently-selected language code (e.g.
+ * "Play (ES)") inside the site's own translated "Play" template. These tests
+ * also verify that changing languages updates the label.
  */
 
 /** First segment with a different data-lang than the one currently active. */

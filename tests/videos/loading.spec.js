@@ -97,13 +97,11 @@ test.describe("Documentary video (video-quote block)", () => {
       });
     });
 
-    // Play-button label / transient status coverage (the button now names the
-    // currently-selected language, e.g. "Play (Spanish)", and briefly confirms
-    // a switch with a "Switched to Spanish." status) moved to
-    // language-feedback.spec.js — that per-language label behavior used to be
-    // asserted as a non-goal here before it was deliberately added back in a
-    // different, safer form (site's own language names the target language;
-    // never translates the whole button into that language's script). See
+    // Play-button label / transient status coverage (the button shows the
+    // currently-selected language code, e.g. "Play (ES)", and briefly
+    // confirms a switch with a "Switched to Spanish." status) moved to
+    // language-feedback.spec.js. The button's "Play" text stays in the site's
+    // language; the code identifies the selected video language. See
     // CHANGES.md, "Make video language toggle visibly change something".
 
     test(`${path} switching language while playing reloads the iframe with the new language's params`, async ({

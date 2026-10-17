@@ -170,6 +170,8 @@ function render_qa_entry_block( $attributes ) {
     $link_type   = get_post_meta( $entry_id, '_bitesmart_qa_link_type', true );
     $resource_id = (int) get_post_meta( $entry_id, '_bitesmart_qa_link_resource_id', true );
     $raw_url     = get_post_meta( $entry_id, '_bitesmart_qa_link_url', true );
+    $show_recommended_reading_heading = ! metadata_exists( 'post', $entry_id, '_bitesmart_qa_show_recommended_reading_heading' )
+        || (bool) get_post_meta( $entry_id, '_bitesmart_qa_show_recommended_reading_heading', true );
     $is_long     = 'long' === $answer_type;
     $link_url    = $is_long ? bitesmart_resolve_qa_entry_link( $link_type, $resource_id, $raw_url ) : '';
     $related     = bitesmart_qa_entry_related_links( $entry_id );
@@ -207,7 +209,9 @@ function render_qa_entry_block( $attributes ) {
                 <?php endif; ?>
 
                 <?php if ( ! empty( $related['primary'] ) ) : ?>
-                    <h4 class="qa-entry-related-links-heading"><?php esc_html_e( 'Recommended Reading', 'custom-blocks' ); ?></h4>
+                    <?php if ( $show_recommended_reading_heading ) : ?>
+                        <h4 class="qa-entry-related-links-heading"><?php esc_html_e( 'Recommended Reading', 'custom-blocks' ); ?></h4>
+                    <?php endif; ?>
                     <div class="qa-entry-related-links qa-entry-related-links-primary">
                         <?php foreach ( $related['primary'] as $link ) : ?>
                             <a href="<?php echo esc_url( $link['url'] ); ?>" class="qa-entry-related-link block-toggle-btn is-style-outline" target="_blank" rel="noopener noreferrer">

@@ -135,12 +135,7 @@ function bitesmart_lang_analytics_name( $code ) {
 
 /**
  * Human-readable name for a language code (e.g. "Spanish"), in the site's
- * own base (non-translated) copy of bitesmart_site_languages(). Used only
- * for the very first, pre-JS render of the play-button label — see
- * bitesmart_play_button_label() below and setPlayButtonLabel() in
- * video-toggle.js, which takes over after that using the same wrapper
- * string with the same {language} placeholder, substituted with the
- * TranslatePress-translated langName() instead.
+ * own base (non-translated) copy of bitesmart_site_languages().
  */
 function bitesmart_lang_name( $code ) {
     $code = bitesmart_normalize_lang_code( $code );
@@ -155,7 +150,7 @@ function bitesmart_lang_name( $code ) {
 }
 
 /**
- * Initial play-button label, e.g. "Play (English)" — computed server-side so
+ * Initial play-button label, e.g. "Play (EN)" — computed server-side so
  * it's correct on first paint, before video-toggle.js's setPlayButtonLabel()
  * takes over keeping it in sync with the picker. Deliberately uses the same
  * "Play ({language})" wrapper string (with the same {language} placeholder
@@ -178,7 +173,7 @@ function bitesmart_play_button_label( $active_code, $has_picker ) {
 
     return str_replace(
         '{language}',
-        bitesmart_lang_name( $active_code ),
+        strtoupper( bitesmart_normalize_lang_code( $active_code ) ),
         __( 'Play ({language})', 'custom-blocks' )
     );
 }
@@ -346,9 +341,9 @@ function bitesmart_render_video_lang_name_templates() {
  * Registers a wp_footer hook to print the play-button label template,
  * exactly once, on any page that renders a multi-language episode or
  * video-quote block. Shared by both blocks' play buttons (see
- * setPlayButtonLabel() in video-toggle.js), which always name the
- * currently-selected language next to the "Play" verb — e.g. "Play
- * (Spanish)" — so the button itself confirms the picker's current state,
+ * setPlayButtonLabel() in video-toggle.js), which always show the
+ * currently-selected language code next to the "Play" verb — e.g. "Play
+ * (ES)" — so the button itself confirms the picker's current state,
  * even before the visitor presses play.
  */
 function bitesmart_needs_play_button_label_template() {
@@ -365,9 +360,10 @@ function bitesmart_needs_play_button_label_template() {
  * Visually hidden, TranslatePress-translatable source of truth for the play
  * button's language-aware label (see setPlayButtonLabel() in
  * video-toggle.js). The {language} placeholder is substituted client-side
- * with langName() — never a hardcoded per-language string — so the
- * surrounding "Play (...)" phrase stays in the site's own displayed
- * language while only the language name changes. That's the deliberate
+ * with the uppercase language code — never a hardcoded per-language string
+ * — so the surrounding "Play (...)" phrase stays in the site's own
+ * displayed language while the code identifies the selected language.
+ * That's the deliberate
  * difference from the old per-language watch-button text this replaces
  * (see CHANGES.md, "Watch button text simplified"): that version translated
  * the whole button into the target language's own script, which didn't
@@ -402,13 +398,13 @@ function bitesmart_needs_lang_change_status_template() {
 
 /**
  * Visually hidden, TranslatePress-translatable source of truth for the
- * transient language-change status line (see showLangChangeStatus() in
- * video-toggle.js).
+ * transient language status lines (see showLangStatus() in video-toggle.js).
  */
 function bitesmart_render_lang_change_status_templates() {
     ?>
     <div class="lang-change-status-templates" aria-hidden="true" style="display:none;">
         <span class="lang-change-status-template"><?php esc_html_e( 'Switched to {language}.', 'custom-blocks' ); ?></span>
+        <span class="lang-already-selected-status-template"><?php esc_html_e( '{language} is already selected.', 'custom-blocks' ); ?></span>
     </div>
     <?php
 }

@@ -71,6 +71,13 @@ function render_video_quote_block( $attributes ) {
         <div class="video-quote-content-wrapper">
 
             <div class="video-quote-video-side">
+                <?php if ( count( $available_languages ) > 1 ) : ?>
+                    <div class="video-quote-controls">
+                        <?php echo bitesmart_render_lang_picker_html( $available_languages, $active_lang ); ?>
+                        <p class="lang-change-status" role="status" aria-live="polite"></p>
+                    </div>
+                <?php endif; ?>
+
                 <div class="video-quote-container">
                     <div class="video-quote-thumbnail-section">
                         <div class="video-thumbnail-wrapper">
@@ -90,13 +97,6 @@ function render_video_quote_block( $attributes ) {
             </div>
 
             <div class="video-quote-text-side">
-
-                <?php if ( count( $available_languages ) > 1 ) : ?>
-                    <div class="video-quote-controls">
-                        <?php echo bitesmart_render_lang_picker_html( $available_languages, $active_lang ); ?>
-                        <p class="lang-change-status" role="status" aria-live="polite"></p>
-                    </div>
-                <?php endif; ?>
 
                 <?php if ( $quote ) : ?>
                     <blockquote class="video-quote-blockquote">

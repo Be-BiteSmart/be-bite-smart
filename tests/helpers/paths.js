@@ -36,8 +36,6 @@ export const LEARNING_CONTACT_PATH = "/learning/contact/";
  */
 export const QA_SEARCH_PAGES = [
   { path: AFTER_BITE_PATH, label: "After a Bite" },
-  { path: "/learning/stages/pregnancy/", label: "Stage: Pregnancy" },
-  { path: "/learning/stages/baby/", label: "Stage: Baby" },
   { path: "/learning/stages/toddler/", label: "Stage: Toddler" },
   { path: "/learning/stages/preschool/", label: "Stage: Preschool" },
   { path: "/learning/stages/all-resources/", label: "Stage: All Resources" },

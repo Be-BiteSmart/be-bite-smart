@@ -452,6 +452,17 @@ function bitesmart_register_qa_entry_meta() {
         'auth_callback'     => 'bitesmart_qa_entry_meta_auth_callback',
     ) );
 
+    // Whether Primary Related Links show the "Recommended Reading" heading.
+    // Defaults to true so existing entries keep their current display.
+    register_post_meta( 'qa_entry', '_bitesmart_qa_show_recommended_reading_heading', array(
+        'type'              => 'boolean',
+        'single'            => true,
+        'default'           => true,
+        'sanitize_callback' => 'rest_sanitize_boolean',
+        'show_in_rest'      => true,
+        'auth_callback'     => 'bitesmart_qa_entry_meta_auth_callback',
+    ) );
+
     // Per-language search-matching phrases parents might search with (e.g.
     // "growl, growling, snapped, aggressive") — plain internal data, NOT
     // rendered as visible page text, so TranslatePress's normal translation
