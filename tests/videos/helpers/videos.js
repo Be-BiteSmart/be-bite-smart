@@ -113,14 +113,14 @@ export async function langDisplayName(page, code) {
 /**
  * Expected play-button label for a language, built the same way
  * setPlayButtonLabel() does client-side: the hidden .play-button-label-template
- * ("Play ({language})") with {language} substituted.
+ * ("Play ({language})") with {language} substituted by the uppercase language
+ * code.
  */
 export async function expectedPlayButtonLabel(page, code) {
-  const name = await langDisplayName(page, code);
   const template =
     (await page.locator(".play-button-label-template").textContent()) ||
     "Play ({language})";
-  return template.replace("{language}", name);
+  return template.replace(/\{language\}/gi, code.toUpperCase());
 }
 
 /**
