@@ -139,7 +139,7 @@ function bitesmart_build_books_list_cards( $audience_slug, $lang ) {
 
     $cards = array();
     foreach ( $query->posts as $post ) {
-        $html = render_book_block( array( 'bookId' => $post->ID ) );
+        $html = render_book_block( array( 'bookId' => $post->ID ), true );
         if ( $html ) {
             $cards[ $post->ID ] = $html;
         }
@@ -316,8 +316,9 @@ function render_books_list_block( $attributes ) {
     // one page — see that file, and book-display.php's own Book Excerpt
     // toggle for the established div-based usage this mirrors) — no new JS
     // needed here, just the same markup shape. Custom
-    // data-label-collapsed/-expanded (Janet's own wording, "Show More"/
-    // "Show Less", not the shared script's "Read More"/"Read Less" default)
+    // data-label-collapsed/-expanded (Janet's own wording, "Show More
+    // Books"/"Show Less Books", not the shared script's "Read More"/
+    // "Read Less" default)
     // is exactly what those data attributes exist for (see read-more.js).
     // The wrapper's existing `id="books-list-{slug}"` (unchanged, was already
     // here for editor/CSS targeting) doubles as this section's link target —
@@ -346,9 +347,9 @@ function render_books_list_block( $attributes ) {
                         type="button"
                         class="read-more-toggle block-toggle-btn is-style-outline"
                         data-expanded="false"
-                        data-label-collapsed="<?php echo esc_attr__( 'Show More', 'custom-blocks' ); ?>"
-                        data-label-expanded="<?php echo esc_attr__( 'Show Less', 'custom-blocks' ); ?>"
-                    ><?php esc_html_e( 'Show More', 'custom-blocks' ); ?></button>
+                        data-label-collapsed="<?php echo esc_attr__( 'Show More Books', 'custom-blocks' ); ?>"
+                        data-label-expanded="<?php echo esc_attr__( 'Show Less Books', 'custom-blocks' ); ?>"
+                    ><?php esc_html_e( 'Show More Books', 'custom-blocks' ); ?></button>
                 </div>
             <?php endif; ?>
         <?php endif; ?>

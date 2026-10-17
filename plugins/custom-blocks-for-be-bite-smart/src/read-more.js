@@ -31,13 +31,26 @@
     return found;
   }
 
+  function findOwnExpandableContent(article) {
+    return findOwn(article, ".expandable-content");
+  }
+
+  function setToggleLabel(toggle, label) {
+    var labelElement = toggle.querySelector(".read-more-toggle-label");
+    if (labelElement) {
+      labelElement.textContent = label;
+    } else {
+      toggle.textContent = label;
+    }
+  }
+
   // Opens one .expandable-article-block programmatically — the exact same
   // end state the click handler below reaches, just triggered without a
   // click (used by expandForHash() so a deep link always lands with
   // everything visible, not collapsed behind the button).
   function expand(article) {
     var toggle = findOwn(article, ".read-more-toggle");
-    var content = findOwn(article, ".expandable-content");
+    var content = findOwnExpandableContent(article);
     if (!toggle || !content) return;
 
     // Hydrate any lazy cover images (custom/books-list's hidden cards —
@@ -52,7 +65,58 @@
     var labelExpanded = toggle.dataset.labelExpanded || "Read Less";
     content.classList.add("expanded");
     toggle.setAttribute("data-expanded", "true");
-    toggle.textContent = labelExpanded;
+    toggle.setAttribute("aria-expanded", "true");
+    setToggleLabel(toggle, labelExpanded);
+    updateBookCardToggles();
+  }
+
+  function setBookCardExpanded(card, expanded) {
+    var toggle = card.querySelector(":scope > .book-card-container .book-card-expand-toggle");
+    var details = card.querySelector(":scope > .book-card-container .book-card-details-expandable");
+    if (!details || !toggle) return;
+
+    var label = expanded
+      ? toggle.dataset.labelExpanded
+      : toggle.dataset.labelCollapsed;
+    details.hidden = !expanded;
+    toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+    setToggleLabel(toggle, label || (expanded ? "Show less" : "Show more"));
+  }
+
+  function updateBookCardToggle(card) {
+    var toggle = card.querySelector(":scope > .book-card-container .book-card-expand-toggle");
+    var details = card.querySelector(":scope > .book-card-container .book-card-details-expandable");
+    if (!toggle) return;
+
+    toggle.hidden = !details || !details.textContent.trim();
+    if (details && toggle.getAttribute("aria-expanded") !== "true") {
+      details.hidden = true;
+    }
+  }
+
+  function updateBookCardToggles() {
+    document.querySelectorAll(".book-card-collapsible").forEach(updateBookCardToggle);
+  }
+
+  function initBookCards() {
+    document.querySelectorAll(".book-card-collapsible").forEach(function (card) {
+      var toggle = card.querySelector(":scope > .book-card-container .book-card-expand-toggle");
+      var details = card.querySelector(":scope > .book-card-container .book-card-details-expandable");
+      if (!toggle || !details || toggle.dataset.initialized === "true") return;
+
+      toggle.dataset.initialized = "true";
+      details.hidden = true;
+      toggle.setAttribute("aria-expanded", "false");
+      toggle.addEventListener("click", function () {
+        var isExpanded = toggle.getAttribute("aria-expanded") === "true";
+        setBookCardExpanded(card, !isExpanded);
+        if (isExpanded) {
+          card.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      });
+
+      updateBookCardToggle(card);
+    });
   }
 
   // Added 2026-08-31 for custom/books-list's Show More/Show Less groups
@@ -77,6 +141,13 @@
     }
     if (!target) return;
 
+    if (target.classList.contains("book-card-collapsible")) {
+      setBookCardExpanded(target, true);
+    }
+    target.querySelectorAll(".book-card-collapsible").forEach(function (card) {
+      setBookCardExpanded(card, true);
+    });
+
     if (target.classList.contains("expandable-article-block")) {
       expand(target);
     }
@@ -84,11 +155,13 @@
   }
 
   function init() {
+    initBookCards();
+
     document
       .querySelectorAll(".expandable-article-block")
       .forEach(function (article) {
         var toggle = findOwn(article, ".read-more-toggle");
-        var content = findOwn(article, ".expandable-content");
+        var content = findOwnExpandableContent(article);
         if (!toggle || !content) return;
         // Per-block overrides (custom/read-more's `buttonLabel` /
         // `expandedButtonLabel` attributes, read-more/index.js). Blank —
@@ -97,15 +170,21 @@
         // custom label now survives every toggle instead of being
         // clobbered by a hardcoded string after the first click.
         var labelCollapsed = toggle.dataset.labelCollapsed || "Read More";
+        toggle.setAttribute(
+          "aria-expanded",
+          toggle.getAttribute("data-expanded") === "true" ? "true" : "false",
+        );
 
         toggle.addEventListener("click", function () {
           var isExpanded = toggle.getAttribute("data-expanded") === "true";
           if (isExpanded) {
             content.classList.remove("expanded");
             toggle.setAttribute("data-expanded", "false");
-            toggle.textContent = labelCollapsed;
+            toggle.setAttribute("aria-expanded", "false");
+            setToggleLabel(toggle, labelCollapsed);
             // will scroll back to where they left off on close
             article.scrollIntoView({ behavior: "smooth", block: "start" });
+            updateBookCardToggles();
           } else {
             expand(article);
           }
