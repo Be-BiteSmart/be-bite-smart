@@ -9,14 +9,16 @@
    weaker selector regardless of source order. */
 body:not(.block-editor-page)
   .wp-block-custom-books-list
-  .expandable-article-block
+  .books-list-expandable
+  >
   .expandable-content {
   display: none;
 }
 
 body:not(.block-editor-page)
   .wp-block-custom-books-list
-  .expandable-article-block
+  .books-list-expandable
+  >
   .expandable-content.expanded {
   display: block;
 }

@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { gotoExpectOk } from "../helpers/page.js";
-import { CRITICAL_PAGES } from "../helpers/paths.js";
+import { BOOKS_PATH, CRITICAL_PAGES } from "../helpers/paths.js";
 
 /**
  * Regression test for a real bug (2026-09-11): custom/article-or-commentary's
@@ -102,4 +102,55 @@ test.describe("Read More / expandable content toggles", () => {
       });
     });
   }
+
+  test("Books List cards expand independently", async ({ page }, testInfo) => {
+    await gotoExpectOk(page, `${BOOKS_PATH}?bscachebust=${Date.now()}`);
+
+    const toggles = page.locator(
+      ".wp-block-custom-books-list .book-card-expand-toggle:visible",
+    );
+    if ((await toggles.count()) < 2) {
+      testInfo.skip();
+      return;
+    }
+
+    const firstToggle = toggles.nth(0);
+    const secondToggle = toggles.nth(1);
+    const firstCard = firstToggle.locator("xpath=ancestor::article[1]");
+    const secondCard = secondToggle.locator("xpath=ancestor::article[1]");
+    const firstBody = firstCard.locator(".book-card-body");
+    const secondBody = secondCard.locator(".book-card-body");
+    const firstDetails = firstCard.locator(".book-card-details-expandable");
+    const secondDetails = secondCard.locator(".book-card-details-expandable");
+
+    await expect(firstDetails).toBeHidden();
+    await expect(secondDetails).toBeHidden();
+    await expect(firstBody.locator(".book-card-title")).toBeVisible();
+    await expect(secondBody.locator(".book-card-title")).toBeVisible();
+    const firstButtonBox = await firstToggle.boundingBox();
+    const firstTitleBox = await firstBody.locator(".book-card-title").boundingBox();
+    expect(firstTitleBox.x + firstTitleBox.width).toBeLessThanOrEqual(
+      firstButtonBox.x,
+    );
+    expect(Math.abs(firstTitleBox.y - firstButtonBox.y)).toBeLessThanOrEqual(1);
+
+    await firstToggle.scrollIntoViewIfNeeded();
+    await firstToggle.click();
+    await expect(firstDetails).toBeVisible();
+    await expect(firstToggle).toHaveAttribute("aria-expanded", "true");
+    await expect(secondDetails).toBeHidden();
+    await expect(secondToggle).toHaveAttribute("aria-expanded", "false");
+
+    await secondToggle.scrollIntoViewIfNeeded();
+    await secondToggle.click();
+    await expect(secondDetails).toBeVisible();
+    await expect(firstDetails).toBeVisible();
+
+    await firstToggle.scrollIntoViewIfNeeded();
+    await firstToggle.click();
+    await expect(firstDetails).toBeHidden();
+    await expect(secondDetails).toBeVisible();
+    await expect(firstToggle).toHaveAttribute("aria-expanded", "false");
+    await expect(secondToggle).toHaveAttribute("aria-expanded", "true");
+  });
 });

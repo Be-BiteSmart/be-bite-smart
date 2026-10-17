@@ -417,9 +417,11 @@ function bitesmart_book_buy_links( $post_id ) {
  * page count, BBS's own Summary, the book's own Excerpt (if set), and (if
  * any are set) Buy Links. Used for manually placing a book on a topic page
  * (e.g. the existing hand-authored "Learn Canine Body Language" page) and
- * for the auto-listed custom/books-list cards.
+ * for the auto-listed custom/books-list cards. $is_books_list enables the
+ * per-card 500px disclosure only for cards rendered by custom/books-list;
+ * manually placed Book blocks remain unchanged.
  */
-function render_book_block( $attributes ) {
+function render_book_block( $attributes, $is_books_list = false ) {
     $book_id = isset( $attributes['bookId'] ) ? (int) $attributes['bookId'] : 0;
     $post    = $book_id ? get_post( $book_id ) : null;
 
@@ -433,15 +435,36 @@ function render_book_block( $attributes ) {
     $pages     = (int) get_post_meta( $post->ID, '_bitesmart_book_pages', true );
     $buy_links = bitesmart_book_buy_links( $post->ID );
     $anchor_id = bitesmart_book_anchor_id( $post );
+    $details_id = $anchor_id . '-details';
+    $has_expandable_details = ! empty( $sections['summary'] ) || ! empty( $sections['excerpt_blocks'] );
 
     ob_start();
     ?>
-    <article id="<?php echo esc_attr( $anchor_id ); ?>" class="wp-block-custom-book">
+    <article id="<?php echo esc_attr( $anchor_id ); ?>" class="wp-block-custom-book<?php echo $is_books_list ? ' book-card-collapsible' : ''; ?>">
         <div class="book-card-container custom-block-card custom-block-border">
             <?php echo bitesmart_book_cover_gallery( $post ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- already-escaped inside bitesmart_book_cover_gallery() ?>
 
-            <div class="book-card-body">
-                <h3 class="book-card-title"><?php echo esc_html( get_the_title( $post ) ); ?></h3>
+            <div class="book-card-body<?php echo $is_books_list && $has_expandable_details ? ' book-card-body-with-toggle' : ''; ?>">
+                <div class="book-card-header">
+                    <h3 class="book-card-title"><?php echo esc_html( get_the_title( $post ) ); ?></h3>
+
+                    <?php if ( $is_books_list && $has_expandable_details ) : ?>
+                        <button
+                            type="button"
+                            class="book-card-expand-toggle block-toggle-btn is-style-outline"
+                            data-expanded="false"
+                            data-label-collapsed="<?php echo esc_attr__( 'Show more', 'custom-blocks' ); ?>"
+                            data-label-expanded="<?php echo esc_attr__( 'Show less', 'custom-blocks' ); ?>"
+                            aria-expanded="false"
+                            aria-controls="<?php echo esc_attr( $details_id ); ?>"
+                        >
+                            <span class="read-more-toggle-label"><?php esc_html_e( 'Show more', 'custom-blocks' ); ?></span>
+                            <svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true" focusable="false">
+                                <polyline points="5 7.5 10 12.5 15 7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                            </svg>
+                        </button>
+                    <?php endif; ?>
+                </div>
 
                 <?php echo bitesmart_book_target_audience_badge( $post->ID ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- already escaped inside bitesmart_book_target_audience_badge() ?>
 
@@ -459,49 +482,45 @@ function render_book_block( $attributes ) {
                     </p>
                 <?php endif; ?>
 
+                <?php if ( $is_books_list && $has_expandable_details ) : ?>
+                    <div id="<?php echo esc_attr( $details_id ); ?>" class="book-card-details-expandable" hidden>
+                <?php endif; ?>
+
                 <?php if ( $sections['summary'] ) : ?>
                     <?php echo $sections['summary']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- render_block() output; already includes its own .book-card-content wrapper (custom/book-summary-section's own save()) ?>
                 <?php endif; ?>
 
                 <?php if ( ! empty( $sections['excerpt_blocks'] ) ) : ?>
-                    <?php
-                    // Heading + blockquote are built here, not returned
-                    // pre-fused by bitesmart_book_content_sections() — see
-                    // that function's own docblock for why (needs the
-                    // individual paragraph/list blocks to split on, not one
-                    // opaque HTML string). Mirrors custom/book-excerpt-section's
-                    // own save() shape (book-excerpt-section/index.js).
-                    $excerpt_split = bitesmart_book_excerpt_preview_split( $sections['excerpt_blocks'] );
-                    ?>
+                    <?php // Heading + blockquote are built here; excerpt_blocks remain separate so standalone Book blocks can preserve paragraph-boundary previews. ?>
                     <h4 class="book-card-section-heading"><?php esc_html_e( 'Book Excerpt', 'custom-blocks' ); ?></h4>
                     <blockquote class="wp-block-quote book-card-excerpt">
-                        <?php echo $excerpt_split['preview']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- render_block() output per content block ?>
-                        <?php if ( $excerpt_split['hidden'] ) : ?>
-                            <?php
-                            // Collapsed by default — read-more.js (enqueued
-                            // globally, custom_blocks_scripts()) finds this
-                            // same as any other .expandable-article-block on
-                            // the page and wires up the toggle; a <div>, not
-                            // <article> like this pattern's other 3 usages,
-                            // since this is a sub-region of the quote, not a
-                            // document-outline article of its own —
-                            // read-more.js matches by class, not tag, so
-                            // this is a drop-in use of the exact same script.
-                            ?>
-                            <div class="expandable-article-block book-card-excerpt-expandable">
-                                <div class="expandable-content">
-                                    <?php echo $excerpt_split['hidden']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- render_block() output per content block ?>
+                        <?php if ( $is_books_list ) : ?>
+                            <?php foreach ( $sections['excerpt_blocks'] as $excerpt_block ) : ?>
+                                <?php echo $excerpt_block; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- render_block() output for an excerpt block ?>
+                            <?php endforeach; ?>
+                        <?php else : ?>
+                            <?php $excerpt_split = bitesmart_book_excerpt_preview_split( $sections['excerpt_blocks'] ); ?>
+                            <?php echo $excerpt_split['preview']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- render_block() output per content block ?>
+                            <?php if ( $excerpt_split['hidden'] ) : ?>
+                                <div class="expandable-article-block book-card-excerpt-expandable">
+                                    <div class="expandable-content">
+                                        <?php echo $excerpt_split['hidden']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- render_block() output per content block ?>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        class="read-more-toggle block-toggle-btn is-style-outline"
+                                        data-expanded="false"
+                                        data-label-collapsed="<?php echo esc_attr__( 'Read More', 'custom-blocks' ); ?>"
+                                        data-label-expanded="<?php echo esc_attr__( 'Read Less', 'custom-blocks' ); ?>"
+                                    ><?php esc_html_e( 'Read More', 'custom-blocks' ); ?></button>
                                 </div>
-                                <button
-                                    type="button"
-                                    class="read-more-toggle block-toggle-btn is-style-outline"
-                                    data-expanded="false"
-                                    data-label-collapsed="<?php echo esc_attr__( 'Read More', 'custom-blocks' ); ?>"
-                                    data-label-expanded="<?php echo esc_attr__( 'Read Less', 'custom-blocks' ); ?>"
-                                ><?php esc_html_e( 'Read More', 'custom-blocks' ); ?></button>
-                            </div>
+                            <?php endif; ?>
                         <?php endif; ?>
                     </blockquote>
+                <?php endif; ?>
+
+                <?php if ( $is_books_list && $has_expandable_details ) : ?>
+                    </div>
                 <?php endif; ?>
 
                 <?php if ( ! empty( $buy_links ) ) : ?>
@@ -515,9 +534,9 @@ function render_book_block( $attributes ) {
                     </div>
                 <?php endif; ?>
             </div>
+
         </div>
     </article>
     <?php
     return ob_get_clean();
 }
-
