@@ -45,13 +45,13 @@ const vimeoWarmUpObserver = new IntersectionObserver(
 );
 
 /* ── Play-button label ──
-   Always names the currently-selected language next to the verb, e.g.
-   "Play (Spanish)" — kept in sync with the picker (called from
+   Always shows the currently-selected language code next to the verb, e.g.
+   "Play (ES)" — kept in sync with the picker (called from
    setEpisodeLanguage() below) so it's correct from first paint and after
    every language change, including rollbacks. The wrapper phrase stays
    TranslatePress-translatable the same way the rest of this block's copy
    does: a static hidden template with a {language} placeholder,
-   substituted client-side with langName() — never a hardcoded per-language
+   substituted client-side with the uppercase language code — never a hardcoded per-language
    string, so the button stays legible in the site's own language even when
    the selected video language isn't (see bitesmart_render_play_button_label_templates()
    in includes/site-lang.php for why that distinction matters here). */
@@ -66,39 +66,36 @@ function setPlayButtonLabel(block, code) {
   const el = block.querySelector(".play-button-label");
   if (!el) return;
 
-  const name = langName(code);
+  const label = normalizeLangCode(code).toUpperCase();
   const template = getPlayButtonLabelTemplate();
   el.textContent = template
-    ? applyLanguagePlaceholder(template, name)
-    : `Play (${name})`;
+    ? applyLanguagePlaceholder(template, label)
+    : `Play (${label})`;
 }
 
-/* ── Transient "language changed" status ──
-   A plain confirmation shown only when a language switch actually happens,
-   then faded back out — see this function's call sites in
-   handleLangSegmentClick() for exactly which paths count as a genuine
-   change (never the initial page-load sync or a cancelled restart). One
-   timeout per block, keyed in a WeakMap so rapid re-toggling restarts the
-   fade instead of stacking timers. */
+/* ── Transient language status ──
+   Confirms either a language change or a click on the already-selected
+   language. One timeout per block lets rapid clicks restart the fade
+   instead of stacking timers. */
 const langChangeStatusTimeouts = new WeakMap();
 const LANG_CHANGE_STATUS_VISIBLE_MS = 2500;
 
-function getLangChangeStatusTemplate() {
-  return (
-    document.querySelector(".lang-change-status-template")?.textContent ??
-    null
-  );
-}
-
-function showLangChangeStatus(block, code) {
+function showLangStatus(block, code, alreadySelected = false) {
   const el = block.querySelector(".lang-change-status");
   if (!el) return;
 
   const name = langName(code);
-  const template = getLangChangeStatusTemplate();
+  const template =
+    document.querySelector(
+      alreadySelected
+        ? ".lang-already-selected-status-template"
+        : ".lang-change-status-template",
+    )?.textContent ?? null;
   el.textContent = template
     ? applyLanguagePlaceholder(template, name)
-    : `Switched to ${name}.`;
+    : alreadySelected
+      ? `${name} is already selected.`
+      : `Switched to ${name}.`;
   el.classList.add("is-visible");
 
   clearTimeout(langChangeStatusTimeouts.get(block));
@@ -259,14 +256,16 @@ document.addEventListener("DOMContentLoaded", function () {
 
     async function handleLangSegmentClick(lang, triggerEl) {
       const target = normalizeLangCode(lang);
+      const selectedLang = isPlaying ? playingLang : currentLang;
 
-      if (!isPlaying) {
-        setEpisodeLanguage(target);
-        showLangChangeStatus(block, target);
+      if (target === selectedLang) {
+        showLangStatus(block, target, true);
         return;
       }
 
-      if (target === playingLang) {
+      if (!isPlaying) {
+        setEpisodeLanguage(target);
+        showLangStatus(block, target);
         return;
       }
 
@@ -277,7 +276,7 @@ document.addEventListener("DOMContentLoaded", function () {
       }
 
       setEpisodeLanguage(target);
-      showLangChangeStatus(block, target);
+      showLangStatus(block, target);
       loadVideo();
     }
 

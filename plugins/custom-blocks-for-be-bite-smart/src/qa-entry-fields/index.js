@@ -507,11 +507,17 @@ function QaEntryFieldsEdit() {
     el("hr", { style: { margin: "24px 0" } }),
 
     el("h3", { className: "qa-entry-fields-subheading" }, __("Related Links", "custom-blocks")),
+    el(CheckboxControl, {
+      label: __("Show “Recommended Reading” heading", "custom-blocks"),
+      checked: meta._bitesmart_qa_show_recommended_reading_heading !== false,
+      onChange: (checked) =>
+        updateMeta("_bitesmart_qa_show_recommended_reading_heading", checked),
+    }),
     el(
       "p",
       { className: "qa-entry-fields-hint" },
       __(
-        "Optional — source buttons shown to visitors on this entry, e.g. while the full written answer is still being drafted. Mark each Primary or Supporting: Primary buttons render first under a “Recommended Reading” heading (the main background reading for this answer), Supporting ones underneath an “Also Helpful” heading (optional, tangential extra reading). Separate from the Chapter Link above, which only affects search matching and isn't shown to visitors.",
+        "Optional — source buttons shown to visitors on this entry, e.g. while the full written answer is still being drafted. Mark each Primary or Supporting: Primary buttons render first, optionally under the “Recommended Reading” heading, while Supporting ones render under an “Also Helpful” heading (optional, tangential extra reading). Separate from the Chapter Link above, which only affects search matching and isn't shown to visitors.",
         "custom-blocks",
       ),
     ),
