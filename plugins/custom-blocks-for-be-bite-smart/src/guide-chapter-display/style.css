@@ -97,6 +97,15 @@ body:not(.block-editor-page) .guide-chapter-container.custom-block-card {
   margin-bottom: 12px;
 }
 
+.guide-chapter-badges--with-label {
+  align-items: center;
+}
+
+body:not(.block-editor-page) .guide-chapter-badges--with-label .guide-format-controls-label {
+  width: auto;
+  padding: 0;
+}
+
 /* Real <button>s now (see guide-chapter-display.php) — this resets the
    browser's default button chrome (font, background, appearance) back to
    matching what the old <span> version looked like, then layers the
@@ -231,6 +240,10 @@ body:not(.block-editor-page) .guide-chapter-container.custom-block-card {
 }
 
 .guide-chapter-video {
+  margin-bottom: 16px;
+}
+
+.guide-chapter-video-intro {
   margin-bottom: 16px;
 }
 
@@ -620,7 +633,7 @@ body:not(.block-editor-page) .guide-chapter-download-buttons .block-toggle-btn {
    icon element, so it's never left orphaned if a translation omits it. */
 .guide-chapter-breadcrumb {
   margin-bottom: 16px;
-  font-size: 0.85em;
+  font-size: var(--wp--preset--font-size--medium);
 }
 
 .guide-chapter-breadcrumb a {
@@ -630,6 +643,54 @@ body:not(.block-editor-page) .guide-chapter-download-buttons .block-toggle-btn {
 .guide-chapter-breadcrumb a:hover,
 .guide-chapter-breadcrumb a:focus-visible {
   color: var(--wp--preset--color--accent-2, #1f6a8f);
+}
+
+/* The theme's Post Title block appears before the chapter breadcrumb in the
+   single-post template. Hide it here so the chapter's own H1 can follow the
+   breadcrumb in the intended order. */
+body.single-guide_chapter .wp-block-post-title {
+  display: none;
+}
+
+.guide-chapter-position {
+  margin: 8px 0;
+  font-size: var(--wp--preset--font-size--medium);
+  text-align: center;
+}
+
+/* The standalone chapter page shows its H1 after the breadcrumb and
+   section/chapter label, before the format controls. */
+.guide-chapter-heading {
+  margin-top: 0;
+  margin-bottom: 24px;
+}
+
+.guide-chapter-navigation {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 16px 0 24px;
+}
+
+.guide-chapter-navigation a {
+  max-width: 48%;
+  white-space: normal;
+  color: var(--wp--preset--color--contrast-2, #6b6b6b);
+}
+
+.guide-chapter-navigation a:hover,
+.guide-chapter-navigation a:focus-visible {
+  color: var(--wp--preset--color--accent-2, #1f6a8f);
+}
+
+.guide-chapter-navigation-next {
+  margin-left: auto;
+  text-align: right;
+}
+
+.guide-chapter-body--standalone {
+  margin-top: 0;
+  padding-left: 0;
 }
 
 /* "Share this Chapter" — the very last thing in

@@ -432,10 +432,13 @@ function bitesmart_render_guide_badge_icons() {
  * @param bool $has_text
  * @return string
  */
-function bitesmart_render_guide_format_badges( $has_video, $has_text ) {
+function bitesmart_render_guide_format_badges( $has_video, $has_text, $show_label = false ) {
     ob_start();
     ?>
-    <span class="guide-chapter-badges">
+    <span class="guide-chapter-badges<?php echo $show_label ? ' guide-chapter-badges--with-label' : ''; ?>">
+        <?php if ( $show_label ) : ?>
+            <span class="guide-format-controls-label custom-block-filter-bar-legend"><?php esc_html_e( 'Show:', 'custom-blocks' ); ?></span>
+        <?php endif; ?>
         <?php
         // Real <button>s, not <span>s — they're independently clickable
         // toggles (format-toggle.js), not just status indicators. Rendered
@@ -638,7 +641,7 @@ function bitesmart_render_guide_table_of_contents( array $chapters_with_sections
  * free, with nothing custom to build/maintain here.
  *
  * @param int $chapter_id
- * @param array{accordion_group?: string, show_guide_link?: bool, show_chapter_link?: bool} $args
+ * @param array{accordion_group?: string, show_guide_link?: bool, show_chapter_link?: bool, collapsible?: bool, show_video_intro?: bool} $args
  *     accordion_group: if set, this <details> gets a matching `name`
  *         attribute, making it part of an HTML native exclusive-accordion
  *         group (opening one auto-closes the others sharing the same
@@ -660,8 +663,11 @@ function bitesmart_render_guide_table_of_contents( array $chapters_with_sections
  *         guide-single.php) passes false — a link to the exact page
  *         already being viewed is redundant, same reasoning as
  *         show_guide_link's own false case above.
- *     open: pre-expand this chapter's <details> — false by default; a
- *         chapter's own single page passes true (see guide-single.php).
+ *     collapsible: whether to wrap the chapter in an expandable <details>
+ *         row — false on a chapter's own page.
+ *     show_video_intro: whether to show the explanatory callout above the
+ *         video — true on a chapter's own page.
+ *     open: pre-expand this chapter's <details> — false by default.
  * @return string HTML, or '' if the chapter/its parent Guide doesn't
  *     resolve to something publishable.
  */
@@ -675,7 +681,9 @@ function bitesmart_render_guide_chapter_row( $chapter_id, array $args = array() 
         'accordion_group'   => '',
         'show_guide_link'   => true,
         'show_chapter_link' => true,
-        'open'              => false, // pre-expanded — a chapter's own single page passes true, since there's nothing else on that page competing for attention.
+        'collapsible'       => true,
+        'show_video_intro'  => false,
+        'open'              => false,
     ) );
 
     $guide    = bitesmart_guide_chapter_parent_guide( $chapter_id );
@@ -702,6 +710,7 @@ function bitesmart_render_guide_chapter_row( $chapter_id, array $args = array() 
     ob_start();
     ?>
     <article class="wp-block-guide-chapter guide-chapter-row" data-chapter-id="<?php echo esc_attr( $chapter_id ); ?>">
+        <?php if ( $args['collapsible'] ) : ?>
         <details
             id="<?php echo esc_attr( $anchor_id ); ?>"
             class="guide-chapter-container custom-block-card custom-block-border"
@@ -753,8 +762,11 @@ function bitesmart_render_guide_chapter_row( $chapter_id, array $args = array() 
                     <polyline points="5 7.5 10 12.5 15 7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline>
                 </svg>
             </summary>
+        <?php else : ?>
+        <div id="<?php echo esc_attr( $anchor_id ); ?>" class="guide-chapter-container guide-chapter-container--standalone custom-block-card custom-block-border">
+        <?php endif; ?>
 
-            <div class="guide-chapter-body">
+            <div class="guide-chapter-body<?php echo $args['collapsible'] ? '' : ' guide-chapter-body--standalone'; ?>">
 
                 <?php
                 /*
@@ -770,11 +782,17 @@ function bitesmart_render_guide_chapter_row( $chapter_id, array $args = array() 
                  * entirely (see git history / CHANGES-2026-09.md if curious),
                  * no special positioning is needed here at all.
                  */
-                echo bitesmart_render_guide_format_badges( $has_video, $has_text ); // phpcs:ignore
+                echo bitesmart_render_guide_format_badges( $has_video, $has_text, ! $args['collapsible'] ); // phpcs:ignore
                 ?>
 
                 <?php if ( $has_video ) : ?>
                     <div class="guide-chapter-format guide-chapter-video" data-format="video">
+                        <?php if ( $args['show_video_intro'] ) : ?>
+                            <aside class="guide-chapter-video-intro custom-block-accent-card">
+                                <h3 class="custom-block-accent-heading"><?php esc_html_e( 'About this video', 'custom-blocks' ); ?></h3>
+                                <p class="custom-block-accent-text"><?php esc_html_e( 'This video covers this topic in a more casual format.', 'custom-blocks' ); ?></p>
+                            </aside>
+                        <?php endif; ?>
                         <?php if ( count( $video_ids ) > 1 ) : ?>
                             <?php echo bitesmart_render_lang_picker_html( array_keys( $video_ids ), $default_lang ); ?>
                         <?php endif; ?>
@@ -964,7 +982,11 @@ function bitesmart_render_guide_chapter_row( $chapter_id, array $args = array() 
                 </p>
 
             </div>
+        <?php if ( $args['collapsible'] ) : ?>
         </details>
+        <?php else : ?>
+        </div>
+        <?php endif; ?>
     </article>
     <?php
     return ob_get_clean();
