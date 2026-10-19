@@ -527,7 +527,7 @@ function render_book_block( $attributes, $is_books_list = false ) {
                     <h4 class="book-card-section-heading"><?php esc_html_e( 'Where to Buy', 'custom-blocks' ); ?></h4>
                     <div class="book-card-buy-links">
                         <?php foreach ( $buy_links as $link ) : ?>
-                            <a href="<?php echo esc_url( $link['url'] ); ?>" class="book-card-link block-toggle-btn is-style-outline">
+                            <a href="<?php echo esc_url( $link['url'] ); ?>" class="book-card-link block-toggle-btn is-style-outline" target="_blank" rel="noopener noreferrer">
                                 <?php echo esc_html( $link['label'] ? $link['label'] : __( 'Buy / More Info', 'custom-blocks' ) ); ?>
                             </a>
                         <?php endforeach; ?>
