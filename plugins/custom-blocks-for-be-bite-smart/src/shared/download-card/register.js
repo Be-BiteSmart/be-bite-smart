@@ -14,6 +14,7 @@ import { DownloadCardSave } from "./save";
  * @param {string} options.wrapperClassName - Front-end wrapper class for analytics/CSS
  * @param {string} options.blockIdPrefix - Stable id prefix for toggles/viewers
  * @param {{ pdf: boolean, downloadLinks: boolean, trackingSlug?: boolean, comingSoonWhenEmpty?: boolean }} options.features
+ * @param {object} [options.text] - Per-block display copy and editor labels.
  * @param {string} [options.editorHelp] - Inspector sidebar help text
  * @param {string} [options.anchorPrefix] - When set (e.g. "coloring-books"), the block's
  *   anchor id is auto-derived from the Series + Episode # instead of a random id — see
@@ -27,16 +28,35 @@ export function registerDownloadCardBlock({
   wrapperClassName,
   blockIdPrefix,
   features,
+  text = {},
   editorHelp,
   anchorPrefix,
 }) {
+  const { labels = {}, ...textOptions } = text;
   const config = {
     wrapperClassName,
     blockIdPrefix,
     features: {
       trackingSlug: false,
       comingSoonWhenEmpty: false,
+      resourcePageLink: false,
       ...features,
+    },
+    text: {
+      showNumber: true,
+      numberLabel: "Episode",
+      defaultContentType: "",
+      contentTypePlaceholder: "Content type",
+      titlePlaceholder: "Title",
+      mediaLabel: "PDF",
+      itemLabel: "PDF",
+      resourcePageLinkLabel: "Go to resource's page",
+      ...textOptions,
+      labels: {
+        english: "English",
+        spanish: "Spanish",
+        ...labels,
+      },
     },
     editorHelp,
     anchorPrefix,
@@ -48,6 +68,7 @@ export function registerDownloadCardBlock({
     icon,
     description,
     supports: {
+      align: true,
       spacing: { margin: true, padding: true },
     },
     attributes: attributesForFeatures(config.features),

@@ -10,7 +10,7 @@ import { computeSeriesAnchorId } from "./anchor-id";
 
 export function DownloadCardEdit({ attributes, setAttributes, clientId, config }) {
   const blockProps = useBlockProps();
-  const { blockIdPrefix, features, editorHelp, anchorPrefix } = config;
+  const { blockIdPrefix, features, editorHelp, anchorPrefix, text } = config;
   const wp = window.wp;
   const [hasCopiedAnchor, setHasCopiedAnchor] = wp.element.useState(false);
 
@@ -170,6 +170,29 @@ export function DownloadCardEdit({ attributes, setAttributes, clientId, config }
         ),
       ),
 
+    features.resourcePageLink &&
+      wp.element.createElement(
+        InspectorControls,
+        null,
+        wp.element.createElement(
+          PanelBody,
+          { title: "Resource page link", initialOpen: true },
+          wp.element.createElement(
+            "p",
+            { style: { fontSize: "13px", color: "#50575e", margin: "0 0 8px" } },
+            "Optional link shown below the language download buttons.",
+          ),
+          wp.element.createElement("input", {
+            type: "url",
+            value: attributes.resourcePageUrl,
+            onChange: (e) => setAttributes({ resourcePageUrl: e.target.value }),
+            placeholder: "https://example.com/articles/resource/",
+            "aria-label": "Resource page URL",
+            style: { width: "100%" },
+          }),
+        ),
+      ),
+
     wp.element.createElement(
       "div",
       { style: previewStyles.wrapper },
@@ -178,16 +201,17 @@ export function DownloadCardEdit({ attributes, setAttributes, clientId, config }
         "div",
         { style: previewStyles.header },
 
-        wp.element.createElement(RichText, {
-          tagName: "div",
-          value: attributes.episodeNumber,
-          onChange: (val) => setAttributes({ episodeNumber: val }),
-          placeholder: "#",
-          className: "bright-chip",
-          style: { padding: "0 16px" },
-          onSplit: () => {},
-          disableLineBreaks: true,
-        }),
+        text.showNumber &&
+          wp.element.createElement(RichText, {
+            tagName: "div",
+            value: attributes.episodeNumber,
+            onChange: (val) => setAttributes({ episodeNumber: val }),
+            placeholder: "#",
+            className: "bright-chip",
+            style: { padding: "0 16px" },
+            onSplit: () => {},
+            disableLineBreaks: true,
+          }),
 
         wp.element.createElement(
           "div",
@@ -195,18 +219,22 @@ export function DownloadCardEdit({ attributes, setAttributes, clientId, config }
           wp.element.createElement(
             "div",
             { style: { display: "flex", alignItems: "center", gap: "4px" } },
-            wp.element.createElement(
-              "span",
-              { className: "capitalized-and-colored" },
-              attributes.episodeNumber
-                ? "EPISODE " + attributes.episodeNumber + " · "
-                : "EPISODE # · ",
-            ),
+            text.showNumber &&
+              wp.element.createElement(
+                "span",
+                { className: "capitalized-and-colored" },
+                attributes.episodeNumber
+                  ? text.numberLabel.toUpperCase() +
+                    " " +
+                    attributes.episodeNumber +
+                    " · "
+                  : text.numberLabel.toUpperCase() + " # · ",
+              ),
             wp.element.createElement(RichText, {
               tagName: "span",
               value: attributes.contentType,
               onChange: (val) => setAttributes({ contentType: val }),
-              placeholder: "Content type",
+              placeholder: text.contentTypePlaceholder,
               className: "capitalized-and-colored",
               onSplit: () => {},
               disableLineBreaks: true,
@@ -216,7 +244,7 @@ export function DownloadCardEdit({ attributes, setAttributes, clientId, config }
             tagName: "div",
             value: attributes.episodeTitle,
             onChange: (val) => setAttributes({ episodeTitle: val }),
-            placeholder: "Episode title",
+            placeholder: text.titlePlaceholder,
             style: previewStyles.title,
             onSplit: () => {},
             disableLineBreaks: true,
@@ -228,7 +256,11 @@ export function DownloadCardEdit({ attributes, setAttributes, clientId, config }
         wp.element.createElement(
           "div",
           { style: previewStyles.uploadArea },
-          ["English PDF", "Spanish PDF"].map((label, i) => {
+          ["English PDF", "Spanish PDF"].map((_, i) => {
+            const mediaLabel =
+              (i === 0 ? text.labels.english : text.labels.spanish) +
+              " " +
+              text.mediaLabel;
             const attr = i === 0 ? "pdfUrl" : "pdfUrlEs";
             return wp.element.createElement(
               "div",
@@ -236,7 +268,7 @@ export function DownloadCardEdit({ attributes, setAttributes, clientId, config }
               wp.element.createElement(
                 "span",
                 { style: previewStyles.uploadLabel },
-                label,
+                mediaLabel,
               ),
               wp.element.createElement(MediaUpload, {
                 onSelect: (media) => setAttributes({ [attr]: media.url }),
@@ -247,8 +279,8 @@ export function DownloadCardEdit({ attributes, setAttributes, clientId, config }
                     "button",
                     { onClick: open, className: "button" },
                     attributes[attr]
-                      ? "Change " + label
-                      : "Upload " + label,
+                      ? "Change " + mediaLabel
+                      : "Upload " + mediaLabel,
                   ),
               }),
               attributes[attr] &&
@@ -313,8 +345,14 @@ export function DownloadCardEdit({ attributes, setAttributes, clientId, config }
             },
           },
           [
-            { label: "English Download Link", attr: "downloadUrlEn" },
-            { label: "Spanish Download Link", attr: "downloadUrlEs" },
+            {
+              label: text.labels.english + " " + (text.downloadLinkLabel || "Download Link"),
+              attr: "downloadUrlEn",
+            },
+            {
+              label: text.labels.spanish + " " + (text.downloadLinkLabel || "Download Link"),
+              attr: "downloadUrlEs",
+            },
           ].map(({ label, attr }) =>
             wp.element.createElement(
               "div",

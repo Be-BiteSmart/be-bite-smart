@@ -1,12 +1,18 @@
 import { renderPdfButton } from "../../components/pdf-button";
 
 /** English UI copy only — TranslatePress handles Spanish on the front end. */
-function labelsForLang(lang) {
+function labelsForLang(lang, copy = {}, itemLabel = "PDF") {
   const tag = lang === "es" ? "ES" : "ENG";
+  const format = (label, fallback) =>
+    (label || fallback)
+      .replace(/\{tag\}/g, tag)
+      .replace(/\{item\}/g, itemLabel);
   return {
-    viewPdf: "View PDF (" + tag + ")",
-    hidePdf: "Hide PDF (" + tag + ")",
-    download: "Download (" + tag + ")",
+    language: lang === "es" ? copy.spanish || "Spanish" : copy.english || "English",
+    viewPdf: format(copy.viewPdf, "View {item} ({tag})"),
+    hidePdf: format(copy.hidePdf, "Hide {item} ({tag})"),
+    download: format(copy.download, "Download ({tag})"),
+    comingSoon: format(copy.comingSoon, "Coming Soon ({tag})"),
     dataLang: lang === "es" ? "es" : "en",
   };
 }
@@ -18,9 +24,18 @@ function labelsForLang(lang) {
  */
 export function renderLanguageRow(
   wp,
-  { lang, pdfUrl, downloadUrl, targetId, groupId, features },
+  {
+    lang,
+    pdfUrl,
+    downloadUrl,
+    targetId,
+    groupId,
+    features,
+    labels: copy,
+    itemLabel,
+  },
 ) {
-  const labels = labelsForLang(lang);
+  const labels = labelsForLang(lang, copy, itemLabel);
   const hasPdf = Boolean(features.pdf && pdfUrl);
   const externalUrl = features.downloadLinks ? downloadUrl : null;
 
@@ -30,6 +45,11 @@ export function renderLanguageRow(
       return wp.element.createElement(
         "div",
         { className: "download-card-language-row" },
+        wp.element.createElement(
+          "span",
+          { className: "download-card-language-label" },
+          labels.language,
+        ),
         wp.element.createElement(
           "button",
           {
@@ -42,7 +62,7 @@ export function renderLanguageRow(
           wp.element.createElement(
             "span",
             { className: "btn-label" },
-            "Coming Soon (" + (lang === "es" ? "ES" : "ENG") + ")",
+            labels.comingSoon,
           ),
         ),
       );
@@ -102,6 +122,12 @@ export function renderLanguageRow(
   return wp.element.createElement(
     "div",
     { className: "download-card-language-row" },
+    (hasPdf || externalUrl) &&
+      wp.element.createElement(
+        "span",
+        { className: "download-card-language-label" },
+        labels.language,
+      ),
     ...rowChildren,
   );
 }
