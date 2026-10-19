@@ -4,7 +4,11 @@ import {
   MediaUpload,
   RichText,
 } from "@wordpress/block-editor";
-import { PanelBody, ClipboardButton } from "@wordpress/components";
+import {
+  PanelBody,
+  ClipboardButton,
+  SelectControl,
+} from "@wordpress/components";
 import { previewStyles } from "./preview-styles";
 import { computeSeriesAnchorId } from "./anchor-id";
 
@@ -99,6 +103,27 @@ export function DownloadCardEdit({ attributes, setAttributes, clientId, config }
             { style: { fontSize: "13px", color: "#50575e", margin: 0 } },
             editorHelp,
           ),
+        ),
+      ),
+
+    features.pdfDisplayMode &&
+      wp.element.createElement(
+        InspectorControls,
+        null,
+        wp.element.createElement(
+          PanelBody,
+          { title: "PDF display", initialOpen: true },
+          wp.element.createElement(SelectControl, {
+            label: "Actions for uploaded PDFs",
+            value: attributes.pdfDisplayMode || "view-and-download",
+            options: [
+              { label: "View PDF + Download (default)", value: "view-and-download" },
+              { label: "View PDF only", value: "view-only" },
+              { label: "Download only", value: "download-only" },
+            ],
+            onChange: (pdfDisplayMode) => setAttributes({ pdfDisplayMode }),
+            help: "This setting applies to uploaded PDFs. Direct download links remain downloadable.",
+          }),
         ),
       ),
 

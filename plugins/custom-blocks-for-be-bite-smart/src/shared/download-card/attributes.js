@@ -13,6 +13,11 @@ export const pdfAttributes = {
   trackingId: { type: "string", default: "" },
 };
 
+/** Controls which PDF actions are displayed by blocks that expose the setting. */
+export const pdfDisplayModeAttribute = {
+  pdfDisplayMode: { type: "string", default: "view-and-download" },
+};
+
 /** Direct download link fields (Drive, Dropbox, R2, etc.). */
 export const downloadLinkAttributes = {
   downloadUrlEn: { type: "string", default: "" },
@@ -28,6 +33,7 @@ export function attributesForFeatures(features) {
   return {
     ...coreAttributes,
     ...(features.pdf ? pdfAttributes : {}),
+    ...(features.pdfDisplayMode ? pdfDisplayModeAttribute : {}),
     ...(features.downloadLinks ? downloadLinkAttributes : {}),
     ...(features.resourcePageLink ? resourcePageLinkAttributes : {}),
   };

@@ -18,8 +18,19 @@ function labelsForLang(lang, copy = {}, itemLabel = "PDF") {
 }
 
 /**
- * One language row: View PDF + Download when a PDF is uploaded (pdf-toggle pattern),
- * or a single tracked download link when only an external URL is set.
+ * One language row: configurable PDF actions when a PDF is uploaded, or a
+ * single tracked download link when only an external URL is set.
+ * @param {Object} wp - WordPress API.
+ * @param {Object} root0
+ * @param {string} root0.lang
+ * @param {string} root0.pdfUrl
+ * @param {?string} root0.downloadUrl
+ * @param {string} root0.targetId
+ * @param {string} root0.groupId
+ * @param {Object} root0.features
+ * @param {string} root0.pdfDisplayMode - Actions shown for uploaded PDFs.
+ * @param {Object} root0.labels
+ * @param {string} root0.itemLabel
  * Returns null when that language has no resources (row hidden).
  */
 export function renderLanguageRow(
@@ -31,6 +42,7 @@ export function renderLanguageRow(
     targetId,
     groupId,
     features,
+    pdfDisplayMode = "view-and-download",
     labels: copy,
     itemLabel,
   },
@@ -38,8 +50,9 @@ export function renderLanguageRow(
   const labels = labelsForLang(lang, copy, itemLabel);
   const hasPdf = Boolean(features.pdf && pdfUrl);
   const externalUrl = features.downloadLinks ? downloadUrl : null;
+  const hasExternalDownload = Boolean(externalUrl);
 
-  if (!hasPdf && !externalUrl) {
+  if (!hasPdf && !hasExternalDownload) {
     if (features.comingSoonWhenEmpty && features.pdf) {
       const isOutline = lang === "es";
       return wp.element.createElement(
@@ -73,29 +86,35 @@ export function renderLanguageRow(
   const rowChildren = [];
 
   if (hasPdf) {
-    rowChildren.push(
-      renderPdfButton(
-        wp,
-        "ecd-toggle block-toggle-btn",
-        targetId,
-        groupId,
-        labels.viewPdf,
-        labels.hidePdf,
-        labels.dataLang,
-      ),
-      wp.element.createElement(
-        "a",
-        {
-          href: pdfUrl,
-          download: true,
-          className:
-            "block-toggle-btn is-style-outline download-card-pdf-download",
-          "data-lang": labels.dataLang,
-        },
-        labels.download,
-      ),
-    );
-  } else if (externalUrl) {
+    if (pdfDisplayMode !== "download-only") {
+      rowChildren.push(
+        renderPdfButton(
+          wp,
+          "ecd-toggle block-toggle-btn",
+          targetId,
+          groupId,
+          labels.viewPdf,
+          labels.hidePdf,
+          labels.dataLang,
+        ),
+      );
+    }
+    if (pdfDisplayMode !== "view-only") {
+      rowChildren.push(
+        wp.element.createElement(
+          "a",
+          {
+            href: pdfUrl,
+            download: true,
+            className:
+              "block-toggle-btn is-style-outline download-card-pdf-download",
+            "data-lang": labels.dataLang,
+          },
+          labels.download,
+        ),
+      );
+    }
+  } else if (hasExternalDownload) {
     const downloadClass =
       lang === "es"
         ? "ecd-toggle block-toggle-btn is-style-outline ecd-toggle--outline ecd-toggle--download"
@@ -122,7 +141,7 @@ export function renderLanguageRow(
   return wp.element.createElement(
     "div",
     { className: "download-card-language-row" },
-    (hasPdf || externalUrl) &&
+    (hasPdf || hasExternalDownload) &&
       wp.element.createElement(
         "span",
         { className: "download-card-language-label" },

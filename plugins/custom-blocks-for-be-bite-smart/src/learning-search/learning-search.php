@@ -793,7 +793,8 @@ function bitesmart_render_learning_search_strings( $instance_id, array $keys ) {
 /**
  * Render callback for "custom/learning-search" — the search box + live
  * Fuse.js results, as of the 2026-08-16 split (see the file-level comment
- * above). Also renders its own copy of the type-filter checkboxes above the
+ * above). On Stage=Guide, it renders the Guide's Table of Contents first.
+ * It also renders its own copy of the type-filter checkboxes above the
  * search box (added same day, see the call site below) — the paginated
  * "browse everything" list itself still lives only in the sibling
  * custom/learning-browse block (learning-browse.php) — place both, same
@@ -827,6 +828,13 @@ function render_learning_search_block( $attributes ) {
     <section class="wp-block-custom-learning-search learning-search-block" id="<?php echo esc_attr( $instance_id ); ?>" data-stage="<?php echo esc_attr( $stage_slug ); ?>" data-lang="<?php echo esc_attr( $lang ); ?>" data-rest-url="<?php echo esc_url( rest_url( 'bitesmart/v1/zero-result-search' ) ); ?>" data-rest-nonce="<?php echo esc_attr( wp_create_nonce( 'wp_rest' ) ); ?>">
 
         <?php
+        if ( 'guide' === $stage_slug ) {
+            $guide = bitesmart_get_the_main_guide();
+            if ( $guide && 'publish' === $guide->post_status ) {
+                echo bitesmart_render_guide_table_of_contents( bitesmart_get_guide_chapters_with_sections( $guide->ID ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- trusted guide renderer
+            }
+        }
+
         // Own copy of the type filter, above the search box — 2026-08-16,
         // per Janet: it used to live only in the sibling custom/learning-
         // browse block, but she wanted it repeated here too so a visitor
@@ -837,18 +845,9 @@ function render_learning_search_block( $attributes ) {
         // bitesmart_render_learning_search_type_filter()'s own comment.
         bitesmart_render_learning_search_type_filter( $cards );
 
-        // Only rendered on the pooled Guide pseudo-stage (stage_slug ===
-        // 'guide'), where the card list is 100% chapters — never on a real
-        // Stage page, where chapters are at most a small slice of mixed
-        // content and a global "Show video/text" control would apply to
-        // almost nothing on screen. Real Stage pages rely solely on each
-        // chapter's own per-chapter badges (guide-chapter-display.php)
-        // instead. See bitesmart_render_guide_format_controls().
-        if ( 'guide' === $stage_slug ) {
-            echo bitesmart_render_guide_format_controls(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- own trusted markup
-        }
         ?>
 
+        <div class="learning-search-controls-row">
         <div class="learning-search-box" role="search">
             <?php
             /*
@@ -884,6 +883,17 @@ function render_learning_search_block( $attributes ) {
             <p class="learning-search-status" aria-live="polite"></p>
             <?php /* Deliberately no aria-live here — results is rich, multi-card content (headings, links, an accordion each); making it a live region would have screen readers try to re-announce all of that on every keystroke's re-render. The concise status text above ("3 results") is the one thing that should be announced live. */ ?>
             <div class="learning-search-results"></div>
+        </div>
+
+        <?php
+        // Only rendered on the pooled Guide pseudo-stage (stage_slug ===
+        // 'guide'), where the card list is 100% chapters — never on a real
+        // Stage page. Kept after the search box so the Guide-specific layout
+        // can place it on the right, then below the search on small screens.
+        if ( 'guide' === $stage_slug ) {
+            echo bitesmart_render_guide_format_controls(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- own trusted markup
+        }
+        ?>
         </div>
 
         <?php bitesmart_render_learning_search_data( $cards, $instance_id ); ?>

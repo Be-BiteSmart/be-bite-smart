@@ -13,7 +13,7 @@ import { DownloadCardSave } from "./save";
  * @param {string} options.icon
  * @param {string} options.wrapperClassName - Front-end wrapper class for analytics/CSS
  * @param {string} options.blockIdPrefix - Stable id prefix for toggles/viewers
- * @param {{ pdf: boolean, downloadLinks: boolean, trackingSlug?: boolean, comingSoonWhenEmpty?: boolean }} options.features
+ * @param {{ pdf: boolean, downloadLinks: boolean, trackingSlug?: boolean, comingSoonWhenEmpty?: boolean, pdfDisplayMode?: boolean }} options.features
  * @param {object} [options.text] - Per-block display copy and editor labels.
  * @param {string} [options.editorHelp] - Inspector sidebar help text
  * @param {string} [options.anchorPrefix] - When set (e.g. "coloring-books"), the block's

@@ -6,6 +6,9 @@ export function DownloadCardSave({ attributes, config }) {
   const blockProps = useBlockProps.save();
   const { wrapperClassName, blockIdPrefix, features, text } = config;
 
+  const pdfDisplayMode = features.pdfDisplayMode
+    ? attributes.pdfDisplayMode || "view-and-download"
+    : "view-and-download";
   const blockId = attributes.blockId || blockIdPrefix + "-block";
   const enId = blockIdPrefix + "-en-" + blockId;
   const esId = blockIdPrefix + "-es-" + blockId;
@@ -36,6 +39,7 @@ export function DownloadCardSave({ attributes, config }) {
     targetId: enId,
     groupId,
     features,
+    pdfDisplayMode,
     labels: text.labels,
     itemLabel: text.itemLabel,
   });
@@ -46,6 +50,7 @@ export function DownloadCardSave({ attributes, config }) {
     targetId: esId,
     groupId,
     features,
+    pdfDisplayMode,
     labels: text.labels,
     itemLabel: text.itemLabel,
   });
@@ -122,6 +127,7 @@ export function DownloadCardSave({ attributes, config }) {
       ),
 
     features.pdf &&
+      pdfDisplayMode !== "download-only" &&
       attributes.pdfUrl &&
       wp.element.createElement(
         "div",
@@ -135,6 +141,7 @@ export function DownloadCardSave({ attributes, config }) {
       ),
 
     features.pdf &&
+      pdfDisplayMode !== "download-only" &&
       attributes.pdfUrlEs &&
       wp.element.createElement(
         "div",
