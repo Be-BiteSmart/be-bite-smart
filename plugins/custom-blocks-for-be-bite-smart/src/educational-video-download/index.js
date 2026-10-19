@@ -13,6 +13,14 @@ registerDownloadCardBlock({
     pdf: false,
     downloadLinks: true,
   },
+  text: {
+    numberLabel: "Episode",
+    contentTypePlaceholder: "Video",
+    titlePlaceholder: "Episode title",
+    mediaLabel: "Video",
+    itemLabel: "Video",
+    downloadLinkLabel: "Video file",
+  },
   editorHelp:
     "Paste English and/or Spanish download links. Each language gets its own row with a Download button when a link is added.",
 });

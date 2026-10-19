@@ -13,5 +13,16 @@ registerDownloadCardBlock({
     pdf: true,
     downloadLinks: true,
     trackingSlug: true,
+    resourcePageLink: true,
   },
+  text: {
+    showNumber: false,
+    contentTypePlaceholder: "Content type (e.g. Article)",
+    titlePlaceholder: "Title",
+    mediaLabel: "PDF",
+    itemLabel: "PDF",
+    resourcePageLinkLabel: "Go to resource's page",
+  },
+  editorHelp:
+    "Use this shared card for articles, worksheets, guides, or other materials. Set the content type, then add a PDF or download link for each language.",
 });

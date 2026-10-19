@@ -4,7 +4,7 @@ import { renderLanguageRow } from "./render-language-row";
 
 export function DownloadCardSave({ attributes, config }) {
   const blockProps = useBlockProps.save();
-  const { wrapperClassName, blockIdPrefix, features } = config;
+  const { wrapperClassName, blockIdPrefix, features, text } = config;
 
   const blockId = attributes.blockId || blockIdPrefix + "-block";
   const enId = blockIdPrefix + "-en-" + blockId;
@@ -18,12 +18,14 @@ export function DownloadCardSave({ attributes, config }) {
     ? convertToDirectDownload(attributes.downloadUrlEs)
     : null;
 
+  const itemNumber = text.showNumber ? attributes.episodeNumber : "";
   const episodeAndContentType = [
-    attributes.episodeNumber ? "Episode " + attributes.episodeNumber : "",
-    attributes.contentType ? attributes.contentType : "",
+    itemNumber ? text.numberLabel + " " + itemNumber : "",
+    attributes.contentType || text.defaultContentType,
   ]
     .filter(Boolean)
     .join(" · ");
+  const hasHeaderContent = episodeAndContentType || attributes.episodeTitle;
 
   const wp = window.wp;
 
@@ -34,6 +36,8 @@ export function DownloadCardSave({ attributes, config }) {
     targetId: enId,
     groupId,
     features,
+    labels: text.labels,
+    itemLabel: text.itemLabel,
   });
   const esRow = renderLanguageRow(wp, {
     lang: "es",
@@ -42,15 +46,12 @@ export function DownloadCardSave({ attributes, config }) {
     targetId: esId,
     groupId,
     features,
+    labels: text.labels,
+    itemLabel: text.itemLabel,
   });
 
   const hasButtons =
     enRow || esRow || (features.comingSoonWhenEmpty && features.pdf);
-  const downloadOnlyButtons = features.downloadLinks && !features.pdf;
-  const buttonsClassName =
-    "download-card-buttons" +
-    (downloadOnlyButtons ? " download-card-buttons--inline" : "");
-
   return wp.element.createElement(
     "section",
     {
@@ -71,36 +72,53 @@ export function DownloadCardSave({ attributes, config }) {
         wrapperClassName,
     },
 
-    attributes.episodeNumber &&
+    itemNumber &&
       wp.element.createElement(
         "div",
         { className: "bright-chip" },
         attributes.episodeNumber,
       ),
 
-    wp.element.createElement(
-      "div",
-      { className: "ecd-header" },
-      episodeAndContentType &&
-        wp.element.createElement(
-          "span",
-          { className: "capitalized-and-colored" },
-          episodeAndContentType,
-        ),
-      attributes.episodeTitle &&
-        wp.element.createElement(RichText.Content, {
-          tagName: "h3",
-          className: "ecd-title",
-          value: attributes.episodeTitle,
-        }),
-    ),
+    hasHeaderContent &&
+      wp.element.createElement(
+        "div",
+        { className: "ecd-header" },
+        episodeAndContentType &&
+          wp.element.createElement(
+            "span",
+            { className: "capitalized-and-colored" },
+            episodeAndContentType,
+          ),
+        attributes.episodeTitle &&
+          wp.element.createElement(RichText.Content, {
+            tagName: "h3",
+            className: "ecd-title",
+            value: attributes.episodeTitle,
+          }),
+      ),
 
     hasButtons &&
       wp.element.createElement(
         "div",
-        { className: buttonsClassName },
+        { className: "download-card-buttons" },
         enRow,
         esRow,
+      ),
+
+    features.resourcePageLink &&
+      attributes.resourcePageUrl &&
+      wp.element.createElement(
+        "div",
+        { className: "download-card-resource-link-row" },
+        wp.element.createElement(
+          "a",
+          {
+            href: attributes.resourcePageUrl,
+            className:
+              "download-card-resource-link block-toggle-btn is-style-outline",
+          },
+          text.resourcePageLinkLabel,
+        ),
       ),
 
     features.pdf &&

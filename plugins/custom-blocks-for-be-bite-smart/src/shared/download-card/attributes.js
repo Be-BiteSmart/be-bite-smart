@@ -19,10 +19,16 @@ export const downloadLinkAttributes = {
   downloadUrlEs: { type: "string", default: "" },
 };
 
+/** Optional page link for the downloaded resource's landing page. */
+export const resourcePageLinkAttributes = {
+  resourcePageUrl: { type: "string", default: "" },
+};
+
 export function attributesForFeatures(features) {
   return {
     ...coreAttributes,
     ...(features.pdf ? pdfAttributes : {}),
     ...(features.downloadLinks ? downloadLinkAttributes : {}),
+    ...(features.resourcePageLink ? resourcePageLinkAttributes : {}),
   };
 }

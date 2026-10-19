@@ -15,6 +15,13 @@ registerDownloadCardBlock({
     downloadLinks: false,
     comingSoonWhenEmpty: true,
   },
+  text: {
+    numberLabel: "Episode",
+    contentTypePlaceholder: "Coloring Book",
+    titlePlaceholder: "Coloring book title",
+    mediaLabel: "PDF",
+    itemLabel: "PDF",
+  },
   editorHelp:
     "Upload English and/or Spanish PDFs. Each language appears as its own row with View PDF and Download, like the PDF Toggle block.",
 });

@@ -44,83 +44,7 @@ function bitesmart_coloring_book_anchor_id( $post ) {
 }
 
 /**
- * One language's buttons: a matched View PDF (toggle) + Download pair when
- * a PDF is uploaded (front-end toggle behavior comes from the globally
- * enqueued toggle-system.js reading data-target/data-group/data-expanded —
- * see the shared download-card block's render-language-row.js, which this
- * mirrors in PHP), a Coming Soon pill when it isn't and $coming_soon_when_empty
- * is true, or nothing at all.
- *
- * @param string $lang                 'en' or 'es'.
- * @param string $pdf_url              Uploaded PDF URL, '' if none.
- * @param string $target_id            DOM id of this language's viewer <div>.
- * @param string $group_id             Shared toggle group id (closes the other language's viewer).
- * @param bool   $include_viewer_toggle Whether to render the View PDF toggle alongside the Download link. Always true from this file's remaining caller since the Download-only search-card mode (render_coloring_book_search_card(), deleted 2026-08-30) was removed — kept as a param rather than hardcoded in case a future caller needs the Download-only mode again.
- * @param bool   $coming_soon_when_empty Whether to render a Coming Soon pill when $pdf_url is empty.
- * @return string
- */
-function bitesmart_coloring_book_language_row( $lang, $pdf_url, $target_id, $group_id, $include_viewer_toggle, $coming_soon_when_empty ) {
-    $is_es      = 'es' === $lang;
-    $tag        = $is_es ? 'ES' : 'ENG';
-    $view_label = sprintf(
-        /* translators: %s: language tag, e.g. "ENG" */
-        __( 'View PDF (%s)', 'custom-blocks' ),
-        $tag
-    );
-    $hide_label = sprintf(
-        /* translators: %s: language tag, e.g. "ENG" */
-        __( 'Hide PDF (%s)', 'custom-blocks' ),
-        $tag
-    );
-    $download_label = sprintf(
-        /* translators: %s: language tag, e.g. "ENG" */
-        __( 'Download (%s)', 'custom-blocks' ),
-        $tag
-    );
-
-    if ( ! $pdf_url ) {
-        if ( ! $coming_soon_when_empty ) {
-            return '';
-        }
-        $outline_class = $is_es ? ' is-style-outline ecd-toggle--outline' : '';
-        ob_start();
-        ?>
-        <div class="download-card-language-row">
-            <button class="ecd-toggle block-toggle-btn ecd-toggle--coming-soon<?php echo esc_attr( $outline_class ); ?>" disabled aria-disabled="true">
-                <span class="btn-label">
-                    <?php
-                    /* translators: %s: language tag, e.g. "ENG" */
-                    printf( esc_html__( 'Coming Soon (%s)', 'custom-blocks' ), esc_html( $tag ) );
-                    ?>
-                </span>
-            </button>
-        </div>
-        <?php
-        return ob_get_clean();
-    }
-
-    ob_start();
-    ?>
-    <div class="download-card-language-row">
-        <?php if ( $include_viewer_toggle ) : ?>
-            <button class="ecd-toggle block-toggle-btn" data-target="<?php echo esc_attr( $target_id ); ?>" data-group="<?php echo esc_attr( $group_id ); ?>" data-expanded="false" data-lang="<?php echo esc_attr( $lang ); ?>">
-                <span class="btn-label btn-label--view"><?php echo esc_html( $view_label ); ?></span>
-                <span class="btn-label btn-label--hide"><?php echo esc_html( $hide_label ); ?></span>
-            </button>
-        <?php endif; ?>
-        <a href="<?php echo esc_url( $pdf_url ); ?>" download class="block-toggle-btn is-style-outline download-card-pdf-download" data-lang="<?php echo esc_attr( $lang ); ?>">
-            <?php echo esc_html( $download_label ); ?>
-        </a>
-    </div>
-    <?php
-    return ob_get_clean();
-}
-
-/**
- * Full download card — title/episode chip, View PDF + Download per
- * language, inline (initially hidden) PDF viewers. Used only by
- * render_coloring_book_block(), i.e. the white .download-card-block look
- * for /learning/downloads/ itself.
+ * Adapt the Coloring Book CPT data to the shared download-card renderer.
  *
  * @param WP_Post $post
  * @return string
@@ -130,55 +54,29 @@ function bitesmart_render_coloring_book_card( $post ) {
     $pdf_en   = get_post_meta( $post->ID, '_bitesmart_coloring_book_pdf_url_en', true );
     $pdf_es   = get_post_meta( $post->ID, '_bitesmart_coloring_book_pdf_url_es', true );
     $block_id = bitesmart_coloring_book_anchor_id( $post );
-    $en_id    = 'ecd-en-' . $block_id;
-    $es_id    = 'ecd-es-' . $block_id;
-    $group_id = 'ecd-grp-' . $block_id;
-
-    $en_row = bitesmart_coloring_book_language_row( 'en', $pdf_en, $en_id, $group_id, true, true );
-    $es_row = bitesmart_coloring_book_language_row( 'es', $pdf_es, $es_id, $group_id, true, true );
-
-    ob_start();
-    ?>
-    <section id="<?php echo esc_attr( $block_id ); ?>" class="download-card-block coloring-book-card">
-        <?php if ( $number ) : ?>
-            <div class="bright-chip"><?php echo esc_html( $number ); ?></div>
-        <?php endif; ?>
-
-        <div class="ecd-header">
-            <span class="capitalized-and-colored">
-                <?php
-                echo esc_html(
-                    $number
-                        /* translators: %s: episode number */
-                        ? sprintf( __( 'Episode %s · Coloring Book', 'custom-blocks' ), $number )
-                        : __( 'Coloring Book', 'custom-blocks' )
-                );
-                ?>
-            </span>
-            <h3 class="ecd-title"><?php echo esc_html( get_the_title( $post ) ); ?></h3>
-        </div>
-
-        <div class="download-card-buttons">
-            <?php
-            echo $en_row; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- already-escaped HTML from bitesmart_coloring_book_language_row()
-            echo $es_row; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- already-escaped HTML from bitesmart_coloring_book_language_row()
-            ?>
-        </div>
-
-        <?php if ( $pdf_en ) : ?>
-            <div id="<?php echo esc_attr( $en_id ); ?>" class="ecd-viewer">
-                <iframe data-src="<?php echo esc_url( $pdf_en ); ?>" width="100%" height="600px" title="<?php esc_attr_e( 'PDF Document (ENG)', 'custom-blocks' ); ?>"></iframe>
-            </div>
-        <?php endif; ?>
-
-        <?php if ( $pdf_es ) : ?>
-            <div id="<?php echo esc_attr( $es_id ); ?>" class="ecd-viewer">
-                <iframe data-src="<?php echo esc_url( $pdf_es ); ?>" width="100%" height="600px" title="<?php esc_attr_e( 'PDF Document (ES)', 'custom-blocks' ); ?>"></iframe>
-            </div>
-        <?php endif; ?>
-    </section>
-    <?php
-    return ob_get_clean();
+    return bitesmart_render_download_card(
+        array(
+            'id'             => $block_id,
+            'class_name'     => 'coloring-book-card',
+            'toggle_prefix'  => 'ecd',
+            'number'         => $number,
+            'number_label'   => __( 'Episode', 'custom-blocks' ),
+            'type'           => __( 'Coloring Book', 'custom-blocks' ),
+            'title'          => get_the_title( $post ),
+            'item_label'     => __( 'PDF', 'custom-blocks' ),
+            'viewer_enabled' => true,
+            'languages'      => array(
+                'en' => array(
+                    'pdf_url'    => $pdf_en,
+                    'coming_soon' => true,
+                ),
+                'es' => array(
+                    'pdf_url'    => $pdf_es,
+                    'coming_soon' => true,
+                ),
+            ),
+        )
+    );
 }
 
 /**
@@ -200,4 +98,3 @@ function render_coloring_book_block( $attributes ) {
 
     return bitesmart_render_coloring_book_card( $post );
 }
-

@@ -31,6 +31,7 @@
 function bitesmart_downloads_page_template_version() {
     $files = array(
         __DIR__ . '/../coloring-book-display/coloring-book-display.php',
+        __DIR__ . '/../shared/download-card/render.php',
         __FILE__,
     );
 
