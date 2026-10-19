@@ -19,6 +19,29 @@
   margin-bottom: 32px;
 }
 
+.learning-search-block[data-stage="guide"] .learning-search-controls-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 20px 24px;
+}
+
+.learning-search-block[data-stage="guide"] .learning-search-box {
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+.learning-search-block[data-stage="guide"] .guide-format-controls {
+  justify-self: end;
+  margin: 0;
+}
+
+@media (max-width: 700px) {
+  .learning-search-block[data-stage="guide"] .learning-search-controls-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* Magnifying-glass icon as a background-image (not a separate DOM element)
    — simplest way to keep it fixed in place regardless of how much text is
    typed: background images don't move with text flow the way an inline

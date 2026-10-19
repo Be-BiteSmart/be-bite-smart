@@ -6,11 +6,12 @@ registerDownloadCardBlock({
   title: "Educational Content Download",
   icon: "download",
   description:
-    "Worksheets and guides: per-language rows with View PDF + Download when a PDF is uploaded, or a download link alone.",
+    "Worksheets and guides: choose whether each language shows a PDF viewer, download link, or both.",
   wrapperClassName: "educational-content-download-block",
   blockIdPrefix: "ecd",
   features: {
     pdf: true,
+    pdfDisplayMode: true,
     downloadLinks: true,
     trackingSlug: true,
     resourcePageLink: true,
@@ -24,5 +25,5 @@ registerDownloadCardBlock({
     resourcePageLinkLabel: "Go to resource's page",
   },
   editorHelp:
-    "Use this shared card for articles, worksheets, guides, or other materials. Set the content type, then add a PDF or download link for each language.",
+    "Use this shared card for articles, worksheets, guides, or other materials. Set the content type, add PDFs or download links for each language, and choose which PDF actions to show.",
 });

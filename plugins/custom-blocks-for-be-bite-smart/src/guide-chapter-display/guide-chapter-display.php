@@ -24,21 +24,20 @@
  *
  * Leaner still: `bitesmart_render_guide_toc_item()` below renders one Table
  * of Contents entry (a plain link only — no badges, no summary/video/text/
- * downloads at all) for the collapsible Table of Contents atop the Guide's
- * own page (`bitesmart_render_guide_single()`, guide-single.php) — added
+ * downloads at all) for the collapsible Table of Contents on the Guide's
+ * own page, immediately before its Learning Hub Search — added
  * 2026-08-28, per Janet: the full accordion rows' own spacing makes the
  * page "impossible to read at a glance," so the ToC exists purely to let a
  * visitor scan the guide's structure fast, distinct from every render above
  * which shows a chapter's actual content. Briefly split out into its own
  * separate block (`custom/guide-toc`, same day) so it could be placed
  * independently of `custom/guide-single`, same precedent
- * `custom/guide-description` already set 2026-08-16 — reverted back into
- * `custom/guide-single`'s own output the SAME day once Janet decided one
- * block was simpler/more efficient than two. `bitesmart_get_guide_chapters_with_sections()`
- * below still exists as its own function (rather than folding straight back
- * into `bitesmart_render_guide_single()`), now for a different reason: it's
- * the one place backed by a real persistent cache (a transient, not just a
- * per-request memo) — see that function's own comment.
+ * `custom/guide-description` already set 2026-08-16. The ToC now renders
+ * from the Guide-stage Learning Hub Search so it stays immediately before
+ * the search controls regardless of where the Guide display block sits.
+ * `bitesmart_get_guide_chapters_with_sections()` below is backed by a real
+ * persistent cache (a transient, not just a per-request memo) — see that
+ * function's own comment.
  *
  * See [[be-bitesmart-guide-cpt-plan]] in memory for the full feature. Not
  * registered as a block (no block.json) — chapters are never manually
@@ -133,10 +132,8 @@ function bitesmart_guide_chapter_parent_guide( $chapter_id ) {
 /**
  * Every published chapter of $guide_id, in Chapter Number order, each
  * paired with its Guide Section name ('' if untagged) and its own post ID
- * (not the full WP_Post — see below) — the "give me the chapters,
- * grouped/ordered for rendering" query `bitesmart_render_guide_single()`
- * (guide-single.php) uses to build both the Table of Contents and the
- * chapter accordion in one pass.
+ * (not the full WP_Post — see below) — shared by the Guide display and its
+ * Learning Hub Search ToC so section grouping and chapter order stay aligned.
  *
  * Backed by a real, persistent cache (a transient, not just a per-request
  * memo) — added 2026-08-28, per Janet: "there should still be memoization
@@ -426,15 +423,10 @@ function bitesmart_render_guide_badge_icons() {
 /**
  * The Video/Text badge pair for one chapter — rendered by
  * bitesmart_render_guide_chapter_row() inside .guide-chapter-body (only
- * shown once the chapter is open, see that call site) and (previously) the
- * Table of Contents entries bitesmart_render_guide_single() builds
- * (guide-single.php) — the ToC's own badges were reverted the same day they
- * were added (2026-08-28), per Janet: she'd meant a plain link list, not a
- * second interactive control surface for the same per-chapter toggle (see
- * bitesmart_render_guide_toc_item()'s own comment). This function is kept
- * as its own helper anyway — it's still the one place both the row's
- * badges AND their new "obviously clickable" icons
- * (bitesmart_render_guide_badge_icons() above) are defined.
+ * shown once the chapter is open, see that call site). This function is
+ * kept as its own helper — it's still the one place the row's badges and
+ * their "obviously clickable" icons (bitesmart_render_guide_badge_icons()
+ * above) are defined.
  *
  * @param bool $has_video
  * @param bool $has_text
@@ -506,8 +498,8 @@ function bitesmart_render_guide_format_badges( $has_video, $has_text ) {
  * Video/Text badges — since the point of the ToC is a fast scan of the
  * guide's structure; both live already on each collapsed row below it
  * (duplicating them here would just recreate the "too loose to skim"
- * problem the ToC exists to fix). Only called from
- * bitesmart_render_guide_single() (guide-single.php) — added 2026-08-28.
+ * problem the ToC exists to fix). Rendered by
+ * bitesmart_render_guide_table_of_contents() below — added 2026-08-28.
  * Briefly lived in its own separate block (custom/guide-toc, same day),
  * reverted back into custom/guide-single's own output the same day once
  * Janet decided one block was simpler/more efficient than two — see
@@ -561,6 +553,57 @@ function bitesmart_render_guide_toc_item( $chapter ) {
             <p class="guide-toc-chapter-title"><?php echo esc_html( get_the_title( $chapter ) ); ?></p>
         </a>
     </li>
+    <?php
+    return ob_get_clean();
+}
+
+/**
+ * Renders the Guide's collapsible Table of Contents from the same cached
+ * chapter list used by the Guide display. The Guide-stage Learning Hub
+ * Search calls this so the ToC appears immediately before its search
+ * controls, independently of where the Guide display block sits.
+ *
+ * @param array<int, array{chapter_id: int, section: string}> $chapters_with_sections
+ * @return string
+ */
+function bitesmart_render_guide_table_of_contents( array $chapters_with_sections ) {
+    $current_section = null;
+    $toc_items       = '';
+
+    foreach ( $chapters_with_sections as $entry ) {
+        $chapter = get_post( $entry['chapter_id'] );
+        if ( ! $chapter ) {
+            continue;
+        }
+
+        $section_name = $entry['section'];
+        if ( $section_name !== $current_section ) {
+            $current_section = $section_name;
+            if ( $section_name ) {
+                $toc_items .= '<li class="guide-toc-section-heading">' . esc_html( $section_name ) . '</li>';
+            }
+        }
+
+        $toc_items .= bitesmart_render_guide_toc_item( $chapter );
+    }
+
+    if ( ! $toc_items ) {
+        return '';
+    }
+
+    ob_start();
+    ?>
+    <details class="guide-toc" open>
+        <summary class="guide-toc-summary">
+            <?php esc_html_e( 'Table of Contents', 'custom-blocks' ); ?>
+            <svg class="guide-toc-chevron" viewBox="0 0 20 20" width="20" height="20" aria-hidden="true" focusable="false">
+                <polyline points="5 7.5 10 12.5 15 7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline>
+            </svg>
+        </summary>
+        <ul class="guide-toc-list">
+            <?php echo $toc_items; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- items are generated by trusted, escaped renderers ?>
+        </ul>
+    </details>
     <?php
     return ob_get_clean();
 }
@@ -1054,10 +1097,8 @@ function bitesmart_render_guide_format_controls() {
  * style.css file rather than a dedicated stylesheet of its own, same
  * "minimal, piggyback on this file" precedent custom/guide-single's own
  * output already set. The Table of Contents' own .guide-toc* CSS lives here
- * too (bitesmart_render_guide_toc_item()) — it's part of
- * custom/guide-single's own output (briefly its own separate block,
- * custom/guide-toc, reverted the same day — see that function's own
- * comment), so no separate has_block() check is needed for it.
+ * too; the Guide-stage custom/learning-search block is already covered by
+ * the check below.
  *
  * Same webpack entry/asset.php/style-index.css pattern as pdf-toggle (see
  * that block's own manual enqueue in the main plugin file) — this file

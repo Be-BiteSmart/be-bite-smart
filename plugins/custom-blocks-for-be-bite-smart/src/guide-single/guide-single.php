@@ -67,18 +67,10 @@
  * section ORDER falls naturally out of the existing Chapter Number
  * ordering with no extra data needed.
  *
- * A collapsible Table of Contents (bitesmart_render_guide_toc_item(),
- * guide-chapter-display.php) renders above the chapter list, built in the
- * same loop — added 2026-08-28. Briefly lived in its own separate block
- * (`custom/guide-toc`, same day, same "split out so it can be placed
- * independently" precedent `custom/guide-description` set below) — reverted
- * back into this function's own output the same day once Janet decided one
- * block was simpler/more efficient than querying twice for two blocks that
- * normally sit on the same page anyway. The underlying chapter query is
- * still its own function, `bitesmart_get_guide_chapters_with_sections()`
- * (guide-chapter-display.php), now backed by a real persistent cache
- * (a transient, not just a per-request memo) — see that function's own
- * comment for why and how it's invalidated.
+ * The Guide-stage Learning Hub Search renders the collapsible Table of
+ * Contents immediately before its search controls. The underlying chapter
+ * query is still shared through bitesmart_get_guide_chapters_with_sections()
+ * (guide-chapter-display.php), backed by a persistent cache.
  *
  * Does NOT render the Guide's Description — that used to render here (a
  * plain paragraph, right above the chapter list) but was split out into
@@ -121,39 +113,7 @@ function bitesmart_render_guide_single( $guide_id ) {
             // where this bar renders.
             ?>
             <?php
-            // Table of Contents — built in the SAME pass over
-            // $chapters_with_sections as the chapter rows below (not a
-            // separate loop), reusing the identical Section-change
-            // detection so the ToC's own grouping can never drift out of
-            // step with the real list's <h2> headings. Added 2026-08-28,
-            // per Janet: the full accordion rows' own spacing makes the
-            // page "impossible to read at a glance" — the ToC gives a
-            // fast, compact scan of the guide's structure instead.
-            // Collapsible (native <details>, no JS) but starts open —
-            // Janet: "start as visible but also let parents collapse it if
-            // they want."
-            //
-            // $chapters_with_sections is already in Chapter Number order
-            // (bitesmart_get_guide_chapters_with_sections()), and the
-            // source document's own chapters are numbered sequentially BY
-            // section, so simply detecting when the section name changes
-            // as we walk the list reproduces the right section order for
-            // free — same logic drives both $toc_items' section headings
-            // and $chapter_rows' <h2> headings below, from ONE walk of the
-            // list. A chapter with no Section term set yet doesn't get a
-            // heading at all (rather than an "Uncategorized" placeholder)
-            // — $current_section starts null, and an empty string only
-            // ever triggers the "insert a heading" branch once, on the
-            // very first untagged chapter; every untagged chapter after
-            // that no longer looks like a transition, so nothing repeats.
-            //
-            // $toc_items and $chapter_rows accumulate as plain strings
-            // (rather than echoing directly) specifically because the ToC
-            // has to appear BEFORE the chapter list in the final markup,
-            // even though both are only knowable by walking the same
-            // per-chapter loop once.
             $current_section = null;
-            $toc_items       = '';
             $chapter_rows    = '';
 
             foreach ( $chapters_with_sections as $entry ) :
@@ -185,7 +145,6 @@ function bitesmart_render_guide_single( $guide_id ) {
                         // object itself here.
                         $section_anchor = sanitize_title( $section_name );
                         $chapter_rows  .= '<h2 class="guide-section-heading" id="' . esc_attr( $section_anchor ) . '">' . esc_html( $section_name ) . '</h2>';
-                        $toc_items     .= '<li class="guide-toc-section-heading">' . esc_html( $section_name ) . '</li>';
                     endif;
                 endif;
 
@@ -193,31 +152,8 @@ function bitesmart_render_guide_single( $guide_id ) {
                     'accordion_group' => $accordion_group,
                     'show_guide_link' => false, // redundant — we're already ON this chapter's guide
                 ) );
-
-                $toc_items .= bitesmart_render_guide_toc_item( $chapter );
             endforeach;
             ?>
-
-            <?php if ( $toc_items ) : ?>
-                <details class="guide-toc" open>
-                    <summary class="guide-toc-summary">
-                        <?php esc_html_e( 'Table of Contents', 'custom-blocks' ); ?>
-                        <?php
-                        // Same chevron SVG/rotate-on-[open] treatment every
-                        // other <summary> in this feature already uses (see
-                        // .guide-chapter-chevron, guide-chapter-display/style.css)
-                        // — kept visually consistent rather than falling back
-                        // to the browser's own default disclosure triangle.
-                        ?>
-                        <svg class="guide-toc-chevron" viewBox="0 0 20 20" width="20" height="20" aria-hidden="true" focusable="false">
-                            <polyline points="5 7.5 10 12.5 15 7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline>
-                        </svg>
-                    </summary>
-                    <ul class="guide-toc-list">
-                        <?php echo $toc_items; // phpcs:ignore ?>
-                    </ul>
-                </details>
-            <?php endif; ?>
 
             <div class="guide-chapter-list">
                 <?php echo $chapter_rows; // phpcs:ignore ?>
