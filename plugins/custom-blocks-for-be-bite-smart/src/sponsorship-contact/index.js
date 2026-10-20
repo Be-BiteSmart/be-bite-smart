@@ -154,7 +154,7 @@ registerBlockType("custom/sponsorship-contact", {
 
       // Buttons
 
-      (attributes.email || attributes.contactFormUrl) &&
+      (attributes.email || attributes.phone || attributes.contactFormUrl) &&
         el(
           "div",
           { className: "sponsorship-card-btns" },
@@ -167,6 +167,20 @@ registerBlockType("custom/sponsorship-contact", {
                 className: "block-toggle-btn",
               },
               __("Email", "custom-blocks"),
+            ),
+
+          attributes.phone &&
+            el(
+              "a",
+              {
+                href:
+                  "tel:" +
+                  attributes.phone
+                    .replace(/[^\d+]/g, "")
+                    .replace(/(?!^)\+/g, ""),
+                className: "block-toggle-btn is-style-outline",
+              },
+              __("Call", "custom-blocks"),
             ),
 
           attributes.contactFormUrl &&

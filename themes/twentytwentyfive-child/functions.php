@@ -69,6 +69,34 @@ if ( is_page( 'contact' ) ) {
 }
 add_action( 'wp_enqueue_scripts', 'twentytwentyfive_child_enqueue_styles' );
 
+/**
+ * Load the copy-email interaction only on the Contact pages.
+ */
+function bitesmart_enqueue_contact_page_assets() {
+    if ( ! is_page( 'contact' ) ) {
+        return;
+    }
+
+    $script_path = get_stylesheet_directory() . '/js/contact-email-copy.js';
+    if ( file_exists( $script_path ) ) {
+        wp_enqueue_script(
+            'bitesmart-contact-email-copy',
+            get_stylesheet_directory_uri() . '/js/contact-email-copy.js',
+            array(),
+            filemtime( $script_path ),
+            true
+        );
+    }
+
+    wp_enqueue_style(
+        'bitesmart-contact-page',
+        get_stylesheet_directory_uri() . '/css/contact-page.css',
+        array( 'twentytwentyfive-child' ),
+        get_css_version( 'css/contact-page.css' )
+    );
+}
+add_action( 'wp_enqueue_scripts', 'bitesmart_enqueue_contact_page_assets' );
+
 /* load hero image immediately on front page */
 add_action( 'wp_head', function() {
     if ( ! is_front_page() ) return;
@@ -146,6 +174,70 @@ add_action( 'enqueue_block_assets', function() {
     );
 });
 
+/**
+ * Make the contact details on both Contact pages actionable while leaving
+ * email addresses visible as selectable text. Run late so email addresses
+ * are linked after the Email Encoder has rendered its protected output.
+ *
+ * @param string $content Page content.
+ * @return string
+ */
+function bitesmart_link_contact_page_details( $content ) {
+    $post = get_post();
+    if ( ! $post || 'page' !== $post->post_type || 'contact' !== $post->post_name ) {
+        return $content;
+    }
+
+    $content = preg_replace_callback(
+        '~(<p\b[^>]*>\s*<strong>\s*Main Phone:\s*</strong>\s*)([^<]*)(</p>)~i',
+        static function ( $matches ) {
+            if ( false !== stripos( $matches[2], 'tel:' ) ) {
+                return $matches[0];
+            }
+
+            $phone_link = preg_replace(
+                '~(413-248-8806)~',
+                '<a class="contact-page-contact-link" href="tel:+14132488806">$1</a>',
+                $matches[2],
+                1
+            );
+
+            return $matches[1] . $phone_link . $matches[3];
+        },
+        $content,
+        1
+    );
+
+    $parts       = preg_split( '~(<a\b[^>]*>|</a>)~i', $content, -1, PREG_SPLIT_DELIM_CAPTURE );
+    $inside_link = false;
+
+    foreach ( $parts as &$part ) {
+        if ( preg_match( '~^<a\b~i', $part ) ) {
+            $inside_link = true;
+            continue;
+        }
+        if ( preg_match( '~^</a>~i', $part ) ) {
+            $inside_link = false;
+            continue;
+        }
+        if ( $inside_link ) {
+            continue;
+        }
+
+        $part = preg_replace_callback(
+            '~[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}~i',
+            static function ( $matches ) {
+                $email = $matches[0];
+                return '<a class="contact-page-contact-link" href="' . esc_url( 'mailto:' . $email ) . '">' . esc_html( $email ) . '</a> <button class="contact-page-copy-email block-toggle-btn is-style-outline" type="button" aria-label="' . esc_attr__( 'Copy email address', 'twentytwentyfive-child' ) . '">' . esc_html__( 'Copy email', 'twentytwentyfive-child' ) . '</button><span class="contact-page-copy-status" aria-live="polite"></span>';
+            },
+            $part
+        );
+    }
+    unset( $part );
+
+    return implode( '', $parts );
+}
+add_filter( 'the_content', 'bitesmart_link_contact_page_details', 9999 );
 
 // deletes autosaves on post save
 add_action( 'post_updated', function( $post_id ) {

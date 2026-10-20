@@ -167,10 +167,51 @@ function bitesmart_render_guide_single( $guide_id ) {
 }
 
 /**
- * A chapter's own page: breadcrumb back to the Guide, format-toggle
- * controls, then just that one chapter, pre-expanded (open => true) —
- * there's nothing else on the page competing for attention, unlike a
- * chapter row sitting collapsed in a longer list.
+ * Previous/next links for a standalone Guide Chapter page.
+ *
+ * @param WP_Post|null $previous Previous published chapter.
+ * @param WP_Post|null $next Next published chapter.
+ * @return string
+ */
+function bitesmart_render_guide_chapter_navigation( $previous, $next ) {
+    if ( ! $previous && ! $next ) {
+        return '';
+    }
+
+    ob_start();
+    ?>
+    <nav class="guide-chapter-navigation guide-chapter-breadcrumb" aria-label="<?php esc_attr_e( 'Chapter navigation', 'custom-blocks' ); ?>">
+        <?php if ( $previous ) : ?>
+            <a class="guide-chapter-navigation-previous" href="<?php echo esc_url( get_permalink( $previous ) ); ?>">
+                <?php
+                printf(
+                    /* translators: %s: previous chapter title */
+                    esc_html__( '← Previous: %s', 'custom-blocks' ),
+                    esc_html( get_the_title( $previous ) )
+                );
+                ?>
+            </a>
+        <?php endif; ?>
+        <?php if ( $next ) : ?>
+            <a class="guide-chapter-navigation-next" href="<?php echo esc_url( get_permalink( $next ) ); ?>">
+                <?php
+                printf(
+                    /* translators: %s: next chapter title */
+                    esc_html__( 'Next: %s →', 'custom-blocks' ),
+                    esc_html( get_the_title( $next ) )
+                );
+                ?>
+            </a>
+        <?php endif; ?>
+    </nav>
+    <?php
+    return ob_get_clean();
+}
+
+/**
+ * A chapter's own page: breadcrumb back to the Guide, a section/chapter
+ * label, the chapter heading, navigation, then the chapter content without
+ * a collapsible wrapper.
  *
  * @param int $chapter_id
  * @return string HTML, or '' if $chapter_id isn't a real published chapter.
@@ -181,15 +222,49 @@ function bitesmart_render_guide_chapter_single( $chapter_id ) {
         return '';
     }
 
-    // Same validated parent-Guide lookup bitesmart_render_guide_chapter_row()
-    // uses for its own (bottom-of-body) "Part of: {Guide}" link — this
-    // breadcrumb is the top-of-page counterpart, added 2026-08-16 per
-    // Janet: "at the very top can we create a breadcrumb? So something
-    // like 'Go to Full Parent's Guide'." Only rendered when the parent
-    // Guide actually resolves (same guard as show_guide_link elsewhere) —
-    // a chapter somehow left without a valid Guide has nowhere for this
-    // link to go.
-    $guide = bitesmart_guide_chapter_parent_guide( $chapter_id );
+    // The chapter list helper provides the published chapter sequence for
+    // this Guide, ordered by chapter number and grouped by the current
+    // Guide relationship.
+    $guide           = bitesmart_guide_chapter_parent_guide( $chapter_id );
+    $previous_chapter = null;
+    $next_chapter     = null;
+    if ( $guide ) {
+        $chapter_entries = bitesmart_get_guide_chapters_with_sections( $guide->ID );
+        foreach ( $chapter_entries as $index => $entry ) {
+            if ( (int) $entry['chapter_id'] !== (int) $chapter_id ) {
+                continue;
+            }
+
+            foreach ( array( 'previous' => $index - 1, 'next' => $index + 1 ) as $direction => $neighbor_index ) {
+                if ( ! isset( $chapter_entries[ $neighbor_index ] ) ) {
+                    continue;
+                }
+
+                $neighbor = get_post( $chapter_entries[ $neighbor_index ]['chapter_id'] );
+                if ( ! $neighbor || 'guide_chapter' !== $neighbor->post_type || 'publish' !== $neighbor->post_status ) {
+                    continue;
+                }
+
+                if ( 'previous' === $direction ) {
+                    $previous_chapter = $neighbor;
+                } else {
+                    $next_chapter = $neighbor;
+                }
+            }
+            break;
+        }
+    }
+    $chapter_navigation = bitesmart_render_guide_chapter_navigation( $previous_chapter, $next_chapter );
+
+    // The breadcrumb is the top-of-page counterpart to the chapter row's
+    // "Part of" link. Only rendered when the parent Guide resolves.
+    $number        = get_post_meta( $chapter_id, '_bitesmart_chapter_number', true );
+    $section_terms = get_the_terms( $chapter_id, 'guide_section' );
+    $section_name  = ( ! is_wp_error( $section_terms ) && ! empty( $section_terms ) ) ? $section_terms[0]->name : '';
+    $section_label = '';
+    if ( $section_name && preg_match( '/^(Section\s+\S+)/u', $section_name, $matches ) ) {
+        $section_label = $matches[1];
+    }
 
     ob_start();
     ?>
@@ -214,7 +289,33 @@ function bitesmart_render_guide_chapter_single( $chapter_id ) {
             </nav>
         <?php endif; ?>
 
-        <?php echo bitesmart_render_guide_format_controls(); // phpcs:ignore ?>
+        <?php if ( $section_label || $number ) : ?>
+            <p class="guide-chapter-position">
+                <?php
+                if ( $section_label && $number ) {
+                    printf(
+                        /* translators: 1: section number, 2: chapter number */
+                        esc_html__( '%1$s - Chapter %2$s', 'custom-blocks' ),
+                        esc_html( $section_label ),
+                        esc_html( $number )
+                    );
+                } elseif ( $number ) {
+                    printf(
+                        /* translators: %s: chapter number */
+                        esc_html__( 'Chapter %s', 'custom-blocks' ),
+                        esc_html( $number )
+                    );
+                } else {
+                    echo esc_html( $section_label );
+                }
+                ?>
+            </p>
+        <?php endif; ?>
+
+        <h1 class="guide-chapter-heading"><?php echo esc_html( get_the_title( $post ) ); ?></h1>
+
+        <?php echo $chapter_navigation; // phpcs:ignore ?>
+
         <?php
         echo bitesmart_render_guide_chapter_row( $chapter_id, array( // phpcs:ignore
             'show_guide_link'   => true,
@@ -223,9 +324,12 @@ function bitesmart_render_guide_chapter_single( $chapter_id ) {
             // as bitesmart_render_guide_single()'s show_guide_link => false
             // for its own chapters, just the other direction.
             'show_chapter_link' => false,
-            'open'              => true,
+            'collapsible'       => false,
+            'show_video_intro'  => true,
         ) );
         ?>
+
+        <?php echo $chapter_navigation; // phpcs:ignore ?>
 
         <?php
         // "Share this Chapter" — sits right above the AddToAny share
