@@ -29,7 +29,9 @@ on:
 
 jobs:
   deploy-staging:
-    if: github.event_name == 'pull_request'
+    # TEMPORARILY DISABLED: staging sync and branch deployment are paused
+    # without removing the existing deployment code below.
+    if: false
     runs-on: ubuntu-latest
     environment: staging
     steps:
@@ -75,7 +77,6 @@ jobs:
 
   test:
     if: github.event_name == 'pull_request'
-    needs: deploy-staging
     name: Playwright Tests
     runs-on: ubuntu-latest
     environment: staging    
