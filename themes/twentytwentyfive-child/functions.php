@@ -516,3 +516,16 @@ add_action( 'wp_footer', function() {
     </script>
     <?php
 });
+
+
+add_filter('block_editor_settings_all', function ($settings) {
+    $settings['styles'][] = [
+        'css' => '
+            .editor-visual-editor__post-title-wrapper {
+                display: none !important;
+            }
+        '
+    ];
+
+    return $settings;
+});
