@@ -27,7 +27,7 @@ This used to cause the post-sync cleanup step to **fail outright** (`wp plugin d
 | Situation | What to do |
 |---|---|
 | You want to test a plugin update against real production data | SSH in and run `./sync-staging-db.sh` manually — see Step 6 below for the full walkthrough |
-| You want staging to reflect your LOCAL DB changes for manual review | Run `push-local-db-to-staging.sh` from your machine (in `local-only-scripts/`, not this repo) — see Step 7. Remember: the next PR's CI sync overwrites it with prod's DB again. |
+| You want staging to reflect your LOCAL DB changes for manual review | Run `push-local-db-to-staging.sh` from your machine (in `local-only-scripts/`, not this repo) — see Step 7. Staging CI is currently disabled, so no PR run will overwrite it automatically. |
 | Wordfence gets updated and adds new DB tables | Update the `WORDFENCE_TABLES` array in `sync-staging-db.sh` — see Step 5 and the "Wordfence table exclusion drift" risk below |
 | You want to test a Wordfence update specifically | Install Wordfence on staging yourself first (it's not there by default — see above), test, then either leave it deactivated via the next sync or remove it again once done |
 | You're setting this up fresh for a *different* repo/site (not just inheriting this one) | Follow Steps 1–4 in order — they cover initial deployment, key generation, and GitHub configuration from scratch |
